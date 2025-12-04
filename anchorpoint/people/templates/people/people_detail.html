@@ -1,0 +1,255 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="profile-header card">
+    <div class="profile-photo{% if not person.profile_photo %} profile-photo--placeholder{% endif %}">
+        {% if person.profile_photo %}
+            <img src="{{ person.profile_photo.url }}" alt="Profile photo of {{ person.first_name }} {{ person.last_name }}">
+        {% else %}
+            <span>{{ person.first_name|default:"?"|slice:":1" }}{{ person.last_name|default:"?"|slice:":1" }}</span>
+        {% endif %}
+    </div>
+    <div class="profile-header__meta">
+        <a class="ghost-link" href="{% url 'people_list' %}">&larr; Back to people</a>
+        <h1>{{ person.first_name }} {{ person.last_name }}</h1>
+        <p class="page-subtitle">
+            {{ person.status|title }}
+            {% if person.get_grade_display %}
+                &middot; {{ person.get_grade_display }}
+            {% endif %}
+        </p>
+        <div class="hero-actions">
+            <a class="btn" href="{% url 'people_edit' person.pk %}">Edit person</a>
+            <a class="btn ghost" href="{% url 'people_add' %}">Add another</a>
+        </div>
+    </div>
+</div>
+
+<div class="detail-grid">
+
+    <section class="detail-card">
+        <h2>Profile Snapshot</h2>
+        <ul class="detail-list">
+            <li>
+                <span>Preferred Name</span>
+                {{ person.first_name }} {{ person.last_name }}
+            </li>
+            <li>
+                <span>Age</span>
+                {{ person.age|default:"-" }}
+            </li>
+            <li>
+                <span>Grade</span>
+                {{ person.get_grade_display|default:"-" }}
+            </li>
+            <li>
+                <span>Marital Status</span>
+                {{ person.get_marital_status_display|default:"-" }}
+            </li>
+            <li>
+                <span>Birthdate</span>
+                {{ person.birthdate|date:"M j, Y"|default:"-" }}
+            </li>
+        </ul>
+    </section>
+
+    <section class="detail-card">
+        <h2>Contact & Address</h2>
+        <ul class="detail-list">
+            <li>
+                <span>Email</span>
+                {{ person.email|default:"-" }}
+            </li>
+            <li>
+                <span>Phone</span>
+                {{ person.phone|default:"-" }}
+            </li>
+            <li>
+                <span>SMS Opt-In</span>
+                {% if person.phone %}
+                    {{ person.phone_opt_in|yesno:"Can receive texts,No texts" }}
+                {% else %}
+                    -
+                {% endif %}
+            </li>
+            <li>
+                <span>Address Line 1</span>
+                {{ person.address_line1|default:"-" }}
+            </li>
+            <li>
+                <span>Address Line 2</span>
+                {{ person.address_line2|default:"-" }}
+            </li>
+            <li>
+                <span>City</span>
+                {{ person.city|default:"-" }}
+            </li>
+            <li>
+                <span>State</span>
+                {{ person.state|default:"-" }}
+            </li>
+            <li>
+                <span>ZIP / Postal Code</span>
+                {{ person.postal_code|default:"-" }}
+            </li>
+        </ul>
+    </section>
+
+    <section class="detail-card">
+        <h2>Key Dates</h2>
+        <ul class="detail-list">
+            <li>
+                <span>First Visit</span>
+                {{ person.first_visit_date|date:"M j, Y"|default:"-" }}
+            </li>
+            <li>
+                <span>Salvation Date</span>
+                {{ person.salvation_date|date:"M j, Y"|default:"-" }}
+            </li>
+            <li>
+                <span>Baptism Date</span>
+                {{ person.baptism_date|date:"M j, Y"|default:"-" }}
+            </li>
+        </ul>
+    </section>
+
+    <section class="detail-card">
+        <h2>Health & Security</h2>
+        <ul class="detail-list">
+            <li>
+                <span>Allergies</span>
+                {{ person.allergies|default:"None noted" }}
+            </li>
+            <li>
+                <span>Security Notes</span>
+                {% if person.security_notes %}
+                    <div class="highlight-note">{{ person.security_notes }}</div>
+                {% else %}
+                    None noted
+                {% endif %}
+            </li>
+        </ul>
+    </section>
+
+    <section class="detail-card detail-card--full">
+        <h2>Address Summary</h2>
+        {% if person.formatted_address %}
+            <p>{{ person.formatted_address|linebreaksbr }}</p>
+        {% else %}
+            <p class="empty-state">No address on file yet.</p>
+        {% endif %}
+    </section>
+
+    <section class="detail-card detail-card--full">
+        <h2>Family Connections</h2>
+        {% if households %}
+            <div class="household-list">
+                {% for household in households %}
+                    <div class="household-item">
+                        <div>
+                            <strong>{{ household.name }}</strong>
+                            {% if household.phone %}<p>{{ household.phone }}</p>{% endif %}
+                            {% if household.formatted_address %}
+                                <p class="household-address">{{ household.formatted_address|linebreaksbr }}</p>
+                            {% endif %}
+                            <ul class="household-members">
+                                {% for membership in household.memberships.all %}
+                                    <li>
+                                        {{ membership.person.first_name }} {{ membership.person.last_name }}
+                                        <small>{{ membership.get_relationship_type_display }}</small>
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        <form method="POST" action="{% url 'people_household_remove' person.pk household.pk %}">
+                            {% csrf_token %}
+                            <button type="submit" class="btn ghost danger">Remove</button>
+                        </form>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p class="empty-state">Not linked to a family yet.</p>
+        {% endif %}
+
+        <div class="family-actions">
+            <div class="family-action-card">
+                <h3>Join existing family</h3>
+                <form method="POST" action="{% url 'people_household_add' person.pk %}">
+                    {% csrf_token %}
+                    <div class="form-field">
+                        {{ existing_household_form.household.label_tag }}
+                        {{ existing_household_form.household }}
+                        {% for error in existing_household_form.household.errors %}<span class="error-text">{{ error }}</span>{% endfor %}
+                    </div>
+                    <div class="form-field">
+                        {{ existing_household_form.relationship_type.label_tag }}
+                        {{ existing_household_form.relationship_type }}
+                        {% for error in existing_household_form.relationship_type.errors %}<span class="error-text">{{ error }}</span>{% endfor %}
+                    </div>
+                    <button type="submit" class="btn ghost">Link family</button>
+                </form>
+            </div>
+            <div class="family-action-card">
+                <h3>Create a new family</h3>
+                <form method="POST" action="{% url 'people_household_create' person.pk %}">
+                    {% csrf_token %}
+                    <div class="form-field">
+                        {{ new_household_form.name.label_tag }}
+                        {{ new_household_form.name }}
+                        {% for error in new_household_form.name.errors %}<span class="error-text">{{ error }}</span>{% endfor %}
+                    </div>
+                    <div class="form-grid" style="margin: 0;">
+                        <div class="form-field">
+                            {{ new_household_form.phone.label_tag }}
+                            {{ new_household_form.phone }}
+                        </div>
+                        <div class="form-field">
+                            {{ new_household_form.primary_adult.label_tag }}
+                            {{ new_household_form.primary_adult }}
+                        </div>
+                    </div>
+                    <div class="form-field">
+                        {{ new_household_form.address_line1.label_tag }}
+                        {{ new_household_form.address_line1 }}
+                    </div>
+                    <div class="form-field">
+                        {{ new_household_form.address_line2.label_tag }}
+                        {{ new_household_form.address_line2 }}
+                    </div>
+                    <div class="form-grid" style="margin: 0;">
+                        <div class="form-field">
+                            {{ new_household_form.city.label_tag }}
+                            {{ new_household_form.city }}
+                        </div>
+                        <div class="form-field">
+                            {{ new_household_form.state.label_tag }}
+                            {{ new_household_form.state }}
+                        </div>
+                        <div class="form-field">
+                            {{ new_household_form.postal_code.label_tag }}
+                            {{ new_household_form.postal_code }}
+                        </div>
+                    </div>
+                    <div class="form-field">
+                        {{ new_household_form.relationship_type.label_tag }}
+                        {{ new_household_form.relationship_type }}
+                    </div>
+                    <button type="submit" class="btn">Create family</button>
+                </form>
+            </div>
+        </div>
+    </section>
+
+    <section class="detail-card detail-card--full">
+        <h2>Additional Notes</h2>
+        {% if person.notes %}
+            <p>{{ person.notes }}</p>
+        {% else %}
+            <p class="empty-state">No additional notes yet.</p>
+        {% endif %}
+    </section>
+
+</div>
+
+{% endblock %}

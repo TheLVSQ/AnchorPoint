@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="card hero">
+    <div class="hero-content">
+        <span class="chip">Groups</span>
+        <h1>Organize every team and gathering.</h1>
+        <p class="page-subtitle">
+            Track volunteer teams, classrooms, small groups, and event cohorts from one workspace.
+        </p>
+        <div class="hero-actions">
+            <a class="btn" href="{% url 'groups:create' %}">Create Group</a>
+            <a class="btn ghost" href="#groups-list">Browse groups</a>
+        </div>
+    </div>
+    <div class="hero-panel">
+        <p class="hero-panel__label">At a glance</p>
+        <div class="hero-panel__stat">
+            <span>Total Groups</span>
+            <strong>{{ group_count }}</strong>
+        </div>
+        <div class="hero-panel__stat">
+            <span>Active Types</span>
+            <strong>{{ active_category_count }}</strong>
+        </div>
+    </div>
+</section>
+
+<section class="stat-grid">
+    {% for category in category_summary %}
+        <article class="stat-card">
+            <p class="stat-label">{{ category.label }}</p>
+            <p class="stat-value small">{{ category.count }}</p>
+            <span class="stat-hint">Active records</span>
+        </article>
+    {% empty %}
+        <article class="stat-card">
+            <p class="stat-label">No groups yet</p>
+            <p class="stat-value small">Start building</p>
+            <span class="stat-hint">Create your first group to unlock insights.</span>
+        </article>
+    {% endfor %}
+</section>
+
+<section class="card list-card" id="groups-list">
+    <div class="list-card__header">
+        <div>
+            <p class="quick-label">Directory</p>
+            <h2>All Groups</h2>
+        </div>
+        <a class="ghost-link" href="{% url 'groups:create' %}">New group -></a>
+    </div>
+    <div class="list-card__body">
+        {% for group in groups %}
+            <div class="list-item">
+                <div>
+                    <strong>{{ group.name }}</strong>
+                    <span>
+                        {{ group.get_category_display }}
+                        {% if group.location %} - {{ group.location }}{% endif %}
+                        {% if group.meeting_schedule %} - {{ group.meeting_schedule }}{% endif %}
+                    </span>
+                </div>
+                <span class="detail-pill">{% if group.is_active %}Active{% else %}Archived{% endif %}</span>
+            </div>
+        {% empty %}
+            <p class="empty-state">No groups yet. Tap "Create Group" to get started.</p>
+        {% endfor %}
+    </div>
+</section>
+{% endblock %}

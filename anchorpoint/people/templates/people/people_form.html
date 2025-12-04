@@ -1,0 +1,196 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="page-header">
+    <a class="ghost-link" href="{% url 'people_list' %}">← Back to people</a>
+    <h1>{{ form.instance.pk|yesno:"Edit Person,Add Person" }}</h1>
+    <p class="page-subtitle">Capture the latest contact info, milestones, and care notes.</p>
+</div>
+
+<section class="card">
+    <form method="POST" enctype="multipart/form-data" class="person-form">
+        {% csrf_token %}
+        <div class="photo-upload">
+            <div class="photo-preview" id="photoPreview">
+                {% if form.instance.profile_photo %}
+                    <img src="{{ form.instance.profile_photo.url }}" alt="Profile photo preview">
+                {% else %}
+                    <span>No photo</span>
+                {% endif %}
+            </div>
+            <div class="photo-upload__text">
+                <strong>Profile photo</strong>
+                <span>Upload a clear headshot (JPG or PNG).</span>
+                {{ form.profile_photo }}
+                {% if form.profile_photo.help_text %}
+                    <small class="help-text">{{ form.profile_photo.help_text }}</small>
+                {% endif %}
+                {% for error in form.profile_photo.errors %}
+                    <span class="error-text">{{ error }}</span>
+                {% endfor %}
+            </div>
+        </div>
+        {{ form.non_field_errors }}
+
+        <div class="form-section">
+            <h3>Basic Details</h3>
+            <div class="form-grid">
+                <div class="form-field">
+                    {{ form.first_name.label_tag }}
+                    {{ form.first_name }}
+                    {% for error in form.first_name.errors %}<span class="error-text">{{ error }}</span>{% endfor %}
+                </div>
+                <div class="form-field">
+                    {{ form.last_name.label_tag }}
+                    {{ form.last_name }}
+                    {% for error in form.last_name.errors %}<span class="error-text">{{ error }}</span>{% endfor %}
+                </div>
+                <div class="form-field">
+                    {{ form.status.label_tag }}
+                    {{ form.status }}
+                    {% for error in form.status.errors %}<span class="error-text">{{ error }}</span>{% endfor %}
+                </div>
+                <div class="form-field">
+                    {{ form.grade.label_tag }}
+                    {{ form.grade }}
+                    {% for error in form.grade.errors %}<span class="error-text">{{ error }}</span>{% endfor %}
+                </div>
+                <div class="form-field">
+                    {{ form.marital_status.label_tag }}
+                    {{ form.marital_status }}
+                    {% for error in form.marital_status.errors %}<span class="error-text">{{ error }}</span>{% endfor %}
+                </div>
+                <div class="form-field">
+                    {{ form.birthdate.label_tag }}
+                    {{ form.birthdate }}
+                    {% for error in form.birthdate.errors %}<span class="error-text">{{ error }}</span>{% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h3>Contact</h3>
+            <div class="form-grid">
+                <div class="form-field">
+                    {{ form.email.label_tag }}
+                    {{ form.email }}
+                    {% for error in form.email.errors %}<span class="error-text">{{ error }}</span>{% endfor %}
+                </div>
+                <div class="form-field">
+                    {{ form.phone.label_tag }}
+                    {{ form.phone }}
+                    {% for error in form.phone.errors %}<span class="error-text">{{ error }}</span>{% endfor %}
+                </div>
+                <div class="form-field form-field--full checkbox-field">
+                    <label for="{{ form.phone_opt_in.id_for_label }}">
+                        {{ form.phone_opt_in }}
+                        <span>{{ form.phone_opt_in.label }}</span>
+                    </label>
+                    {% if form.phone_opt_in.help_text %}
+                        <small class="help-text">{{ form.phone_opt_in.help_text }}</small>
+                    {% endif %}
+                    {% for error in form.phone_opt_in.errors %}<span class="error-text">{{ error }}</span>{% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h3>Address</h3>
+            <div class="form-grid">
+                <div class="form-field form-field--full">
+                    {{ form.address_line1.label_tag }}
+                    {{ form.address_line1 }}
+                    {% for error in form.address_line1.errors %}<span class="error-text">{{ error }}</span>{% endfor %}
+                </div>
+                <div class="form-field form-field--full">
+                    {{ form.address_line2.label_tag }}
+                    {{ form.address_line2 }}
+                    {% for error in form.address_line2.errors %}<span class="error-text">{{ error }}</span>{% endfor %}
+                </div>
+                <div class="form-field">
+                    {{ form.city.label_tag }}
+                    {{ form.city }}
+                    {% for error in form.city.errors %}<span class="error-text">{{ error }}</span>{% endfor %}
+                </div>
+                <div class="form-field">
+                    {{ form.state.label_tag }}
+                    {{ form.state }}
+                    {% for error in form.state.errors %}<span class="error-text">{{ error }}</span>{% endfor %}
+                </div>
+                <div class="form-field">
+                    {{ form.postal_code.label_tag }}
+                    {{ form.postal_code }}
+                    {% for error in form.postal_code.errors %}<span class="error-text">{{ error }}</span>{% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h3>Milestones</h3>
+            <div class="form-grid">
+                <div class="form-field">
+                    {{ form.first_visit_date.label_tag }}
+                    {{ form.first_visit_date }}
+                    {% for error in form.first_visit_date.errors %}<span class="error-text">{{ error }}</span>{% endfor %}
+                </div>
+                <div class="form-field">
+                    {{ form.salvation_date.label_tag }}
+                    {{ form.salvation_date }}
+                    {% for error in form.salvation_date.errors %}<span class="error-text">{{ error }}</span>{% endfor %}
+                </div>
+                <div class="form-field">
+                    {{ form.baptism_date.label_tag }}
+                    {{ form.baptism_date }}
+                    {% for error in form.baptism_date.errors %}<span class="error-text">{{ error }}</span>{% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h3>Care & Notes</h3>
+            <div class="form-grid">
+                <div class="form-field form-field--full">
+                    {{ form.allergies.label_tag }}
+                    {{ form.allergies }}
+                    {% for error in form.allergies.errors %}<span class="error-text">{{ error }}</span>{% endfor %}
+                </div>
+                <div class="form-field form-field--full">
+                    {{ form.security_notes.label_tag }}
+                    {{ form.security_notes }}
+                    {% for error in form.security_notes.errors %}<span class="error-text">{{ error }}</span>{% endfor %}
+                </div>
+                <div class="form-field form-field--full">
+                    {{ form.notes.label_tag }}
+                    {{ form.notes }}
+                    {% for error in form.notes.errors %}<span class="error-text">{{ error }}</span>{% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <button type="submit">Save</button>
+    </form>
+</section>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const input = document.getElementById("id_profile_photo");
+    const preview = document.getElementById("photoPreview");
+    if (!input || !preview) {
+        return;
+    }
+
+    input.addEventListener("change", function (event) {
+        const [file] = event.target.files;
+        if (!file) {
+            return;
+        }
+        const reader = new FileReader();
+        reader.onload = function (readerEvent) {
+            preview.innerHTML = `<img src="${readerEvent.target.result}" alt="Selected profile photo preview">`;
+        };
+        reader.readAsDataURL(file);
+    });
+});
+</script>
+
+{% endblock %}

@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<section class="card">
+    <div class="page-header">
+        <span class="chip">Profile</span>
+        <h1>My Profile</h1>
+        <p class="page-subtitle">Update your contact details and share a short bio so teammates know how to reach you.</p>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="message">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- PROFILE INFO -->
+    <form method="POST" class="profile-form">
+        {% csrf_token %}
+        <input type="hidden" name="update_profile">
+
+        {% if user_form.non_field_errors %}
+            <p class="error-text">{{ user_form.non_field_errors.0 }}</p>
+        {% endif %}
+        {% if profile_form.non_field_errors %}
+            <p class="error-text">{{ profile_form.non_field_errors.0 }}</p>
+        {% endif %}
+
+        <div class="form-section">
+            <h2>Basic Info</h2>
+            <div class="form-grid">
+                <div class="form-field">
+                    <label for="{{ user_form.first_name.id_for_label }}">First Name</label>
+                    {{ user_form.first_name }}
+                    {% if user_form.first_name.errors %}
+                        <p class="error-text">{{ user_form.first_name.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                <div class="form-field">
+                    <label for="{{ user_form.last_name.id_for_label }}">Last Name</label>
+                    {{ user_form.last_name }}
+                    {% if user_form.last_name.errors %}
+                        <p class="error-text">{{ user_form.last_name.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                <div class="form-field form-field--full">
+                    <label for="{{ user_form.email.id_for_label }}">Email</label>
+                    {{ user_form.email }}
+                    {% if user_form.email.errors %}
+                        <p class="error-text">{{ user_form.email.errors.0 }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h2>Contact Details</h2>
+            <div class="form-grid">
+                <div class="form-field">
+                    <label for="{{ profile_form.phone_number.id_for_label }}">Phone Number</label>
+                    {{ profile_form.phone_number }}
+                    {% if profile_form.phone_number.errors %}
+                        <p class="error-text">{{ profile_form.phone_number.errors.0 }}</p>
+                    {% endif %}
+                    <span class="help-text">Include country code if outside the U.S.</span>
+                </div>
+                <div class="form-field form-field--full">
+                    <label for="{{ profile_form.address_line1.id_for_label }}">Address Line 1</label>
+                    {{ profile_form.address_line1 }}
+                    {% if profile_form.address_line1.errors %}
+                        <p class="error-text">{{ profile_form.address_line1.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                <div class="form-field form-field--full">
+                    <label for="{{ profile_form.address_line2.id_for_label }}">Address Line 2</label>
+                    {{ profile_form.address_line2 }}
+                    {% if profile_form.address_line2.errors %}
+                        <p class="error-text">{{ profile_form.address_line2.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                <div class="form-field">
+                    <label for="{{ profile_form.city.id_for_label }}">City</label>
+                    {{ profile_form.city }}
+                    {% if profile_form.city.errors %}
+                        <p class="error-text">{{ profile_form.city.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                <div class="form-field">
+                    <label for="{{ profile_form.state.id_for_label }}">State / Province</label>
+                    {{ profile_form.state }}
+                    {% if profile_form.state.errors %}
+                        <p class="error-text">{{ profile_form.state.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                <div class="form-field">
+                    <label for="{{ profile_form.postal_code.id_for_label }}">Postal Code</label>
+                    {{ profile_form.postal_code }}
+                    {% if profile_form.postal_code.errors %}
+                        <p class="error-text">{{ profile_form.postal_code.errors.0 }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h2>Bio</h2>
+            <div class="form-field form-field--full">
+                <label for="{{ profile_form.bio.id_for_label }}">Share a short introduction</label>
+                {{ profile_form.bio }}
+                {% if profile_form.bio.errors %}
+                    <p class="error-text">{{ profile_form.bio.errors.0 }}</p>
+                {% endif %}
+                <span class="help-text">Let volunteers and staff know how you serve your church or the best way to connect.</span>
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit">Save Profile</button>
+        </div>
+    </form>
+
+    <!-- PASSWORD CHANGE -->
+    <form method="POST" class="profile-form profile-form--password">
+        {% csrf_token %}
+        <input type="hidden" name="update_password">
+
+        <h2>Change Password</h2>
+
+        <div class="form-grid">
+            <div class="form-field form-field--full">
+                <label>Current Password</label>
+                <input type="password" name="current_password" required>
+            </div>
+            <div class="form-field form-field--full">
+                <label>New Password</label>
+                <input type="password" name="new_password" required>
+            </div>
+            <div class="form-field form-field--full">
+                <label>Confirm New Password</label>
+                <input type="password" name="confirm_password" required>
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit">Update Password</button>
+        </div>
+    </form>
+</section>
+
+<style>
+    .profile-form {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+        margin-bottom: 2.5rem;
+    }
+    .profile-form--password {
+        margin-top: 3rem;
+    }
+    .form-section h2 {
+        margin: 0;
+        font-size: 1.1rem;
+    }
+    .form-actions {
+        display: flex;
+        justify-content: flex-end;
+    }
+</style>
+
+{% endblock %}

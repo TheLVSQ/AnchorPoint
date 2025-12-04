@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="card">
+    <div class="page-header">
+        <span class="chip">Organization</span>
+        <h1>Church Details</h1>
+        <p class="page-subtitle">
+            Keep your contact information up to date so we can reuse it across check-in receipts, communications, and reports.
+        </p>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="message">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+
+    <form method="post" class="person-form">
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+            <p class="error-text">{{ form.non_field_errors.0 }}</p>
+        {% endif %}
+
+        <div class="form-section">
+            <h2>Identity</h2>
+            <div class="form-grid">
+                <div class="form-field form-field--full">
+                    <label for="{{ form.name.id_for_label }}">Church Name</label>
+                    {{ form.name }}
+                    {% if form.name.errors %}
+                        <p class="error-text">{{ form.name.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                <div class="form-field">
+                    <label for="{{ form.phone_number.id_for_label }}">Phone Number</label>
+                    {{ form.phone_number }}
+                    {% if form.phone_number.errors %}
+                        <p class="error-text">{{ form.phone_number.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                <div class="form-field">
+                    <label for="{{ form.email.id_for_label }}">Contact Email</label>
+                    {{ form.email }}
+                    {% if form.email.errors %}
+                        <p class="error-text">{{ form.email.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                <div class="form-field form-field--full">
+                    <label for="{{ form.website.id_for_label }}">Website</label>
+                    {{ form.website }}
+                    {% if form.website.errors %}
+                        <p class="error-text">{{ form.website.errors.0 }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h2>Address</h2>
+            <div class="form-grid">
+                <div class="form-field form-field--full">
+                    <label for="{{ form.address_line1.id_for_label }}">Address Line 1</label>
+                    {{ form.address_line1 }}
+                    {% if form.address_line1.errors %}
+                        <p class="error-text">{{ form.address_line1.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                <div class="form-field form-field--full">
+                    <label for="{{ form.address_line2.id_for_label }}">Address Line 2</label>
+                    {{ form.address_line2 }}
+                    {% if form.address_line2.errors %}
+                        <p class="error-text">{{ form.address_line2.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                <div class="form-field">
+                    <label for="{{ form.city.id_for_label }}">City</label>
+                    {{ form.city }}
+                    {% if form.city.errors %}
+                        <p class="error-text">{{ form.city.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                <div class="form-field">
+                    <label for="{{ form.state.id_for_label }}">State / Province</label>
+                    {{ form.state }}
+                    {% if form.state.errors %}
+                        <p class="error-text">{{ form.state.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                <div class="form-field">
+                    <label for="{{ form.postal_code.id_for_label }}">Postal Code</label>
+                    {{ form.postal_code }}
+                    {% if form.postal_code.errors %}
+                        <p class="error-text">{{ form.postal_code.errors.0 }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit">Save Settings</button>
+        </div>
+    </form>
+</section>
+{% endblock %}

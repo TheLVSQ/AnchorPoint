@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="card">
+    <div class="page-header">
+        <span class="chip">Groups</span>
+        <h1>Create Group</h1>
+        <p class="page-subtitle">Capture the basics now; refine rosters and automation later.</p>
+    </div>
+
+    <form method="post" class="person-form">
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+            <p class="error-text">{{ form.non_field_errors.0 }}</p>
+        {% endif %}
+
+        <div class="form-grid">
+            <div class="form-field form-field--full">
+                <label for="{{ form.name.id_for_label }}">Group Name</label>
+                {{ form.name }}
+                {% if form.name.errors %}
+                    <p class="error-text">{{ form.name.errors.0 }}</p>
+                {% endif %}
+            </div>
+            <div class="form-field">
+                <label for="{{ form.short_code.id_for_label }}">Short Code</label>
+                {{ form.short_code }}
+                {% if form.short_code.errors %}
+                    <p class="error-text">{{ form.short_code.errors.0 }}</p>
+                {% endif %}
+                <span class="help-text">Optional code for kiosks or printed sheets.</span>
+            </div>
+            <div class="form-field">
+                <label for="{{ form.category.id_for_label }}">Type</label>
+                {{ form.category }}
+                {% if form.category.errors %}
+                    <p class="error-text">{{ form.category.errors.0 }}</p>
+                {% endif %}
+            </div>
+            <div class="form-field form-field--full">
+                <label for="{{ form.description.id_for_label }}">Description</label>
+                {{ form.description }}
+                {% if form.description.errors %}
+                    <p class="error-text">{{ form.description.errors.0 }}</p>
+                {% endif %}
+            </div>
+            <div class="form-field">
+                <label for="{{ form.location.id_for_label }}">Location</label>
+                {{ form.location }}
+                {% if form.location.errors %}
+                    <p class="error-text">{{ form.location.errors.0 }}</p>
+                {% endif %}
+            </div>
+            <div class="form-field">
+                <label for="{{ form.meeting_schedule.id_for_label }}">Meeting Schedule</label>
+                {{ form.meeting_schedule }}
+                {% if form.meeting_schedule.errors %}
+                    <p class="error-text">{{ form.meeting_schedule.errors.0 }}</p>
+                {% endif %}
+            </div>
+            <div class="form-field">
+                <label for="{{ form.capacity.id_for_label }}">Capacity</label>
+                {{ form.capacity }}
+                {% if form.capacity.errors %}
+                    <p class="error-text">{{ form.capacity.errors.0 }}</p>
+                {% endif %}
+            </div>
+            <div class="form-field">
+                <label for="{{ form.is_active.id_for_label }}">Status</label>
+                {{ form.is_active }}
+                {% if form.is_active.errors %}
+                    <p class="error-text">{{ form.is_active.errors.0 }}</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <a class="btn ghost" href="{% url 'groups:list' %}">Cancel</a>
+            <button type="submit">Create Group</button>
+        </div>
+    </form>
+</section>
+{% endblock %}

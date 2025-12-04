@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h1>People</h1>
+
+<form method="GET" style="margin-bottom: 20px;">
+    <input type="text" name="q" placeholder="Search..." value="{{ request.GET.q }}">
+    <button type="submit">Search</button>
+    <a href="{% url 'people_add' %}" style="margin-left: 10px;">Add Person</a>
+</form>
+
+<div class="cards">
+    {% for person in people %}
+        <div class="card">
+            <h2>{{ person.first_name }} {{ person.last_name }}</h2>
+            <p>{{ person.email }}</p>
+            <a href="{% url 'people_detail' person.pk %}">View</a>
+        </div>
+    {% empty %}
+        <p>No people found.</p>
+    {% endfor %}
+</div>
+
+{% endblock %}

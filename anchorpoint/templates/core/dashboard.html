@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<section class="card hero">
+    <div class="hero-content">
+        <span class="chip">Dashboard</span>
+        <h1>Welcome back, {{ request.user.first_name|default:request.user.username }}.</h1>
+        <p class="page-subtitle">
+            Keep a pulse on your people, events, and check-ins from a single place that
+            feels at home on desktop or an iPad in the lobby.
+        </p>
+        <div class="hero-actions">
+            <a class="btn" href="{% url 'people_list' %}">Open People Hub</a>
+            <a class="btn ghost" href="{% url 'profile' %}">Manage Profile</a>
+        </div>
+    </div>
+    <div class="hero-panel">
+        <p class="hero-panel__label">Today</p>
+        <div class="hero-panel__stat">
+            <span>Team on duty</span>
+            <strong>{{ request.user.get_full_name|default:request.user.username }}</strong>
+        </div>
+        <div class="hero-panel__stat">
+            <span>Next action</span>
+            <strong>Review new households</strong>
+        </div>
+        <div class="hero-panel__stat hero-panel__stat--muted">
+            <span>Need check-in?</span>
+            <strong>Tap the kiosk quick action below.</strong>
+        </div>
+    </div>
+</section>
+
+<section class="stat-grid">
+    <article class="stat-card">
+        <p class="stat-label">People Directory</p>
+        <p class="stat-value">{{ people_count }}</p>
+        <span class="stat-hint">Profiles currently in AnchorPoint</span>
+    </article>
+    <article class="stat-card">
+        <p class="stat-label">Last Sign-In</p>
+        {% if request.user.last_login %}
+            <p class="stat-value">
+                {{ request.user.last_login|date:"M j" }}
+                <span>{{ request.user.last_login|date:"g:ia" }}</span>
+            </p>
+            <span class="stat-hint">Thanks for keeping things moving.</span>
+        {% else %}
+            <p class="stat-value">—</p>
+            <span class="stat-hint">Looks like this is your first time here.</span>
+        {% endif %}
+    </article>
+    <article class="stat-card upcoming">
+        <p class="stat-label">Coming Soon</p>
+        <p class="stat-value small">Events + Check-In</p>
+        <span class="stat-hint">Prototype modules are on the way.</span>
+    </article>
+</section>
+
+<section class="quick-actions">
+    <article class="quick-card">
+        <div>
+            <p class="quick-label">Directory</p>
+            <h3>Search & filter people</h3>
+            <p>Lookup contact info, add notes, or group families with one tap.</p>
+        </div>
+        <a class="ghost-link" href="{% url 'people_list' %}">Go to People →</a>
+    </article>
+    <article class="quick-card accent">
+        <div>
+            <p class="quick-label">Check-In</p>
+            <h3>Kiosk-friendly mode</h3>
+            <p>Open the sleek kiosk layout on an iPad for secure child check-in.</p>
+        </div>
+        <a class="ghost-link" href="#">Launch kiosk →</a>
+    </article>
+    <article class="quick-card neutral">
+        <div>
+            <p class="quick-label">Messaging</p>
+            <h3>Stay connected</h3>
+            <p>Send SMS or email updates to parents, teams, or your whole church.</p>
+        </div>
+        <a class="ghost-link" href="#">Compose message →</a>
+    </article>
+</section>
+
+<div class="cards dashboard-split">
+
+    <section class="card list-card">
+        <div class="list-card__header">
+            <div>
+                <p class="quick-label">Latest Activity</p>
+                <h2>Recently added people</h2>
+            </div>
+            <a class="ghost-link" href="{% url 'people_add' %}">Add new</a>
+        </div>
+        <div class="list-card__body">
+            {% for person in recent_people %}
+                <div class="list-item">
+                    <div>
+                        <strong>{{ person.first_name }} {{ person.last_name }}</strong>
+                        <span>
+                            {{ person.status|title }}
+                            {% if person.email %} · {{ person.email }}{% endif %}
+                        </span>
+                    </div>
+                    <a class="ghost-link" href="{% url 'people_detail' person.pk %}">View →</a>
+                </div>
+            {% empty %}
+                <p class="empty-state">Add your first person to see activity here.</p>
+            {% endfor %}
+        </div>
+    </section>
+
+    <section class="card glow-card">
+        <p class="quick-label">Need a hand?</p>
+        <h2>AnchorPoint is built for clarity.</h2>
+        <p>
+            Keep iterating on the experience—tile layouts adapt to tablets,
+            action buttons float to the top on smaller screens, and cards glow subtly
+            so Sunday-morning volunteers feel comfortable.
+        </p>
+        <ul class="feature-list">
+            <li>Responsive grid that snaps to two columns on desktop.</li>
+            <li>Reduced motion surfaces with accessible contrast.</li>
+            <li>Structure ready for upcoming Events, Check-In, and Messaging.</li>
+        </ul>
+        <div class="hero-actions">
+            <a class="btn" href="{% url 'profile' %}">Update profile</a>
+            <a class="btn ghost" href="{% url 'logout' %}">Sign out</a>
+        </div>
+    </section>
+
+</div>
+
+{% endblock %}
