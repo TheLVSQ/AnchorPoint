@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="card">
+    <div class="page-header">
+        <span class="chip">Permissions</span>
+        <h1>Manage Team Roles</h1>
+        <p class="page-subtitle">
+            Assign roles so each teammate has the right level of access. Admins can configure detailed permissions later.
+        </p>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="message">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="permissions-card">
+        <table class="permissions-table">
+            <thead>
+                <tr>
+                    <th scope="col">User</th>
+                    <th scope="col">Email</th>
+                    <th scope="col">Assigned Role</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users %}
+                    <tr>
+                        <td>
+                            <strong>{{ user.get_full_name|default:user.username }}</strong>
+                            <div class="muted-text">@{{ user.username }}</div>
+                        </td>
+                        <td>{{ user.email|default:"—" }}</td>
+                        <td>
+                            <form method="post" class="role-form">
+                                {% csrf_token %}
+                                <input type="hidden" name="user_id" value="{{ user.id }}">
+                                <select name="role">
+                                    {% for value, label in role_choices %}
+                                        <option value="{{ value }}" {% if user.profile.role == value %}selected{% endif %}>
+                                            {{ label }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                                <button type="submit">Update</button>
+                            </form>
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="3">Invite teammates to AnchorPoint to start assigning roles.</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<style>
+    .permissions-card {
+        overflow-x: auto;
+    }
+    .permissions-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    .permissions-table th,
+    .permissions-table td {
+        padding: 0.85rem 0.5rem;
+        border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+        text-align: left;
+    }
+    .permissions-table th {
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+    }
+    .permissions-table tr:last-child td {
+        border-bottom: none;
+    }
+    .role-form {
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+    .role-form select {
+        padding: 0.5rem 0.75rem;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+    }
+    .role-form button {
+        padding: 0.45rem 1rem;
+        font-size: 0.85rem;
+    }
+    .muted-text {
+        color: var(--muted);
+        font-size: 0.85rem;
+    }
+</style>
+{% endblock %}

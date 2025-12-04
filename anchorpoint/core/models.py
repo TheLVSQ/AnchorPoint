@@ -1,0 +1,76 @@
+from django.conf import settings
+from django.contrib.auth import get_user_model
+from django.db import models
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+
+
+class UserProfile(models.Model):
+    class Role(models.TextChoices):
+        ADMIN = "admin", "Admin"
+        STAFF = "staff", "Staff"
+        VOLUNTEER_ADMIN = "volunteer_admin", "Volunteer Admin"
+        VOLUNTEER = "volunteer", "Volunteer"
+
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="profile",
+    )
+    role = models.CharField(
+        max_length=32,
+        choices=Role.choices,
+        default=Role.VOLUNTEER,
+    )
+    phone_number = models.CharField(max_length=50, blank=True)
+    address_line1 = models.CharField(max_length=255, blank=True)
+    address_line2 = models.CharField(max_length=255, blank=True)
+    city = models.CharField(max_length=120, blank=True)
+    state = models.CharField(max_length=80, blank=True)
+    postal_code = models.CharField(max_length=20, blank=True)
+    bio = models.TextField(blank=True)
+
+    def __str__(self):
+        display_name = self.user.get_full_name() or self.user.username
+        return f"{display_name} ({self.get_role_display()})"
+
+    @property
+    def is_admin(self):
+        return self.role == self.Role.ADMIN
+
+
+User = get_user_model()
+
+
+@receiver(post_save, sender=User)
+def ensure_user_profile(sender, instance, created, **kwargs):
+    # Ensure every user has a profile so role checks never fail in templates.
+    if created:
+        UserProfile.objects.create(user=instance)
+    else:
+        UserProfile.objects.get_or_create(user=instance)
+
+
+class OrganizationSettings(models.Model):
+    name = models.CharField(max_length=255, blank=True)
+    phone_number = models.CharField(max_length=50, blank=True)
+    email = models.EmailField(blank=True)
+    website = models.URLField(blank=True)
+    address_line1 = models.CharField(max_length=255, blank=True)
+    address_line2 = models.CharField(max_length=255, blank=True)
+    city = models.CharField(max_length=120, blank=True)
+    state = models.CharField(max_length=80, blank=True)
+    postal_code = models.CharField(max_length=20, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name_plural = "Organization settings"
+
+    def __str__(self):
+        return self.name or "Organization Settings"
+
+    @classmethod
+    def load(cls):
+        instance, _ = cls.objects.get_or_create(pk=1)
+        return instance
