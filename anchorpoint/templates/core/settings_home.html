@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card">
+    <div class="page-header">
+        <span class="chip">Settings</span>
+        <h1>Fine tune AnchorPoint for {{ settings_instance.name|default:"your church" }}.</h1>
+        <p class="page-subtitle">
+            Organize global preferences in one place. Start with your identity, then layer on new modules as they roll out.
+        </p>
+    </div>
+
+    <div class="quick-actions">
+        {% for section in settings_sections %}
+            <article class="quick-card {% if section.accent %}accent{% else %}neutral{% endif %}">
+                <div>
+                    <p class="quick-label">{{ section.title }}</p>
+                    <h3>{{ section.description }}</h3>
+                </div>
+                {% if section.url %}
+                    <a class="ghost-link" href="{% url section.url %}">Open settings →</a>
+                {% else %}
+                    <span class="ghost-link" style="opacity:0.7;">Coming soon</span>
+                {% endif %}
+            </article>
+        {% endfor %}
+    </div>
+</section>
+{% endblock %}

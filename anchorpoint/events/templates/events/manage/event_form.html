@@ -1,0 +1,298 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header">
+    <h1>{% if event %}Edit Event{% else %}Create Event{% endif %}</h1>
+    <p class="page-subtitle">Define public details, schedule, and registration settings.</p>
+    <a class="btn ghost" href="{% url 'events:manage_list' %}">Back to Events</a>
+</div>
+
+<form method="post" enctype="multipart/form-data" class="person-form">
+    {% csrf_token %}
+    {% if form.non_field_errors %}
+        {% for error in form.non_field_errors %}
+            <p class="error-text">{{ error }}</p>
+        {% endfor %}
+    {% endif %}
+
+    <div class="card">
+        <h2>Event Details</h2>
+        <div class="form-section">
+            {% with field=form.title %}
+                <div class="form-field form-field--full">
+                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                    {{ field }}
+                    {% for error in field.errors %}<p class="error-text">{{ error }}</p>{% endfor %}
+                </div>
+            {% endwith %}
+
+            {% with field=form.slug %}
+                <div class="form-field form-field--full">
+                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                    <small class="help-text">{{ field.help_text }}</small>
+                    {{ field }}
+                    {% for error in field.errors %}<p class="error-text">{{ error }}</p>{% endfor %}
+                </div>
+            {% endwith %}
+
+            {% with field=form.summary %}
+                <div class="form-field form-field--full">
+                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                    {{ field }}
+                    {% for error in field.errors %}<p class="error-text">{{ error }}</p>{% endfor %}
+                </div>
+            {% endwith %}
+
+            {% with field=form.description %}
+                <div class="form-field form-field--full">
+                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                    {{ field }}
+                    {% for error in field.errors %}<p class="error-text">{{ error }}</p>{% endfor %}
+                </div>
+            {% endwith %}
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>Location</h2>
+        <div class="form-section">
+            <div class="form-field form-field--full">
+                <label for="{{ form.location_name.id_for_label }}">{{ form.location_name.label }}</label>
+                {{ form.location_name }}
+                {% for error in form.location_name.errors %}<p class="error-text">{{ error }}</p>{% endfor %}
+            </div>
+            <div class="form-field form-field--full">
+                <label for="{{ form.location_address_line1.id_for_label }}">{{ form.location_address_line1.label }}</label>
+                {{ form.location_address_line1 }}
+                {% for error in form.location_address_line1.errors %}<p class="error-text">{{ error }}</p>{% endfor %}
+            </div>
+            <div class="form-field form-field--full">
+                <label for="{{ form.location_address_line2.id_for_label }}">{{ form.location_address_line2.label }}</label>
+                {{ form.location_address_line2 }}
+                {% for error in form.location_address_line2.errors %}<p class="error-text">{{ error }}</p>{% endfor %}
+            </div>
+            <div class="form-field form-field--full">
+                <label for="{{ form.location_city.id_for_label }}">{{ form.location_city.label }}</label>
+                {{ form.location_city }}
+                {% for error in form.location_city.errors %}<p class="error-text">{{ error }}</p>{% endfor %}
+            </div>
+            <div class="form-field form-field--full">
+                <label for="{{ form.location_state.id_for_label }}">{{ form.location_state.label }}</label>
+                {{ form.location_state }}
+                {% for error in form.location_state.errors %}<p class="error-text">{{ error }}</p>{% endfor %}
+            </div>
+            <div class="form-field form-field--full">
+                <label for="{{ form.location_postal_code.id_for_label }}">{{ form.location_postal_code.label }}</label>
+                {{ form.location_postal_code }}
+                {% for error in form.location_postal_code.errors %}<p class="error-text">{{ error }}</p>{% endfor %}
+            </div>
+            <div class="form-field form-field--full">
+                <label for="{{ form.location_notes.id_for_label }}">{{ form.location_notes.label }}</label>
+                {{ form.location_notes }}
+                {% if form.location_notes.help_text %}
+                    <small class="help-text">{{ form.location_notes.help_text }}</small>
+                {% endif %}
+                {% for error in form.location_notes.errors %}<p class="error-text">{{ error }}</p>{% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>Contact &amp; Cost</h2>
+        <div class="form-section">
+            <div class="form-field form-field--full">
+                <label for="{{ form.contact_name.id_for_label }}">{{ form.contact_name.label }}</label>
+                {{ form.contact_name }}
+                {% for error in form.contact_name.errors %}<p class="error-text">{{ error }}</p>{% endfor %}
+            </div>
+            <div class="form-field form-field--full">
+                <label for="{{ form.contact_email.id_for_label }}">{{ form.contact_email.label }}</label>
+                {{ form.contact_email }}
+                {% for error in form.contact_email.errors %}<p class="error-text">{{ error }}</p>{% endfor %}
+            </div>
+            <div class="form-field form-field--full">
+                <label for="{{ form.contact_phone.id_for_label }}">{{ form.contact_phone.label }}</label>
+                {{ form.contact_phone }}
+                {% for error in form.contact_phone.errors %}<p class="error-text">{{ error }}</p>{% endfor %}
+            </div>
+            <div class="checkbox-field">
+                <label for="{{ form.is_free.id_for_label }}">
+                    {{ form.is_free }}
+                    <span>{{ form.is_free.label }}</span>
+                </label>
+                <small class="help-text">Check if the event has no cost.</small>
+                {% for error in form.is_free.errors %}<p class="error-text">{{ error }}</p>{% endfor %}
+            </div>
+            <div class="form-field form-field--full">
+                <label for="{{ form.cost_amount.id_for_label }}">{{ form.cost_amount.label }}</label>
+                {{ form.cost_amount }}
+                <small class="help-text">Displayed on the public event page when the event is paid.</small>
+                {% for error in form.cost_amount.errors %}<p class="error-text">{{ error }}</p>{% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <div class="card" data-formset-prefix="occurrence">
+        <h2>Schedule</h2>
+        {{ occurrence_formset.management_form }}
+        {% if occurrence_formset.non_form_errors %}
+            {% for error in occurrence_formset.non_form_errors %}
+                <p class="error-text">{{ error }}</p>
+            {% endfor %}
+        {% endif %}
+        <div class="detail-list" id="occurrence-formset">
+            {% for subform in occurrence_formset %}
+                <div class="family-action-card formset-item">
+                    {% if subform.instance.pk %}
+                        <p class="detail-pill">Occurrence {{ forloop.counter }}</p>
+                    {% endif %}
+                    {% for hidden in subform.hidden_fields %}{{ hidden }}{% endfor %}
+                    <div class="form-grid">
+                        <div class="form-field">
+                            <label for="{{ subform.starts_at.id_for_label }}">Starts</label>
+                            {{ subform.starts_at }}
+                            {% for error in subform.starts_at.errors %}
+                                <p class="error-text">{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                        <div class="form-field">
+                            <label for="{{ subform.ends_at.id_for_label }}">Ends</label>
+                            {{ subform.ends_at }}
+                            {% for error in subform.ends_at.errors %}
+                                <p class="error-text">{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                        <div class="form-field">
+                            <label for="{{ subform.is_all_day.id_for_label }}">{{ subform.is_all_day.label }}</label>
+                            {{ subform.is_all_day }}
+                        </div>
+                        {% if subform.can_delete %}
+                            <div class="form-field">
+                                <label>Remove</label>
+                                {{ subform.DELETE }}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+        <button type="button" class="btn ghost" data-add-form="occurrence">Add Date &amp; Time</button>
+    </div>
+
+    <div class="card" data-formset-prefix="photo">
+        <h2>Photos</h2>
+        <p class="page-subtitle">Upload hero and gallery images for the public view.</p>
+        {{ photo_formset.management_form }}
+        {% if photo_formset.non_form_errors %}
+            {% for error in photo_formset.non_form_errors %}
+                <p class="error-text">{{ error }}</p>
+            {% endfor %}
+        {% endif %}
+        <div class="detail-list" id="photo-formset">
+            {% for subform in photo_formset %}
+                <div class="family-action-card formset-item">
+                    {% for hidden in subform.hidden_fields %}{{ hidden }}{% endfor %}
+                    <div class="form-grid">
+                        <div class="form-field form-field--full">
+                            <label for="{{ subform.image.id_for_label }}">Image</label>
+                            {{ subform.image }}
+                            {% for error in subform.image.errors %}
+                                <p class="error-text">{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                        <div class="form-field form-field--full">
+                            <label for="{{ subform.caption.id_for_label }}">Caption</label>
+                            {{ subform.caption }}
+                        </div>
+                        <div class="form-field">
+                            <label for="{{ subform.display_order.id_for_label }}">Display Order</label>
+                            {{ subform.display_order }}
+                        </div>
+                        {% if subform.can_delete %}
+                            <div class="form-field">
+                                <label>Remove</label>
+                                {{ subform.DELETE }}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+        <button type="button" class="btn ghost" data-add-form="photo">Add Photo</button>
+    </div>
+
+    <div class="card">
+        <h2>Registration &amp; Publishing</h2>
+        <div class="form-grid">
+            <div class="checkbox-field">
+                <label for="{{ form.registration_open.id_for_label }}">
+                    {{ form.registration_open }}
+                    <span>{{ form.registration_open.label }}</span>
+                </label>
+                {% for error in form.registration_open.errors %}<p class="error-text">{{ error }}</p>{% endfor %}
+            </div>
+            <div class="form-field">
+                <label for="{{ form.registration_deadline.id_for_label }}">{{ form.registration_deadline.label }}</label>
+                {{ form.registration_deadline }}
+                {% for error in form.registration_deadline.errors %}<p class="error-text">{{ error }}</p>{% endfor %}
+            </div>
+            <div class="form-field">
+                <label for="{{ form.registration_capacity.id_for_label }}">{{ form.registration_capacity.label }}</label>
+                {{ form.registration_capacity }}
+                {% for error in form.registration_capacity.errors %}<p class="error-text">{{ error }}</p>{% endfor %}
+            </div>
+            <div class="checkbox-field">
+                <label for="{{ form.is_published.id_for_label }}">
+                    {{ form.is_published }}
+                    <span>{{ form.is_published.label }}</span>
+                </label>
+                {% for error in form.is_published.errors %}<p class="error-text">{{ error }}</p>{% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <button type="submit">{% if event %}Update Event{% else %}Create Event{% endif %}</button>
+    </div>
+</form>
+
+<script>
+    (function() {
+        function addForm(prefix) {
+            const container = document.getElementById(prefix + "-formset");
+            const totalInput = document.querySelector(`[name="${prefix}-TOTAL_FORMS"]`);
+            const formCount = parseInt(totalInput.value, 10);
+            const emptyTemplate = container.querySelector(".formset-item");
+            if (!emptyTemplate) { return; }
+            const newForm = emptyTemplate.cloneNode(true);
+            newForm.querySelectorAll(".error-text").forEach(function(node) {
+                node.remove();
+            });
+            newForm.querySelectorAll("input, textarea, select").forEach(function(input) {
+                const name = input.getAttribute("name");
+                if (!name) { return; }
+                const newName = name.replace(/-(\d+)-/, "-" + formCount + "-");
+                input.setAttribute("name", newName);
+                input.setAttribute("id", "id_" + newName);
+                if (input.type === "checkbox") {
+                    input.checked = false;
+                } else {
+                    input.value = "";
+                }
+            });
+            newForm.querySelectorAll("label").forEach(function(label) {
+                const forAttr = label.getAttribute("for");
+                if (!forAttr) { return; }
+                label.setAttribute("for", forAttr.replace(/-(\d+)-/, "-" + formCount + "-"));
+            });
+            container.appendChild(newForm);
+            totalInput.value = formCount + 1;
+        }
+
+        document.querySelectorAll("[data-add-form]").forEach(function(button) {
+            button.addEventListener("click", function() {
+                addForm(this.getAttribute("data-add-form"));
+            });
+        });
+    })();
+</script>
+{% endblock %}

@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% block content %}
+<article class="card">
+    <div class="page-header">
+        <div>
+            <p class="chip">{{ event.display_cost }}</p>
+            <h1>{{ event.title }}</h1>
+            {% if event.summary %}
+                <p class="page-subtitle">{{ event.summary }}</p>
+            {% endif %}
+        </div>
+        {% if can_register %}
+            <a class="btn" href="{% url 'event_register' event.registration_token %}">Register</a>
+        {% endif %}
+    </div>
+
+    {% if event.primary_photo %}
+        <div class="photo-preview" style="width:100%;height:320px;border-radius:24px;margin-bottom:1.5rem;">
+            <img src="{{ event.primary_photo.image.url }}" alt="{{ event.primary_photo.caption|default:event.title }}" style="width:100%;height:100%;object-fit:cover;">
+        </div>
+    {% endif %}
+
+    <div class="detail-grid">
+        <div class="detail-card detail-card--full">
+            <h2>Overview</h2>
+            <p>{{ event.description|linebreaks }}</p>
+        </div>
+
+        <div class="detail-card">
+            <h2>Schedule</h2>
+            {% if occurrences %}
+                <ul class="detail-list">
+                    {% for occurrence in occurrences %}
+                        <li>
+                            <strong>{{ occurrence.starts_at|date:"l, F j" }}</strong>
+                            <span>
+                                {% if occurrence.is_all_day %}
+                                    All day
+                                {% else %}
+                                    {{ occurrence.starts_at|date:"g:ia" }}
+                                    {% if occurrence.ends_at %}
+                                        – {{ occurrence.ends_at|date:"g:ia" }}
+                                    {% endif %}
+                                {% endif %}
+                            </span>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p class="empty-state">Schedule will be announced soon.</p>
+            {% endif %}
+        </div>
+
+        <div class="detail-card">
+            <h2>Location</h2>
+            {% if event.location_display %}
+                <p>{{ event.location_display|linebreaksbr }}</p>
+            {% else %}
+                <p class="empty-state">Details coming soon.</p>
+            {% endif %}
+            {% if event.location_notes %}
+                <p class="highlight-note">{{ event.location_notes }}</p>
+            {% endif %}
+        </div>
+
+        <div class="detail-card">
+            <h2>Contact</h2>
+            {% if event.contact_name %}
+                <p><strong>{{ event.contact_name }}</strong></p>
+            {% endif %}
+            {% if event.contact_email %}
+                <p><a href="mailto:{{ event.contact_email }}">{{ event.contact_email }}</a></p>
+            {% endif %}
+            {% if event.contact_phone %}
+                <p><a href="tel:{{ event.contact_phone }}">{{ event.contact_phone }}</a></p>
+            {% endif %}
+            {% if not event.contact_name and not event.contact_email and not event.contact_phone %}
+                <p class="empty-state">Contact information not provided.</p>
+            {% endif %}
+        </div>
+
+        {% with photos=event.photos.all %}
+            {% if photos %}
+                <div class="detail-card detail-card--full">
+                    <h2>Gallery</h2>
+                    <div class="cards">
+                        {% for photo in photos %}
+                            <div class="photo-preview" style="height:200px;">
+                                <img src="{{ photo.image.url }}" alt="{{ photo.caption|default:event.title }}">
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endif %}
+        {% endwith %}
+    </div>
+
+    {% if can_register %}
+        <div class="hero-actions" style="margin-top:2rem;">
+            <a class="btn" href="{% url 'event_register' event.registration_token %}">Register Now</a>
+            {% if event.contact_email %}
+                <a class="btn ghost" href="mailto:{{ event.contact_email }}">Questions?</a>
+            {% endif %}
+        </div>
+    {% else %}
+        <p class="highlight-note" style="margin-top:2rem;">Registration is currently closed.</p>
+    {% endif %}
+</article>
+{% endblock %}

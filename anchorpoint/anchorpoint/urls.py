@@ -20,6 +20,7 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
 from core import views as core_views
+from events import views as event_views
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -28,6 +29,7 @@ urlpatterns = [
     path("", core_views.dashboard, name="dashboard"),
     path("profile/", core_views.profile, name="profile"),
     path("permissions/roles/", core_views.manage_roles, name="manage_roles"),
+    path("settings/", core_views.settings_home, name="settings_home"),
     path(
         "settings/organization/",
         core_views.organization_settings,
@@ -35,6 +37,12 @@ urlpatterns = [
     ),
     path("people/", include("people.urls")),
     path("groups/", include("groups.urls")),
+    path("events/", include("events.urls")),
+    path(
+        "register/<uuid:registration_token>/",
+        event_views.public_event_register,
+        name="event_register",
+    ),
 ]
 
 if settings.DEBUG:
