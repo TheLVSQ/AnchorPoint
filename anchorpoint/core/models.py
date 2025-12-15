@@ -53,6 +53,7 @@ def ensure_user_profile(sender, instance, created, **kwargs):
 
 class OrganizationSettings(models.Model):
     name = models.CharField(max_length=255, blank=True)
+    logo = models.ImageField(upload_to="organization/logo/", blank=True, null=True)
     phone_number = models.CharField(max_length=50, blank=True)
     email = models.EmailField(blank=True)
     website = models.URLField(blank=True)

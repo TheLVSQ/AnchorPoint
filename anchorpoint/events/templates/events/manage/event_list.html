@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header">
+    <h1>Events</h1>
+    <p class="page-subtitle">Create and manage gatherings for your church community.</p>
+    <a class="btn" href="{% url 'events:create' %}">Create Event</a>
+</div>
+
+<div class="cards">
+    <div class="card glow-card">
+        <h2>Total Events</h2>
+        <p class="stat-value">{{ events|length }}</p>
+        <p class="stat-hint">Draft and published events.</p>
+    </div>
+    <div class="card glow-card">
+        <h2>Upcoming Highlights</h2>
+        {% if upcoming_events %}
+            <ul class="detail-list">
+                {% for event in upcoming_events %}
+                    <li>
+                        <strong>{{ event.title }}</strong>
+                        {% with next=event.next_occurrence %}
+                            {% if next %}
+                                <span>{{ next.starts_at|date:"M j, g:ia" }}</span>
+                            {% endif %}
+                        {% endwith %}
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p class="empty-state">No upcoming events scheduled.</p>
+        {% endif %}
+    </div>
+    <div class="card glow-card">
+        <h2>Recent Registrations</h2>
+        {% if recent_registrations %}
+            <ul class="detail-list">
+                {% for registration in recent_registrations %}
+                    <li>
+                        <strong>{{ registration.first_name }} {{ registration.last_name }}</strong>
+                        <span>{{ registration.event.title }} • {{ registration.created_at|date:"M j, g:ia" }}</span>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p class="empty-state">No registrations yet.</p>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card" style="margin-top:2rem;">
+    <div class="list-card__header">
+        <div>
+            <h2>All Events</h2>
+            <p class="page-subtitle">Manage event details, schedules, and registrations.</p>
+        </div>
+        <a class="btn ghost" href="{% url 'events:create' %}">New Event</a>
+    </div>
+    {% if events %}
+        <div class="list-card__body">
+            {% for event in events %}
+                <div class="list-item">
+                    <div>
+                        <strong>{{ event.title }}</strong>
+                        {% if not event.is_published %}
+                            <span class="detail-pill">Draft</span>
+                        {% endif %}
+                        <div class="page-subtitle">
+                            {% with next=event.next_occurrence %}
+                                {% if next %}
+                                    Next on {{ next.starts_at|date:"M j, Y g:ia" }}
+                                {% else %}
+                                    Schedule needed
+                                {% endif %}
+                            {% endwith %}
+                            • {{ event.registrations.all|length }} registrations
+                        </div>
+                    </div>
+                    <div>
+                        <a class="btn ghost" href="{% url 'events:edit' event.pk %}">Edit</a>
+                        <a class="btn ghost" href="{% url 'events:registrations' event.pk %}">Registrations</a>
+                        <a class="btn" href="{% url 'events:public_detail' event.slug %}" target="_blank">View</a>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p class="empty-state">No events yet. Start by creating your first one.</p>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="container">
+    <p class="chip">Register for {{ event.title }}</p>
+    <h1>{{ event.title }}</h1>
+    {% with next=event.next_occurrence %}
+        {% if next %}
+            <p class="page-subtitle">{{ next.starts_at|date:"l, F j @ g:ia" }}</p>
+        {% endif %}
+    {% endwith %}
+    <p>{{ event.summary|default:event.description|truncatewords:30 }}</p>
+
+    {% if registration_closed %}
+        <p class="highlight-note">Registration is closed for this event. Please contact {{ event.contact_email|default:"the organizer" }} for details.</p>
+    {% elif submitted %}
+        <div class="highlight-note">
+            <h2>Thanks for registering!</h2>
+            <p>We have received your information. Keep an eye on your email for updates.</p>
+        </div>
+    {% else %}
+        <form method="post" class="person-form">
+            {% csrf_token %}
+            {% if form.non_field_errors %}
+                {% for error in form.non_field_errors %}
+                    <p class="error-text">{{ error }}</p>
+                {% endfor %}
+            {% endif %}
+            <div class="form-grid">
+                {% for field in form %}
+                    <div class="form-field {% if field.name == 'notes' %}form-field--full{% endif %}">
+                        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                        {{ field }}
+                        {% if field.help_text %}
+                            <small class="help-text">{{ field.help_text }}</small>
+                        {% endif %}
+                        {% for error in field.errors %}
+                            <p class="error-text">{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                {% endfor %}
+            </div>
+            <button type="submit">Submit Registration</button>
+        </form>
+    {% endif %}
+</section>
+{% endblock %}

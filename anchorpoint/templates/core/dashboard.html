@@ -12,7 +12,6 @@
         </p>
         <div class="hero-actions">
             <a class="btn" href="{% url 'people_list' %}">Open People Hub</a>
-            <a class="btn ghost" href="{% url 'profile' %}">Manage Profile</a>
         </div>
     </div>
     <div class="hero-panel">
@@ -110,25 +109,6 @@
             {% empty %}
                 <p class="empty-state">Add your first person to see activity here.</p>
             {% endfor %}
-        </div>
-    </section>
-
-    <section class="card glow-card">
-        <p class="quick-label">Need a hand?</p>
-        <h2>AnchorPoint is built for clarity.</h2>
-        <p>
-            Keep iterating on the experience—tile layouts adapt to tablets,
-            action buttons float to the top on smaller screens, and cards glow subtly
-            so Sunday-morning volunteers feel comfortable.
-        </p>
-        <ul class="feature-list">
-            <li>Responsive grid that snaps to two columns on desktop.</li>
-            <li>Reduced motion surfaces with accessible contrast.</li>
-            <li>Structure ready for upcoming Events, Check-In, and Messaging.</li>
-        </ul>
-        <div class="hero-actions">
-            <a class="btn" href="{% url 'profile' %}">Update profile</a>
-            <a class="btn ghost" href="{% url 'logout' %}">Sign out</a>
         </div>
     </section>
 

@@ -45,6 +45,7 @@ class OrganizationSettingsForm(forms.ModelForm):
         model = OrganizationSettings
         fields = [
             "name",
+            "logo",
             "phone_number",
             "email",
             "website",

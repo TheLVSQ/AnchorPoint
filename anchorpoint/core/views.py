@@ -155,7 +155,9 @@ def organization_settings(request):
     settings_instance = OrganizationSettings.load()
 
     if request.method == "POST":
-        form = OrganizationSettingsForm(request.POST, instance=settings_instance)
+        form = OrganizationSettingsForm(
+            request.POST, request.FILES, instance=settings_instance
+        )
         if form.is_valid():
             form.save()
             messages.success(request, "Organization settings updated.")
@@ -167,5 +169,41 @@ def organization_settings(request):
     return render(
         request,
         "core/organization_settings.html",
-        {"form": form},
+        {"form": form, "settings_instance": settings_instance},
+    )
+
+
+@login_required
+def settings_home(request):
+    if not user_is_admin(request.user):
+        return HttpResponseForbidden("You do not have permission to manage settings.")
+
+    settings_instance = OrganizationSettings.load()
+    settings_sections = [
+        {
+            "title": "Organization Identity",
+            "description": "Logo, name, and contact details used across public pages.",
+            "url": "organization_settings",
+            "accent": True,
+        },
+        {
+            "title": "People Defaults",
+            "description": "Coming soon: customize statuses, workflows, and intake forms.",
+            "url": None,
+            "accent": False,
+        },
+        {
+            "title": "Events & Registrations",
+            "description": "Coming soon: configure policies, reminders, and embed themes.",
+            "url": None,
+            "accent": False,
+        },
+    ]
+    return render(
+        request,
+        "core/settings_home.html",
+        {
+            "settings_sections": settings_sections,
+            "settings_instance": settings_instance,
+        },
     )

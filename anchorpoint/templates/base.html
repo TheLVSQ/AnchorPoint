@@ -149,6 +149,8 @@
             align-items: center;
             gap: 0.9rem;
             font-weight: 600;
+            text-decoration: none;
+            color: inherit;
         }
 
         .brand-mark {
@@ -161,6 +163,7 @@
             place-items: center;
             font-weight: 700;
             letter-spacing: 0.04em;
+            overflow: hidden;
         }
 
         .brand-copy {
@@ -177,22 +180,123 @@
             display: flex;
             align-items: center;
             gap: 0.75rem;
-            flex-wrap: wrap;
         }
 
-        .nav-right a {
-            text-decoration: none;
+        .menu-toggle {
+            appearance: none;
+            border: 1px solid var(--border);
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 0.45rem 0.85rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: border-color 0.15s ease, box-shadow 0.15s ease;
             color: var(--text);
-            font-size: 0.95rem;
-            padding: 0.45rem 0.95rem;
-            border-radius: 999px;
-            border: 1px solid transparent;
-            transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+            background: var(--card-bg);
         }
 
-        .nav-right a:hover {
+        .menu-toggle:hover,
+        .menu-toggle:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+        }
+
+        .menu-toggle__icon {
+            display: grid;
+            gap: 4px;
+        }
+
+        .menu-toggle__icon span {
+            width: 20px;
+            height: 2px;
+            background: var(--text);
+            border-radius: 999px;
+            display: block;
+        }
+
+        .nav-drawer {
+            position: fixed;
+            inset: 0 0 0 auto;
+            width: min(320px, 90vw);
+            background: #fff;
+            border-left: 1px solid var(--border);
+            box-shadow: -20px 0 60px rgba(15, 23, 42, 0.15);
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+            z-index: 50;
+            display: flex;
+            flex-direction: column;
+            padding: 1.5rem;
+        }
+
+        .nav-drawer.open {
+            transform: translateX(0);
+        }
+
+        .nav-drawer__header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .nav-drawer__section {
+            margin-bottom: 1.5rem;
+        }
+
+        .nav-drawer__section h3 {
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            font-size: 0.75rem;
+            color: var(--muted);
+            margin: 0 0 0.75rem;
+        }
+
+        .nav-drawer__links {
+            display: flex;
+            flex-direction: column;
+            gap: 0.45rem;
+        }
+
+        .nav-drawer__links a {
+            text-decoration: none;
+            padding: 0.65rem 0.85rem;
+            border-radius: 12px;
+            border: 1px solid transparent;
+            font-weight: 500;
+            color: var(--text);
+            transition: background 0.2s ease, border-color 0.2s ease;
+        }
+
+        .nav-drawer__links a:hover {
+            background: var(--bg-accent);
             border-color: var(--border);
-            background: rgba(37, 99, 235, 0.08);
+        }
+
+        .nav-drawer__overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.35);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+            z-index: 40;
+        }
+
+        .nav-drawer__overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .nav-close {
+            background: none;
+            border: none;
+            font-size: 1.25rem;
+            cursor: pointer;
+            color: var(--muted);
         }
 
         .cards {
@@ -869,32 +973,126 @@
 
     <!-- NAVBAR -->
     <nav class="navbar">
-        <div class="brand">
-            <div class="brand-mark">AP</div>
+        <a class="brand" href="{% url 'dashboard' %}">
+            <div class="brand-mark">
+                {% if organization_settings.logo %}
+                    <img src="{{ organization_settings.logo.url }}" alt="{{ organization_settings.name|default:'Organization logo' }}" style="width:100%;height:100%;object-fit:cover;">
+                {% else %}
+                    AP
+                {% endif %}
+            </div>
             <div class="brand-copy">
                 <span>AnchorPoint</span>
-                <small>Church ops toolkit</small>
+                <small>{{ organization_settings.name|default:"Your church" }}</small>
             </div>
-        </div>
+        </a>
         <div class="nav-right">
             {% if request.user.is_authenticated %}
-                <a href="{% url 'dashboard' %}">Dashboard</a>
-                <a href="{% url 'logout' %}">Logout</a>
-                <a href="{% url 'profile' %}">Profile</a>
-                <a href="{% url 'people_list' %}">People</a>
-                <a href="{% url 'groups:list' %}">Groups</a>
-                {% if request.user.profile.is_admin %}
-                    <a href="{% url 'organization_settings' %}">Organization</a>
-                    <a href="{% url 'manage_roles' %}">Permissions</a>
-                {% endif %}
+                <span>Hi, {{ request.user.first_name|default:request.user.username }}</span>
             {% endif %}
+            <button class="menu-toggle" type="button" id="menuToggle" aria-expanded="false" aria-controls="navDrawer">
+                <span class="menu-toggle__icon" aria-hidden="true">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </span>
+                Menu
+            </button>
         </div>
     </nav>
 
+    <div class="nav-drawer__overlay" id="navOverlay"></div>
+    <aside class="nav-drawer" id="navDrawer" aria-hidden="true">
+        <div class="nav-drawer__header">
+            <strong>Navigation</strong>
+            <button class="nav-close" type="button" id="menuClose" aria-label="Close menu">&times;</button>
+        </div>
+
+        <div class="nav-drawer__section">
+            <h3>Public</h3>
+            <div class="nav-drawer__links">
+                <a href="{% url 'events:public_list' %}">Events</a>
+                {% if not request.user.is_authenticated %}
+                    <a href="{% url 'login' %}">Login</a>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if request.user.is_authenticated %}
+            <div class="nav-drawer__section">
+                <h3>Workspace</h3>
+                <div class="nav-drawer__links">
+                    <a href="{% url 'dashboard' %}">Dashboard</a>
+                    <a href="{% url 'people_list' %}">People</a>
+                    <a href="{% url 'groups:list' %}">Groups</a>
+                    <a href="{% url 'events:manage_list' %}">Events Admin</a>
+                </div>
+            </div>
+
+            {% if request.user.profile.is_admin %}
+                <div class="nav-drawer__section">
+                    <h3>Administration</h3>
+                    <div class="nav-drawer__links">
+                        <a href="{% url 'settings_home' %}">Settings</a>
+                        <a href="{% url 'manage_roles' %}">Permissions</a>
+                    </div>
+                </div>
+            {% endif %}
+
+            <div class="nav-drawer__section">
+                <h3>Account</h3>
+                <div class="nav-drawer__links">
+                    <a href="{% url 'profile' %}">Manage Profile</a>
+                    <a href="{% url 'logout' %}">Logout</a>
+                </div>
+            </div>
+        {% endif %}
+    </aside>
+
     <!-- PAGE CONTENT -->
     <main class="page" role="main">
+        {% if messages %}
+            {% for message in messages %}
+                <div class="message">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
         {% block content %}{% endblock %}
     </main>
 
+    <script>
+        (function() {
+            const drawer = document.getElementById("navDrawer");
+            const toggle = document.getElementById("menuToggle");
+            const closeBtn = document.getElementById("menuClose");
+            const overlay = document.getElementById("navOverlay");
+
+            if (!drawer || !toggle || !closeBtn || !overlay) {
+                return;
+            }
+
+            function openDrawer() {
+                drawer.classList.add("open");
+                overlay.classList.add("active");
+                drawer.setAttribute("aria-hidden", "false");
+                toggle.setAttribute("aria-expanded", "true");
+            }
+
+            function closeDrawer() {
+                drawer.classList.remove("open");
+                overlay.classList.remove("active");
+                drawer.setAttribute("aria-hidden", "true");
+                toggle.setAttribute("aria-expanded", "false");
+            }
+
+            toggle.addEventListener("click", openDrawer);
+            closeBtn.addEventListener("click", closeDrawer);
+            overlay.addEventListener("click", closeDrawer);
+            document.addEventListener("keydown", function(event) {
+                if (event.key === "Escape") {
+                    closeDrawer();
+                }
+            });
+        })();
+    </script>
 </body>
 </html>

@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header">
+    <h1>Registrations • {{ event.title }}</h1>
+    <p class="page-subtitle">Export attendee details or follow up with contacts.</p>
+    <a class="btn ghost" href="{% url 'events:manage_list' %}">Back to Events</a>
+</div>
+
+<div class="card">
+    <h2>Total Registrations: {{ registrations|length }}</h2>
+    {% if registrations %}
+        <div class="list-card__body">
+            {% for registration in registrations %}
+                <div class="list-item">
+                    <div>
+                        <strong>{{ registration.first_name }} {{ registration.last_name }}</strong>
+                        <span>{{ registration.email }} • {{ registration.created_at|date:"M j, Y g:ia" }}</span>
+                        {% if registration.phone %}
+                            <p>{{ registration.phone }}</p>
+                        {% endif %}
+                        <p>Attendees: {{ registration.number_of_attendees }}</p>
+                        {% if registration.notes %}
+                            <p class="highlight-note">{{ registration.notes }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p class="empty-state">No registrations yet.</p>
+    {% endif %}
+</div>
+{% endblock %}

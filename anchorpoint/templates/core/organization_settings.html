@@ -16,7 +16,7 @@
         {% endfor %}
     {% endif %}
 
-    <form method="post" class="person-form">
+    <form method="post" enctype="multipart/form-data" class="person-form">
         {% csrf_token %}
 
         {% if form.non_field_errors %}
@@ -25,6 +25,23 @@
 
         <div class="form-section">
             <h2>Identity</h2>
+            <div class="photo-upload">
+                <div class="photo-preview">
+                    {% if settings_instance.logo %}
+                        <img src="{{ settings_instance.logo.url }}" alt="{{ settings_instance.name|default:'Organization logo' }}">
+                    {% else %}
+                        <span>{{ settings_instance.name|default:"Logo" }}</span>
+                    {% endif %}
+                </div>
+                <div class="photo-upload__text">
+                    <strong>Logo</strong>
+                    <p>Upload your church mark. Square PNG/SVG looks best.</p>
+                    {{ form.logo }}
+                    {% if form.logo.errors %}
+                        <p class="error-text">{{ form.logo.errors.0 }}</p>
+                    {% endif %}
+                </div>
+            </div>
             <div class="form-grid">
                 <div class="form-field form-field--full">
                     <label for="{{ form.name.id_for_label }}">Church Name</label>
