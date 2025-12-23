@@ -3,7 +3,10 @@
 <div class="page-header">
     <h1>Registrations • {{ event.title }}</h1>
     <p class="page-subtitle">Export attendee details or follow up with contacts.</p>
-    <a class="btn ghost" href="{% url 'events:manage_list' %}">Back to Events</a>
+    <div class="hero-actions">
+        <a class="btn ghost" href="{% url 'events:roster' event.pk %}">View Roster</a>
+        <a class="btn ghost" href="{% url 'events:manage_list' %}">Back to Events</a>
+    </div>
 </div>
 
 <div class="card">

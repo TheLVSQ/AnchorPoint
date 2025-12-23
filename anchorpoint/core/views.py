@@ -6,6 +6,9 @@ from django.http import HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 from people.models import Person
 
+from events.forms import ReleaseDocumentForm
+from events.models import ReleaseDocument
+
 from .forms import (
     OrganizationSettingsForm,
     ProfileForm,
@@ -153,23 +156,45 @@ def organization_settings(request):
         return HttpResponseForbidden("You do not have permission to edit organization settings.")
 
     settings_instance = OrganizationSettings.load()
+    release_form = ReleaseDocumentForm()
+    release_documents = ReleaseDocument.objects.all().order_by("category", "name")
 
     if request.method == "POST":
-        form = OrganizationSettingsForm(
-            request.POST, request.FILES, instance=settings_instance
-        )
-        if form.is_valid():
-            form.save()
-            messages.success(request, "Organization settings updated.")
+        form_type = request.POST.get("form_type", "settings")
+        if form_type == "release":
+            release_form = ReleaseDocumentForm(request.POST, request.FILES)
+            if release_form.is_valid():
+                release_form.save()
+                messages.success(request, "Release document uploaded.")
+                return redirect("organization_settings")
+            messages.error(request, "Could not upload the release document.")
+        elif form_type == "delete_release":
+            doc_id = request.POST.get("document_id")
+            document = get_object_or_404(ReleaseDocument, pk=doc_id)
+            document.delete()
+            messages.success(request, f"Deleted {document.name}.")
             return redirect("organization_settings")
-        messages.error(request, "Please correct the errors below.")
+        else:
+            form = OrganizationSettingsForm(
+                request.POST, request.FILES, instance=settings_instance
+            )
+            if form.is_valid():
+                form.save()
+                messages.success(request, "Organization settings updated.")
+                return redirect("organization_settings")
+            messages.error(request, "Please correct the errors below.")
     else:
         form = OrganizationSettingsForm(instance=settings_instance)
 
     return render(
         request,
         "core/organization_settings.html",
-        {"form": form, "settings_instance": settings_instance},
+        {
+            "form": form,
+            "settings_instance": settings_instance,
+            "release_form": release_form,
+            "release_documents": release_documents,
+        },
     )
 
 

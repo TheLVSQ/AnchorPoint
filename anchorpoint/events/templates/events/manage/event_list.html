@@ -1,9 +1,21 @@
 {% extends "base.html" %}
 {% block content %}
 <div class="page-header">
-    <h1>Events</h1>
-    <p class="page-subtitle">Create and manage gatherings for your church community.</p>
-    <a class="btn" href="{% url 'events:create' %}">Create Event</a>
+    <div>
+        <h1>Events</h1>
+        <p class="page-subtitle">Create and manage gatherings for your church community.</p>
+    </div>
+    <div class="hero-actions">
+        <a class="btn" href="{% url 'events:create' %}">Create Event</a>
+        {% if show_match_queue %}
+            <a class="btn ghost" href="{% url 'events:registration_queue' %}">
+                Match Attendees
+                {% if pending_match_count %}
+                    <span class="detail-pill">{{ pending_match_count }}</span>
+                {% endif %}
+            </a>
+        {% endif %}
+    </div>
 </div>
 
 <div class="cards">
@@ -79,6 +91,7 @@
                     <div>
                         <a class="btn ghost" href="{% url 'events:edit' event.pk %}">Edit</a>
                         <a class="btn ghost" href="{% url 'events:registrations' event.pk %}">Registrations</a>
+                        <a class="btn ghost" href="{% url 'events:roster' event.pk %}">Roster</a>
                         <a class="btn" href="{% url 'events:public_detail' event.slug %}" target="_blank">View</a>
                     </div>
                 </div>

@@ -120,4 +120,58 @@
         </div>
     </form>
 </section>
+
+<section class="card" style="margin-top:2rem;">
+    <div class="page-header">
+        <span class="chip">Release Library</span>
+        <h2>Standard Release Documents</h2>
+        <p class="page-subtitle">Upload liability and media releases once, then reuse them on any event registration.</p>
+    </div>
+    {% if release_documents %}
+        <div class="detail-list" style="margin-bottom:1rem;">
+            {% for document in release_documents %}
+                <div class="list-item">
+                    <div>
+                        <strong>{{ document.name }}</strong>
+                        <span>{{ document.get_category_display }}</span>
+                    </div>
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="form_type" value="delete_release">
+                        <input type="hidden" name="document_id" value="{{ document.id }}">
+                        <button type="submit" class="btn ghost danger">Delete</button>
+                    </form>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p class="empty-state">No release documents uploaded yet.</p>
+    {% endif %}
+    <form method="post" enctype="multipart/form-data" class="form-grid">
+        {% csrf_token %}
+        <input type="hidden" name="form_type" value="release">
+        <div class="form-field">
+            <label for="{{ release_form.name.id_for_label }}">Document Name</label>
+            {{ release_form.name }}
+            {% for error in release_form.name.errors %}<p class="error-text">{{ error }}</p>{% endfor %}
+        </div>
+        <div class="form-field">
+            <label for="{{ release_form.category.id_for_label }}">Category</label>
+            {{ release_form.category }}
+            {% for error in release_form.category.errors %}<p class="error-text">{{ error }}</p>{% endfor %}
+        </div>
+        <div class="form-field form-field--full">
+            <label for="{{ release_form.file.id_for_label }}">File</label>
+            {{ release_form.file }}
+            {% for error in release_form.file.errors %}<p class="error-text">{{ error }}</p>{% endfor %}
+        </div>
+        <div class="form-field form-field--full">
+            <label for="{{ release_form.description.id_for_label }}">Notes</label>
+            {{ release_form.description }}
+        </div>
+        <div class="form-actions">
+            <button type="submit" class="btn ghost">Upload Document</button>
+        </div>
+    </form>
+</section>
 {% endblock %}

@@ -18,29 +18,224 @@
             <p>We have received your information. Keep an eye on your email for updates.</p>
         </div>
     {% else %}
-        <form method="post" class="person-form">
+        <form method="post" class="person-form" novalidate>
             {% csrf_token %}
-            {% if form.non_field_errors %}
+            {% if form and form.non_field_errors %}
                 {% for error in form.non_field_errors %}
                     <p class="error-text">{{ error }}</p>
                 {% endfor %}
             {% endif %}
-            <div class="form-grid">
-                {% for field in form %}
-                    <div class="form-field {% if field.name == 'notes' %}form-field--full{% endif %}">
-                        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-                        {{ field }}
-                        {% if field.help_text %}
-                            <small class="help-text">{{ field.help_text }}</small>
+
+            <div class="card">
+                <h2>Primary Contact</h2>
+                <p class="page-subtitle">We’ll use this information for confirmations and follow-ups.</p>
+                <div class="form-grid">
+                    {% for field in form %}
+                        {% if field.name != "accept_liability" and field.name != "liability_release_signature" and field.name != "accept_media" and field.name != "media_release_signature" %}
+                            <div class="form-field{% if field.name == 'notes' %} form-field--full{% endif %}">
+                                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                {{ field }}
+                                {% if field.help_text %}
+                                    <small class="help-text">{{ field.help_text }}</small>
+                                {% endif %}
+                                {% for error in field.errors %}
+                                    <p class="error-text">{{ error }}</p>
+                                {% endfor %}
+                            </div>
                         {% endif %}
-                        {% for error in field.errors %}
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Release Agreements</h2>
+                <p class="page-subtitle">Digital signatures ensure your acceptance is on record.</p>
+                {% if liability_doc_url %}
+                    <p class="help-text"><a href="{{ liability_doc_url }}" target="_blank" rel="noopener">View {{ liability_doc_name|default:"Liability Release" }}</a></p>
+                {% endif %}
+                {% if media_doc_url %}
+                    <p class="help-text"><a href="{{ media_doc_url }}" target="_blank" rel="noopener">View {{ media_doc_name|default:"Media Release" }}</a></p>
+                {% endif %}
+                <div class="form-section">
+                    {% for field in form %}
+                        {% if field.name == "accept_liability" or field.name == "liability_release_signature" or field.name == "accept_media" or field.name == "media_release_signature" %}
+                            <div class="form-field{% if field.field.widget.input_type == 'checkbox' %} checkbox-field{% endif %}">
+                                <label for="{{ field.id_for_label }}">
+                                    {% if field.field.widget.input_type == "checkbox" %}
+                                        {{ field }} <span>{{ field.label }}</span>
+                                    {% else %}
+                                        {{ field.label }}
+                                        {{ field }}
+                                    {% endif %}
+                                </label>
+                                {% if field.help_text %}
+                                    <small class="help-text">{{ field.help_text }}</small>
+                                {% endif %}
+                                {% for error in field.errors %}
+                                    <p class="error-text">{{ error }}</p>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="card" data-formset-prefix="attendee">
+                <h2>Attendees</h2>
+                <p class="page-subtitle">Share details for each person attending. Use the checkboxes to copy contact information from the primary contact as needed.</p>
+                {% if attendee_formset %}
+                    {{ attendee_formset.management_form }}
+                    {% if attendee_formset.non_form_errors %}
+                        {% for error in attendee_formset.non_form_errors %}
                             <p class="error-text">{{ error }}</p>
                         {% endfor %}
+                    {% endif %}
+                    <div class="detail-list" id="attendee-formset">
+                        {% for subform in attendee_formset %}
+                            <div class="family-action-card formset-item">
+                                <p class="detail-pill">Attendee {{ forloop.counter }}</p>
+                                {% for hidden in subform.hidden_fields %}{{ hidden }}{% endfor %}
+                                <div class="form-field checkbox-field">
+                                    <label><input type="checkbox" data-copy-field="address"> Same as primary contact address</label>
+                                </div>
+                                <div class="form-field checkbox-field">
+                                    <label><input type="checkbox" data-copy-field="guardian"> Same parent/guardian as primary contact</label>
+                                </div>
+                                <div class="form-field checkbox-field">
+                                    <label><input type="checkbox" data-copy-field="emergency"> Same emergency contact as primary contact</label>
+                                </div>
+                                <div class="form-grid">
+                                    {% for field in subform.visible_fields %}
+                                        <div class="form-field{% if field.name == 'notes' or field.name == 'allergies' or field.name == 'medical_notes' or field.name == 'address_line1' or field.name == 'address_line2' %} form-field--full{% endif %}">
+                                            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                            {{ field }}
+                                            {% if field.help_text %}
+                                                <small class="help-text">{{ field.help_text }}</small>
+                                            {% endif %}
+                                            {% for error in field.errors %}
+                                                <p class="error-text">{{ error }}</p>
+                                            {% endfor %}
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        {% endfor %}
                     </div>
-                {% endfor %}
+                    <button type="button" class="btn ghost" data-add-attendee>Add Another Attendee</button>
+                {% endif %}
             </div>
-            <button type="submit">Submit Registration</button>
+
+            <div class="card">
+                <button type="submit">Submit Registration</button>
+            </div>
         </form>
     {% endif %}
 </section>
+<script>
+    (function() {
+        const formsetWrapper = document.getElementById("attendee-formset");
+        if (!formsetWrapper) { return; }
+        const totalInput = document.querySelector('input[name="attendee-TOTAL_FORMS"]');
+        const addButton = document.querySelector("[data-add-attendee]");
+
+        function formatNameValue() {
+            const first = document.getElementById("id_contact-first_name");
+            const last = document.getElementById("id_contact-last_name");
+            const pieces = [];
+            if (first && first.value) { pieces.push(first.value); }
+            if (last && last.value) { pieces.push(last.value); }
+            return pieces.join(" ");
+        }
+
+        function getContactValue(field) {
+            const el = document.getElementById("id_contact-" + field);
+            return el ? el.value : "";
+        }
+
+        function setFieldValue(form, suffix, value) {
+            const target = form.querySelector('[name$="' + suffix + '"]');
+            if (!target) { return; }
+            target.value = value || "";
+            if (target.tagName === "SELECT") {
+                target.dispatchEvent(new Event("change", { bubbles: true }));
+            }
+        }
+
+        function copyAddressFromPrimary(form) {
+            ["address_line1", "address_line2", "city", "state", "postal_code"].forEach(function(field) {
+                setFieldValue(form, field, getContactValue(field));
+            });
+        }
+
+        function copyGuardianFromPrimary(form) {
+            setFieldValue(form, "parent_guardian_name", formatNameValue());
+            setFieldValue(form, "parent_guardian_email", getContactValue("email"));
+            setFieldValue(form, "parent_guardian_phone", getContactValue("phone"));
+        }
+
+        function copyEmergencyFromPrimary(form) {
+            setFieldValue(form, "emergency_contact_name", formatNameValue());
+            setFieldValue(form, "emergency_contact_phone", getContactValue("phone"));
+            setFieldValue(form, "emergency_contact_relationship", "Parent/Guardian");
+        }
+
+        function copyParentDefaults(form) {
+            const relationship = form.querySelector('[name$="emergency_contact_relationship"]');
+            if (relationship && !relationship.value) {
+                relationship.value = "Parent/Guardian";
+            }
+        }
+
+        Array.from(formsetWrapper.querySelectorAll(".formset-item")).forEach(copyParentDefaults);
+
+        if (addButton && totalInput) {
+            addButton.addEventListener("click", function() {
+                const formCount = parseInt(totalInput.value, 10);
+                const template = formsetWrapper.querySelector(".formset-item");
+                if (!template) { return; }
+                const clone = template.cloneNode(true);
+                clone.querySelectorAll(".error-text").forEach(function(node) { node.remove(); });
+                clone.querySelectorAll("input, textarea, select").forEach(function(input) {
+                    const name = input.getAttribute("name");
+                    if (!name) { return; }
+                    const newName = name.replace(/-(\d+)-/, "-" + formCount + "-");
+                    input.setAttribute("name", newName);
+                    input.setAttribute("id", "id_" + newName);
+                    if (input.type === "checkbox") {
+                        input.checked = false;
+                    } else {
+                        input.value = "";
+                    }
+                });
+                clone.querySelectorAll("label").forEach(function(label) {
+                    const forAttr = label.getAttribute("for");
+                    if (!forAttr) { return; }
+                    label.setAttribute("for", forAttr.replace(/-(\d+)-/, "-" + formCount + "-"));
+                });
+                const pill = clone.querySelector(".detail-pill");
+                if (pill) {
+                    pill.textContent = "Attendee " + (formCount + 1);
+                }
+                formsetWrapper.appendChild(clone);
+                totalInput.value = formCount + 1;
+                copyParentDefaults(clone);
+            });
+        }
+
+        document.addEventListener("change", function(event) {
+            const checkbox = event.target.closest("[data-copy-field]");
+            if (!checkbox || !checkbox.checked) { return; }
+            const wrapper = checkbox.closest(".formset-item");
+            if (!wrapper) { return; }
+            const type = checkbox.getAttribute("data-copy-field");
+            if (type === "address") {
+                copyAddressFromPrimary(wrapper);
+            } else if (type === "guardian") {
+                copyGuardianFromPrimary(wrapper);
+            } else if (type === "emergency") {
+                copyEmergencyFromPrimary(wrapper);
+            }
+        });
+    })();
+</script>
 {% endblock %}

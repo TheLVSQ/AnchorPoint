@@ -1,5 +1,58 @@
 {% extends "base.html" %}
 {% block content %}
+<style>
+    .person-lookup {
+        position: relative;
+    }
+    .person-lookup__suggestions {
+        position: absolute;
+        top: calc(100% + 4px);
+        left: 0;
+        right: 0;
+        background: #fff;
+        border: 1px solid var(--border, #e2e8f0);
+        border-radius: 10px;
+        box-shadow: 0 12px 25px rgba(15, 23, 42, 0.1);
+        z-index: 10;
+        overflow: hidden;
+    }
+    .person-lookup__suggestions[hidden] {
+        display: none;
+    }
+    .person-lookup__option {
+        display: block;
+        width: 100%;
+        padding: 0.65rem 0.9rem;
+        border: none;
+        background: transparent;
+        text-align: left;
+        cursor: pointer;
+        font: inherit;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .person-lookup__option:hover,
+    .person-lookup__option:focus {
+        background: var(--bg, #f6f7fb);
+    }
+    .form-field .help-text {
+        color: var(--muted, #5b6476);
+        display: block;
+        margin-top: 4px;
+    }
+    .form-field--remove input[type="checkbox"] {
+        display: none;
+    }
+    .btn.danger {
+        background: #fee2e2;
+        color: #b91c1c;
+    }
+    .btn.danger:hover {
+        background: #fecaca;
+        color: #991b1b;
+    }
+</style>
 <div class="page-header">
     <h1>{% if event %}Edit Event{% else %}Create Event{% endif %}</h1>
     <p class="page-subtitle">Define public details, schedule, and registration settings.</p>
@@ -101,7 +154,15 @@
         <div class="form-section">
             <div class="form-field form-field--full">
                 <label for="{{ form.contact_name.id_for_label }}">{{ form.contact_name.label }}</label>
-                {{ form.contact_name }}
+                <div class="person-lookup"
+                     data-person-lookup
+                     data-lookup-url="{% url 'people_lookup' %}"
+                     data-email-input-id="{{ form.contact_email.id_for_label }}"
+                     data-phone-input-id="{{ form.contact_phone.id_for_label }}">
+                    {{ form.contact_name }}
+                    <div class="person-lookup__suggestions" role="listbox" hidden></div>
+                </div>
+                <small class="help-text">Start typing to search people and autofill their details.</small>
                 {% for error in form.contact_name.errors %}<p class="error-text">{{ error }}</p>{% endfor %}
             </div>
             <div class="form-field form-field--full">
@@ -127,6 +188,41 @@
                 {{ form.cost_amount }}
                 <small class="help-text">Displayed on the public event page when the event is paid.</small>
                 {% for error in form.cost_amount.errors %}<p class="error-text">{{ error }}</p>{% endfor %}
+            </div>
+            <div class="form-field form-field--full">
+                <label for="{{ form.cost_type.id_for_label }}">{{ form.cost_type.label }}</label>
+                {{ form.cost_type }}
+                {% if form.cost_type.help_text %}
+                    <small class="help-text">{{ form.cost_type.help_text }}</small>
+                {% endif %}
+                {% for error in form.cost_type.errors %}<p class="error-text">{{ error }}</p>{% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>Release Documents</h2>
+        <div class="form-section">
+            <div class="form-field form-field--full">
+                <label for="{{ form.liability_release_document.id_for_label }}">Liability Release</label>
+                {{ form.liability_release_document }}
+                {% if form.liability_release_document.help_text %}<small class="help-text">{{ form.liability_release_document.help_text }}</small>{% endif %}
+                {% for error in form.liability_release_document.errors %}<p class="error-text">{{ error }}</p>{% endfor %}
+            </div>
+            <div class="form-field form-field--full">
+                <label for="{{ form.liability_release_custom.id_for_label }}">Custom Liability Release</label>
+                {{ form.liability_release_custom }}
+                {% for error in form.liability_release_custom.errors %}<p class="error-text">{{ error }}</p>{% endfor %}
+            </div>
+            <div class="form-field form-field--full">
+                <label for="{{ form.media_release_document.id_for_label }}">Media Release</label>
+                {{ form.media_release_document }}
+                {% for error in form.media_release_document.errors %}<p class="error-text">{{ error }}</p>{% endfor %}
+            </div>
+            <div class="form-field form-field--full">
+                <label for="{{ form.media_release_custom.id_for_label }}">Custom Media Release</label>
+                {{ form.media_release_custom }}
+                {% for error in form.media_release_custom.errors %}<p class="error-text">{{ error }}</p>{% endfor %}
             </div>
         </div>
     </div>
@@ -166,9 +262,11 @@
                             {{ subform.is_all_day }}
                         </div>
                         {% if subform.can_delete %}
-                            <div class="form-field">
-                                <label>Remove</label>
+                            <div class="form-field form-field--remove">
                                 {{ subform.DELETE }}
+                                <button type="button" class="btn ghost danger" data-remove-form="occurrence">
+                                    Remove Occurrence
+                                </button>
                             </div>
                         {% endif %}
                     </div>
@@ -264,6 +362,8 @@
             const emptyTemplate = container.querySelector(".formset-item");
             if (!emptyTemplate) { return; }
             const newForm = emptyTemplate.cloneNode(true);
+            newForm.removeAttribute("data-removed");
+            newForm.style.display = "";
             newForm.querySelectorAll(".error-text").forEach(function(node) {
                 node.remove();
             });
@@ -292,6 +392,175 @@
             button.addEventListener("click", function() {
                 addForm(this.getAttribute("data-add-form"));
             });
+        });
+
+        function markFormForRemoval(button) {
+            const item = button.closest(".formset-item");
+            if (!item) { return; }
+            const deleteField = item.querySelector('input[name$="-DELETE"]');
+            if (deleteField) {
+                deleteField.checked = true;
+            }
+            item.setAttribute("data-removed", "true");
+            item.style.display = "none";
+        }
+
+        document.addEventListener("click", function(event) {
+            const button = event.target.closest("[data-remove-form]");
+            if (!button) { return; }
+            event.preventDefault();
+            markFormForRemoval(button);
+        });
+
+        function PersonLookup(root) {
+            this.root = root;
+            this.lookupUrl = root.getAttribute("data-lookup-url");
+            this.emailInput = document.getElementById(root.getAttribute("data-email-input-id"));
+            this.phoneInput = document.getElementById(root.getAttribute("data-phone-input-id"));
+            this.nameInput = root.querySelector("input");
+            this.suggestionsEl = root.querySelector(".person-lookup__suggestions");
+            this.debounceTimer = null;
+            this.activeController = null;
+            this.handleOutsideClick = this.handleOutsideClick.bind(this);
+            if (!this.lookupUrl || !this.nameInput || !this.suggestionsEl) {
+                return;
+            }
+            this.nameInput.setAttribute("autocomplete", "off");
+            this.nameInput.addEventListener("input", this.handleInput.bind(this));
+            this.nameInput.addEventListener("keydown", this.handleKeyDown.bind(this));
+            document.addEventListener("click", this.handleOutsideClick);
+            const self = this;
+            this.suggestionsEl.addEventListener("mousedown", function(event) {
+                event.preventDefault();
+            });
+            this.suggestionsEl.addEventListener("click", function(event) {
+                const option = event.target.closest(".person-lookup__option");
+                if (!option) { return; }
+                event.preventDefault();
+                self.applySelection({
+                    name: option.getAttribute("data-name") || "",
+                    email: option.getAttribute("data-email") || "",
+                    phone: option.getAttribute("data-phone") || "",
+                });
+            });
+        }
+
+        PersonLookup.prototype.handleInput = function() {
+            const query = this.nameInput.value.trim();
+            if (query.length < 2) {
+                this.clearSuggestions();
+                this.abortActiveRequest();
+                return;
+            }
+            if (this.debounceTimer) {
+                clearTimeout(this.debounceTimer);
+            }
+            const self = this;
+            this.debounceTimer = setTimeout(function() {
+                self.fetchSuggestions(query);
+            }, 180);
+        };
+
+        PersonLookup.prototype.handleKeyDown = function(event) {
+            if (event.key === "Escape") {
+                this.clearSuggestions();
+            }
+        };
+
+        PersonLookup.prototype.handleOutsideClick = function(event) {
+            if (!this.root.contains(event.target)) {
+                this.clearSuggestions();
+            }
+        };
+
+        PersonLookup.prototype.abortActiveRequest = function() {
+            if (this.activeController) {
+                this.activeController.abort();
+                this.activeController = null;
+            }
+        };
+
+        PersonLookup.prototype.fetchSuggestions = function(query) {
+            if (!this.lookupUrl) { return; }
+            this.abortActiveRequest();
+            if (window.AbortController) {
+                this.activeController = new AbortController();
+            }
+            const fetchOptions = {
+                headers: { "Accept": "application/json" },
+            };
+            if (this.activeController) {
+                fetchOptions.signal = this.activeController.signal;
+            }
+            const url = this.lookupUrl + "?q=" + encodeURIComponent(query);
+            const self = this;
+            fetch(url, fetchOptions)
+                .then(function(response) {
+                    if (!response.ok) {
+                        throw new Error("Lookup failed");
+                    }
+                    return response.json();
+                })
+                .then(function(data) {
+                    self.renderSuggestions(Array.isArray(data.results) ? data.results : []);
+                })
+                .catch(function(error) {
+                    if (error.name === "AbortError") { return; }
+                    self.clearSuggestions();
+                })
+                .finally(function() {
+                    self.activeController = null;
+                });
+        };
+
+        PersonLookup.prototype.renderSuggestions = function(items) {
+            if (!items.length) {
+                this.clearSuggestions();
+                return;
+            }
+            this.suggestionsEl.innerHTML = "";
+            items.forEach(function(item) {
+                const button = document.createElement("button");
+                button.type = "button";
+                button.className = "person-lookup__option";
+                button.setAttribute("data-name", item.name || "");
+                button.setAttribute("data-email", item.email || "");
+                button.setAttribute("data-phone", item.phone || "");
+                const pieces = [item.name || "Unnamed"];
+                if (item.email) {
+                    pieces.push(item.email);
+                }
+                if (item.phone) {
+                    pieces.push(item.phone);
+                }
+                button.textContent = pieces.join(" • ");
+                this.suggestionsEl.appendChild(button);
+            }, this);
+            this.suggestionsEl.removeAttribute("hidden");
+        };
+
+        PersonLookup.prototype.clearSuggestions = function() {
+            if (!this.suggestionsEl) { return; }
+            this.suggestionsEl.innerHTML = "";
+            this.suggestionsEl.setAttribute("hidden", "hidden");
+        };
+
+        PersonLookup.prototype.applySelection = function(person) {
+            if (!person) { return; }
+            this.nameInput.value = person.name || "";
+            if (this.emailInput) {
+                this.emailInput.value = person.email || "";
+            }
+            if (this.phoneInput) {
+                this.phoneInput.value = person.phone || "";
+            }
+            this.clearSuggestions();
+        };
+
+        document.querySelectorAll("[data-person-lookup]").forEach(function(root) {
+            if (!root.__personLookup) {
+                root.__personLookup = new PersonLookup(root);
+            }
         });
     })();
 </script>
