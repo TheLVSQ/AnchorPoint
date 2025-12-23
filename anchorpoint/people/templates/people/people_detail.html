@@ -242,6 +242,29 @@
     </section>
 
     <section class="detail-card detail-card--full">
+        <h2>Event Registrations</h2>
+        {% if registrations %}
+            <div class="list-card__body">
+                {% for registration in registrations %}
+                    <div class="list-item">
+                        <div>
+                            <strong>{{ registration.event.title }}</strong>
+                            <span>Registered {{ registration.registration.created_at|date:"M j, Y" }}</span>
+                            <p class="stat-hint">
+                                Listed as {{ registration.full_name }}
+                                {% if registration.is_minor %}(Minor){% endif %}
+                            </p>
+                        </div>
+                        <a class="ghost-link" href="{% url 'events:public_detail' registration.event.slug %}">View event &rarr;</a>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p class="empty-state">No registrations recorded yet.</p>
+        {% endif %}
+    </section>
+
+    <section class="detail-card detail-card--full">
         <h2>Additional Notes</h2>
         {% if person.notes %}
             <p>{{ person.notes }}</p>

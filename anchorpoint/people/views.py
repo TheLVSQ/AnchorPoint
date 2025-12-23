@@ -1,10 +1,9 @@
-from django.shortcuts import render
-
-# Create your views here.
-from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import IntegrityError
+from django.db.models import Q
+from django.http import JsonResponse
+from django.shortcuts import get_object_or_404, redirect, render
 
 from households.forms import (
     HouseholdMembershipForm,
@@ -51,11 +50,16 @@ def people_detail(request, pk):
         .prefetch_related("memberships__person")
         .order_by("name")
     )
+    registrations = (
+        person.event_registrations.select_related("event", "registration")
+        .order_by("-registration__created_at")
+    )
     existing_household_form = HouseholdMembershipForm(person=person)
     new_household_form = HouseholdQuickCreateForm(initial={"primary_adult": person.pk})
     context = {
         "person": person,
         "households": households,
+        "registrations": registrations,
         "existing_household_form": existing_household_form,
         "new_household_form": new_household_form,
     }
@@ -134,3 +138,28 @@ def people_household_remove(request, pk, household_pk):
         membership.delete()
         messages.success(request, "Removed from family.")
     return redirect("people_detail", pk=pk)
+
+
+@login_required
+def people_lookup(request):
+    query = (request.GET.get("q") or "").strip()
+    results = []
+    if query:
+        people = (
+            Person.objects.filter(
+                Q(first_name__icontains=query)
+                | Q(last_name__icontains=query)
+                | Q(email__icontains=query)
+            )
+            .order_by("last_name", "first_name")[:8]
+        )
+        for person in people:
+            results.append(
+                {
+                    "id": person.pk,
+                    "name": f"{person.first_name} {person.last_name}".strip(),
+                    "email": person.email or "",
+                    "phone": person.phone or "",
+                }
+            )
+    return JsonResponse({"results": results})

@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>Registration Matching Queue</h1>
+        <p class="page-subtitle">Link attendees to people profiles or create new records. Only team members with elevated permissions can make changes.</p>
+    </div>
+    <a class="btn ghost" href="{% url 'events:manage_list' %}">Back to Events</a>
+</div>
+
+{% if attendee_forms %}
+    <div class="person-form">
+        {% for attendee, form in attendee_forms %}
+            <div class="card">
+                <p class="detail-pill">{{ attendee.event.title }}</p>
+                <h2>{{ attendee.full_name }}</h2>
+                <div class="detail-grid">
+                    <div class="detail-card">
+                        <h3>Contact</h3>
+                        <ul class="detail-list">
+                            <li><span>Email</span> {{ attendee.email|default:"—" }}</li>
+                            <li><span>Phone</span> {{ attendee.phone|default:"—" }}</li>
+                            <li><span>Birthdate</span> {{ attendee.birthdate|date:"M j, Y"|default:"—" }}</li>
+                            <li><span>Minor?</span> {{ attendee.is_minor|yesno:"Yes,No" }}</li>
+                        </ul>
+                    </div>
+                    <div class="detail-card">
+                        <h3>Guardian & Emergency</h3>
+                        <ul class="detail-list">
+                            <li><span>Parent / Guardian</span> {{ attendee.parent_guardian_name|default:"—" }}</li>
+                            <li><span>Guardian Email</span> {{ attendee.parent_guardian_email|default:"—" }}</li>
+                            <li><span>Guardian Phone</span> {{ attendee.parent_guardian_phone|default:"—" }}</li>
+                            <li><span>Emergency Contact</span> {{ attendee.emergency_contact_name|default:"—" }}</li>
+                        </ul>
+                    </div>
+                </div>
+                <form method="post" class="form-field form-field--full">
+                    {% csrf_token %}
+                    <input type="hidden" name="attendee_id" value="{{ attendee.id }}">
+                    <div class="form-grid">
+                        <div class="form-field form-field--full">
+                            <label for="{{ form.person.id_for_label }}">{{ form.person.label }}</label>
+                            {{ form.person }}
+                            {% for error in form.person.errors %}
+                                <p class="error-text">{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                        <div class="form-field">
+                            <label for="{{ form.action.id_for_label }}">{{ form.action.label }}</label>
+                            {{ form.action }}
+                        </div>
+                        <div class="form-field form-field--full">
+                            <label for="{{ form.notes.id_for_label }}">{{ form.notes.label }}</label>
+                            {{ form.notes }}
+                        </div>
+                    </div>
+                    <button type="submit">Update Match</button>
+                </form>
+            </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="card">
+        <p class="empty-state">No attendees need matching right now. Great job staying caught up!</p>
+    </div>
+{% endif %}
+{% endblock %}
