@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="card">
+    <div class="page-header">
+        <span class="chip">Phone Blast</span>
+        <h1>Create Phone Blast</h1>
+        <p class="page-subtitle">
+            Record a short update on your phone, upload the audio file (MP3 or WAV), and AnchorPoint will dial your selected group.
+        </p>
+    </div>
+    {% if not twilio_ready %}
+        <div class="highlight-note">
+            Twilio is not configured. Set credentials in <a href="{% url 'organization_settings' %}">Organization Settings</a> before launching calls.
+        </div>
+    {% endif %}
+    <form method="post" enctype="multipart/form-data" class="person-form">
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+            <div class="message">{{ form.non_field_errors.0 }}</div>
+        {% endif %}
+        <div class="form-section">
+            <h2>Details</h2>
+            <div class="form-grid">
+                <div class="form-field form-field--full">
+                    <label for="{{ form.title.id_for_label }}">Title</label>
+                    {{ form.title }}
+                    {% if form.title.errors %}
+                        <p class="error-text">{{ form.title.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                <div class="form-field form-field--full">
+                    <label for="{{ form.group.id_for_label }}">Group</label>
+                    {{ form.group }}
+                    {% if form.group.errors %}
+                        <p class="error-text">{{ form.group.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                <div class="form-field form-field--full">
+                    <label for="{{ form.audio_file.id_for_label }}">Audio File</label>
+                    {{ form.audio_file }}
+                    <p class="help-text">Upload MP3/WAV up to a few minutes long.</p>
+                    {% if form.audio_file.errors %}
+                        <p class="error-text">{{ form.audio_file.errors.0 }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="form-section">
+            <h2>Scheduling</h2>
+            <div class="form-grid">
+                <div class="form-field">
+                    <label for="{{ form.scheduled_for.id_for_label }}">Call Time</label>
+                    {{ form.scheduled_for }}
+                    <p class="help-text">Leave blank to call immediately.</p>
+                    {% if form.scheduled_for.errors %}
+                        <p class="error-text">{{ form.scheduled_for.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                <div class="form-field form-field--full">
+                    <label for="{{ form.notes.id_for_label }}">Notes (internal)</label>
+                    {{ form.notes }}
+                    {% if form.notes.errors %}
+                        <p class="error-text">{{ form.notes.errors.0 }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="form-actions">
+            <button type="submit">Save &amp; Launch</button>
+        </div>
+    </form>
+</section>
+{% endblock %}

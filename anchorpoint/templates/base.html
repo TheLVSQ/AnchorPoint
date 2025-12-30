@@ -1026,6 +1026,9 @@
                     <a href="{% url 'people_list' %}">People</a>
                     <a href="{% url 'groups:list' %}">Groups</a>
                     <a href="{% url 'events:manage_list' %}">Events Admin</a>
+                    {% if request.user.profile.has_communications_access %}
+                        <a href="{% url 'messaging:home' %}">Communications</a>
+                    {% endif %}
                 </div>
             </div>
 

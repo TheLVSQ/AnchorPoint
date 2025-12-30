@@ -135,7 +135,10 @@ def manage_roles(request):
             target_user = get_object_or_404(User, pk=form.cleaned_data["user_id"])
             profile, _ = UserProfile.objects.get_or_create(user=target_user)
             profile.role = form.cleaned_data["role"]
-            profile.save()
+            profile.can_manage_communications = form.cleaned_data[
+                "can_manage_communications"
+            ]
+            profile.save(update_fields=["role", "can_manage_communications"])
             display_name = target_user.get_full_name() or target_user.username
             messages.success(request, f"{display_name} role updated.")
             return redirect("manage_roles")

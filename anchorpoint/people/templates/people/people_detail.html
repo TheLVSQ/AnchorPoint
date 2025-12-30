@@ -265,6 +265,34 @@
     </section>
 
     <section class="detail-card detail-card--full">
+        <h2>Communications History</h2>
+        {% if communication_logs %}
+            <div class="list-card__body">
+                {% for log in communication_logs %}
+                    <div class="list-item">
+                        <div>
+                            <strong>{{ log.get_communication_type_display }} · {{ log.summary }}</strong>
+                            <span>{{ log.created_at|date:"M j, Y g:ia" }}</span>
+                            {% if log.detail %}
+                                <p class="stat-hint">{{ log.detail|truncatechars:140 }}</p>
+                            {% endif %}
+                        </div>
+                        <div class="muted-text">
+                            {% if log.recorded_by %}
+                                {{ log.recorded_by.get_full_name|default:log.recorded_by.username }}
+                            {% else %}
+                                System
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p class="empty-state">No communications logged yet.</p>
+        {% endif %}
+    </section>
+
+    <section class="detail-card detail-card--full">
         <h2>Additional Notes</h2>
         {% if person.notes %}
             <p>{{ person.notes }}</p>

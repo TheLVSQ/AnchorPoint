@@ -5,8 +5,8 @@ from .models import OrganizationSettings, UserProfile
 
 @admin.register(UserProfile)
 class UserProfileAdmin(admin.ModelAdmin):
-    list_display = ("user", "role", "is_admin_flag")
-    list_filter = ("role",)
+    list_display = ("user", "role", "can_manage_communications", "is_admin_flag")
+    list_filter = ("role", "can_manage_communications")
     search_fields = ("user__username", "user__first_name", "user__last_name")
 
     def is_admin_flag(self, obj):

@@ -4,6 +4,7 @@ from django.db import IntegrityError
 from django.db.models import Q
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from messaging.models import CommunicationLog
 
 from households.forms import (
     HouseholdMembershipForm,
@@ -54,12 +55,18 @@ def people_detail(request, pk):
         person.event_registrations.select_related("event", "registration")
         .order_by("-registration__created_at")
     )
+    communication_logs = (
+        CommunicationLog.objects.filter(person=person)
+        .select_related("recorded_by")
+        .order_by("-created_at")[:10]
+    )
     existing_household_form = HouseholdMembershipForm(person=person)
     new_household_form = HouseholdQuickCreateForm(initial={"primary_adult": person.pk})
     context = {
         "person": person,
         "households": households,
         "registrations": registrations,
+        "communication_logs": communication_logs,
         "existing_household_form": existing_household_form,
         "new_household_form": new_household_form,
     }

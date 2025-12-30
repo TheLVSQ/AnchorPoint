@@ -29,6 +29,10 @@ class UserProfile(models.Model):
     state = models.CharField(max_length=80, blank=True)
     postal_code = models.CharField(max_length=20, blank=True)
     bio = models.TextField(blank=True)
+    can_manage_communications = models.BooleanField(
+        default=False,
+        help_text="Allow this user to manage SMS and phone blast communications.",
+    )
 
     def __str__(self):
         display_name = self.user.get_full_name() or self.user.username
@@ -37,6 +41,10 @@ class UserProfile(models.Model):
     @property
     def is_admin(self):
         return self.role == self.Role.ADMIN
+
+    @property
+    def has_communications_access(self):
+        return self.is_admin or self.can_manage_communications
 
 
 User = get_user_model()
@@ -62,6 +70,11 @@ class OrganizationSettings(models.Model):
     city = models.CharField(max_length=120, blank=True)
     state = models.CharField(max_length=80, blank=True)
     postal_code = models.CharField(max_length=20, blank=True)
+    twilio_account_sid = models.CharField(max_length=64, blank=True)
+    twilio_auth_token = models.CharField(max_length=64, blank=True)
+    twilio_phone_number = models.CharField(max_length=30, blank=True)
+    sms_blackout_start = models.TimeField(blank=True, null=True)
+    sms_blackout_end = models.TimeField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
