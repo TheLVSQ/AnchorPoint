@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="card">
+    <div class="page-header">
+        <span class="chip">Communications</span>
+        <h1>Messaging Control Center</h1>
+        <p class="page-subtitle">
+            Send timely SMS updates or phone blasts to your ministry groups. All sends are recorded on each person's profile.
+        </p>
+    </div>
+    {% if not twilio_ready %}
+        <div class="highlight-note" style="margin-bottom:1rem;">
+            <strong>Add Twilio credentials</strong> in <a href="{% url 'organization_settings' %}">Organization Settings</a> to enable outbound SMS and calls.
+        </div>
+    {% endif %}
+    <div class="quick-actions">
+        <div class="quick-card accent">
+            <div>
+                <div class="quick-label">SMS Messaging</div>
+                <h3>Broadcast a text</h3>
+                <p>Write a message, pick an individual or group, and send now or schedule for later.</p>
+            </div>
+            <a class="btn ghost" href="{% url 'messaging:sms_compose' %}">New SMS</a>
+        </div>
+        <div class="quick-card neutral">
+            <div>
+                <div class="quick-label">Phone Blast</div>
+                <h3>Share a voice update</h3>
+                <p>Upload a recording and AnchorPoint will dial everyone in the target group.</p>
+            </div>
+            <a class="btn ghost" href="{% url 'messaging:phone_blast_create' %}">New Phone Blast</a>
+        </div>
+    </div>
+</section>
+
+<section class="card" style="margin-top:2rem;">
+    <div class="list-card__header">
+        <div>
+            <span class="chip">Recent SMS</span>
+            <h2>Latest text campaigns</h2>
+        </div>
+    </div>
+    {% if sms_messages %}
+        <div class="list-card__body">
+            {% for sms in sms_messages %}
+                <div class="list-item">
+                    <div>
+                        <strong>{{ sms.body|truncatechars:60 }}</strong>
+                        <span>Status: {{ sms.get_status_display }}{% if sms.scheduled_for %} · Scheduled {{ sms.scheduled_for|date:"M j, g:ia" }}{% endif %}</span>
+                    </div>
+                    <div class="muted-text">
+                        {{ sms.created_by.get_full_name|default:sms.created_by.username }}
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p class="empty-state">No SMS have been sent yet.</p>
+    {% endif %}
+</section>
+
+<section class="card" style="margin-top:2rem;">
+    <div class="list-card__header">
+        <div>
+            <span class="chip">Phone Blasts</span>
+            <h2>Latest recordings</h2>
+        </div>
+    </div>
+    {% if phone_blasts %}
+        <div class="list-card__body">
+            {% for blast in phone_blasts %}
+                <div class="list-item">
+                    <div>
+                        <strong>{{ blast.title }}</strong>
+                        <span>Status: {{ blast.get_status_display }}{% if blast.scheduled_for %} · Scheduled {{ blast.scheduled_for|date:"M j, g:ia" }}{% endif %}</span>
+                    </div>
+                    <div class="muted-text">
+                        {{ blast.created_by.get_full_name|default:blast.created_by.username }}
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p class="empty-state">No phone blasts yet. Upload your first recording above.</p>
+    {% endif %}
+</section>
+{% endblock %}

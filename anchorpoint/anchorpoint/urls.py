@@ -38,6 +38,7 @@ urlpatterns = [
     path("people/", include("people.urls")),
     path("groups/", include("groups.urls")),
     path("events/", include("events.urls")),
+    path("communications/", include(("messaging.urls", "messaging"), namespace="messaging")),
     path(
         "register/<uuid:registration_token>/",
         event_views.public_event_register,

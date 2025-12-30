@@ -23,6 +23,7 @@
                     <th scope="col">User</th>
                     <th scope="col">Email</th>
                     <th scope="col">Assigned Role</th>
+                    <th scope="col">Communications</th>
                 </tr>
             </thead>
             <tbody>
@@ -44,13 +45,31 @@
                                         </option>
                                     {% endfor %}
                                 </select>
+                                <input type="hidden" name="can_manage_communications" value="{% if user.profile.can_manage_communications %}on{% else %}off{% endif %}">
                                 <button type="submit">Update</button>
+                            </form>
+                        </td>
+                        <td>
+                            <form method="post" class="role-form role-form--flag">
+                                {% csrf_token %}
+                                <input type="hidden" name="user_id" value="{{ user.id }}">
+                                <input type="hidden" name="role" value="{{ user.profile.role }}">
+                                <label class="toggle">
+                                    <input
+                                        type="checkbox"
+                                        name="can_manage_communications"
+                                        value="true"
+                                        {% if user.profile.can_manage_communications %}checked{% endif %}
+                                    >
+                                    <span>Can send SMS & calls</span>
+                                </label>
+                                <button type="submit">Save</button>
                             </form>
                         </td>
                     </tr>
                 {% empty %}
                     <tr>
-                        <td colspan="3">Invite teammates to AnchorPoint to start assigning roles.</td>
+                        <td colspan="4">Invite teammates to AnchorPoint to start assigning roles.</td>
                     </tr>
                 {% endfor %}
             </tbody>
@@ -95,6 +114,20 @@
     .role-form button {
         padding: 0.45rem 1rem;
         font-size: 0.85rem;
+    }
+    .role-form--flag {
+        justify-content: space-between;
+    }
+    .toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        font-weight: 600;
+        color: var(--text);
+    }
+    .toggle input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
     }
     .muted-text {
         color: var(--muted);

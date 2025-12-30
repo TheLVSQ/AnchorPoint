@@ -115,6 +115,54 @@
             </div>
         </div>
 
+        <div class="form-section">
+            <h2>Communications</h2>
+            <p class="page-subtitle">
+                Connect your Twilio account and define texting blackout windows so scheduled messages stay respectful.
+            </p>
+            <div class="form-grid">
+                <div class="form-field">
+                    <label for="{{ form.twilio_account_sid.id_for_label }}">Twilio Account SID</label>
+                    {{ form.twilio_account_sid }}
+                    {% if form.twilio_account_sid.errors %}
+                        <p class="error-text">{{ form.twilio_account_sid.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                <div class="form-field">
+                    <label for="{{ form.twilio_auth_token.id_for_label }}">Twilio Auth Token</label>
+                    {{ form.twilio_auth_token }}
+                    {% if form.twilio_auth_token.errors %}
+                        <p class="error-text">{{ form.twilio_auth_token.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                <div class="form-field">
+                    <label for="{{ form.twilio_phone_number.id_for_label }}">Messaging Phone Number</label>
+                    {{ form.twilio_phone_number }}
+                    {% if form.twilio_phone_number.errors %}
+                        <p class="error-text">{{ form.twilio_phone_number.errors.0 }}</p>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="form-grid">
+                <div class="form-field">
+                    <label for="{{ form.sms_blackout_start.id_for_label }}">Blackout Start</label>
+                    {{ form.sms_blackout_start }}
+                    <p class="help-text">Time of day (local) when sends should pause.</p>
+                    {% if form.sms_blackout_start.errors %}
+                        <p class="error-text">{{ form.sms_blackout_start.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                <div class="form-field">
+                    <label for="{{ form.sms_blackout_end.id_for_label }}">Blackout End</label>
+                    {{ form.sms_blackout_end }}
+                    <p class="help-text">Time when queued sends can resume.</p>
+                    {% if form.sms_blackout_end.errors %}
+                        <p class="error-text">{{ form.sms_blackout_end.errors.0 }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
         <div class="form-actions">
             <button type="submit">Save Settings</button>
         </div>
