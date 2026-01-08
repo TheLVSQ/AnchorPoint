@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="card kiosk-layout" style="max-width:600px;margin:0 auto;text-align:center;">
+    <div class="page-header" style="flex-direction:column;gap:0.5rem;">
+        <span class="chip">Check-In</span>
+        <h1>You're checked in!</h1>
+        <p class="page-subtitle">The following individuals were marked present.</p>
+    </div>
+    <ul class="detail-list">
+        {% for record in records %}
+            <li>
+                <strong>{{ record.person.first_name }} {{ record.person.last_name }}</strong>
+                <span>{{ record.group.name|default:"No group" }} • {{ record.checked_in_at|date:"g:ia" }}</span>
+            </li>
+        {% endfor %}
+    </ul>
+    <div class="form-actions" style="margin-top:1.5rem;">
+        <a class="btn ghost" href="{% url 'attendance:kiosk_lookup' %}">New Search</a>
+        <a class="btn ghost" href="{% url 'attendance:kiosk_lock' %}">Lock Kiosk</a>
+    </div>
+</section>
+{% endblock %}

@@ -63,6 +63,7 @@ class OrganizationSettingsForm(forms.ModelForm):
             "twilio_phone_number",
             "sms_blackout_start",
             "sms_blackout_end",
+            "kiosk_pin",
         ]
         widgets = {
             "sms_blackout_start": forms.TimeInput(attrs={"type": "time"}),

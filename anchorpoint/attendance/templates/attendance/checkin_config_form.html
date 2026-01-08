@@ -1,0 +1,265 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    .form-field--remove input[type="checkbox"] {
+        display: none;
+    }
+    .btn.danger {
+        background: #fee2e2;
+        color: #b91c1c;
+    }
+    .btn.danger:hover {
+        background: #fecaca;
+        color: #991b1b;
+    }
+</style>
+<section class="card">
+    <div class="page-header">
+        <span class="chip">Check-In</span>
+        <h1>{% if configuration %}Edit Check-In Configuration{% else %}Create Check-In Configuration{% endif %}</h1>
+        <p class="page-subtitle">Choose which groups appear on the kiosk and when the flow should open.</p>
+    </div>
+
+    <form method="post" class="person-form" novalidate>
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+            {% for error in form.non_field_errors %}
+                <p class="error-text">{{ error }}</p>
+            {% endfor %}
+        {% endif %}
+
+        <div class="form-grid">
+            <div class="form-field form-field--full">
+                <label for="{{ form.name.id_for_label }}">Name</label>
+                {{ form.name }}
+                {% for error in form.name.errors %}<p class="error-text">{{ error }}</p>{% endfor %}
+                <span class="help-text">Appears in the kiosk launcher list.</span>
+            </div>
+            <div class="form-field">
+                <label for="{{ form.location_name.id_for_label }}">Location Label</label>
+                {{ form.location_name }}
+                {% for error in form.location_name.errors %}<p class="error-text">{{ error }}</p>{% endfor %}
+                <span class="help-text">Optional hint like "Kids Wing" or "Lobby".</span>
+            </div>
+            <div class="form-field">
+                <label for="{{ form.welcome_message.id_for_label }}">Welcome Message</label>
+                {{ form.welcome_message }}
+                {% for error in form.welcome_message.errors %}<p class="error-text">{{ error }}</p>{% endfor %}
+            </div>
+            <div class="form-field form-field--full">
+                <label for="{{ form.description.id_for_label }}">Description</label>
+                {{ form.description }}
+                {% for error in form.description.errors %}<p class="error-text">{{ error }}</p>{% endfor %}
+            </div>
+            <div class="form-field">
+                <label for="{{ form.is_active.id_for_label }}">Status</label>
+                {{ form.is_active }}
+                {% for error in form.is_active.errors %}<p class="error-text">{{ error }}</p>{% endfor %}
+                <span class="help-text">Uncheck to hide this configuration from kiosks while keeping settings.</span>
+            </div>
+            <div class="form-field form-field--full">
+                <label for="{{ form.groups.id_for_label }}">Eligible Groups</label>
+                {{ form.groups }}
+                {% for error in form.groups.errors %}<p class="error-text">{{ error }}</p>{% endfor %}
+                <span class="help-text">Only the selected groups will appear on this check-in flow.</span>
+            </div>
+        </div>
+
+        <div class="card" data-formset-prefix="{{ formset.prefix }}">
+            <div class="list-card__header">
+                <div>
+                    <h2>Service Windows</h2>
+                    <p class="page-subtitle">Define every day and time this configuration should unlock check-in.</p>
+                </div>
+            </div>
+            {{ formset.management_form }}
+            {% if formset.non_form_errors %}
+                {% for error in formset.non_form_errors %}
+                    <p class="error-text">{{ error }}</p>
+                {% endfor %}
+            {% endif %}
+            <div class="detail-list" id="{{ formset.prefix }}-formset">
+                {% for subform in formset %}
+                    <div class="family-action-card formset-item" {% if subform.instance.pk %}data-existing="true"{% endif %}>
+                        {% for hidden in subform.hidden_fields %}{{ hidden }}{% endfor %}
+                        {% if subform.non_field_errors %}
+                            {% for error in subform.non_field_errors %}
+                                <p class="error-text">{{ error }}</p>
+                            {% endfor %}
+                        {% endif %}
+                        <div class="form-grid">
+                            <div class="form-field form-field--full">
+                                <label for="{{ subform.schedule_type.id_for_label }}">Schedule Type</label>
+                                {{ subform.schedule_type }}
+                                {% for error in subform.schedule_type.errors %}<p class="error-text">{{ error }}</p>{% endfor %}
+                                <span class="help-text">Recurring repeats weekly; Specific date is for one-time events.</span>
+                            </div>
+                            <div class="form-field" data-schedule-field="weekly">
+                                <label for="{{ subform.day_of_week.id_for_label }}">Day of Week</label>
+                                {{ subform.day_of_week }}
+                                {% for error in subform.day_of_week.errors %}<p class="error-text">{{ error }}</p>{% endfor %}
+                            </div>
+                            <div class="form-field" data-schedule-field="specific_date">
+                                <label for="{{ subform.specific_date.id_for_label }}">Specific Date</label>
+                                {{ subform.specific_date }}
+                                {% for error in subform.specific_date.errors %}<p class="error-text">{{ error }}</p>{% endfor %}
+                                <span class="help-text">Use for single services or special events.</span>
+                            </div>
+                            <div class="form-field">
+                                <label for="{{ subform.opens_at.id_for_label }}">Opens At</label>
+                                {{ subform.opens_at }}
+                                {% for error in subform.opens_at.errors %}<p class="error-text">{{ error }}</p>{% endfor %}
+                            </div>
+                            <div class="form-field">
+                                <label for="{{ subform.closes_at.id_for_label }}">Closes At</label>
+                                {{ subform.closes_at }}
+                                {% for error in subform.closes_at.errors %}<p class="error-text">{{ error }}</p>{% endfor %}
+                            </div>
+                            <div class="form-field">
+                                <label for="{{ subform.is_active.id_for_label }}">Active</label>
+                                {{ subform.is_active }}
+                                {% for error in subform.is_active.errors %}<p class="error-text">{{ error }}</p>{% endfor %}
+                            </div>
+                            <div class="form-field form-field--full">
+                                <label for="{{ subform.notes.id_for_label }}">Notes</label>
+                                {{ subform.notes }}
+                                {% for error in subform.notes.errors %}<p class="error-text">{{ error }}</p>{% endfor %}
+                            </div>
+                            {% if subform.can_delete %}
+                                <div class="form-field form-field--remove">
+                                    {{ subform.DELETE }}
+                                    <button type="button" class="btn ghost danger" data-remove-form="{{ formset.prefix }}">
+                                        Remove Window
+                                    </button>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+            <div class="form-actions">
+                <button type="button" class="btn ghost" data-add-form="{{ formset.prefix }}">Add Window</button>
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <a class="btn ghost" href="{% url 'attendance:configuration_list' %}">Cancel</a>
+            <button type="submit">{% if configuration %}Save Changes{% else %}Create Configuration{% endif %}</button>
+        </div>
+    </form>
+</section>
+
+<script>
+    (function() {
+        const prefix = "{{ formset.prefix }}";
+        const container = document.getElementById(prefix + "-formset");
+        const defaultScheduleType = "weekly";
+        if (!container) { return; }
+
+        function updateFormAttributes(form, index) {
+            form.querySelectorAll("input, textarea, select").forEach(function(input) {
+                const name = input.getAttribute("name");
+                if (!name) { return; }
+                const newName = name.replace(/-(\d+)-/, "-" + index + "-");
+                input.setAttribute("name", newName);
+                input.setAttribute("id", "id_" + newName);
+            });
+            form.querySelectorAll("label").forEach(function(label) {
+                const forAttr = label.getAttribute("for");
+                if (!forAttr) { return; }
+                label.setAttribute("for", forAttr.replace(/-(\d+)-/, "-" + index + "-"));
+            });
+        }
+
+        function updateScheduleFields(wrapper) {
+            if (!wrapper) { return; }
+            const select = wrapper.querySelector("[data-schedule-type-select]");
+            if (!select) { return; }
+            const value = select.value || defaultScheduleType;
+            wrapper.querySelectorAll("[data-schedule-field]").forEach(function(field) {
+                const fieldType = field.getAttribute("data-schedule-field");
+                if (!fieldType) { return; }
+                const shouldShow =
+                    (value === "specific_date" && fieldType === "specific_date") ||
+                    (value !== "specific_date" && fieldType === "weekly");
+                field.style.display = shouldShow ? "" : "none";
+            });
+        }
+
+        function initScheduleFields() {
+            container.querySelectorAll(".formset-item").forEach(updateScheduleFields);
+        }
+
+        function addForm() {
+            const totalInput = document.querySelector(`[name="${prefix}-TOTAL_FORMS"]`);
+            if (!totalInput) { return; }
+            const formCount = parseInt(totalInput.value, 10);
+            const template = container.querySelector(".formset-item");
+            if (!template) { return; }
+            const newForm = template.cloneNode(true);
+            newForm.removeAttribute("data-existing");
+            newForm.querySelectorAll("input, textarea, select").forEach(function(input) {
+                if (input.type === "checkbox") {
+                    input.checked = false;
+                } else if (input.tagName === "SELECT") {
+                    input.selectedIndex = 0;
+                } else {
+                    input.value = "";
+                }
+            });
+            newForm.querySelectorAll(".error-text").forEach(function(errorNode) {
+                errorNode.remove();
+            });
+            newForm.querySelectorAll("[data-existing]").forEach(function(node) {
+                node.removeAttribute("data-existing");
+            });
+            newForm.querySelectorAll("input[name$='-id']").forEach(function(input) {
+                input.value = "";
+            });
+            newForm.querySelectorAll("input[name$='-DELETE']").forEach(function(input) {
+                input.checked = false;
+            });
+            updateFormAttributes(newForm, formCount);
+            container.appendChild(newForm);
+            totalInput.value = formCount + 1;
+            updateScheduleFields(newForm);
+        }
+
+        function markForRemoval(button) {
+            const card = button.closest(".formset-item");
+            if (!card) { return; }
+            const deleteInput = card.querySelector(`input[name$='-DELETE']`);
+            if (!deleteInput) {
+                card.remove();
+                return;
+            }
+            deleteInput.checked = true;
+            card.style.opacity = 0.5;
+        }
+
+        document.addEventListener("click", function(event) {
+            const addButton = event.target.closest("[data-add-form]");
+            if (addButton && addButton.getAttribute("data-add-form") === prefix) {
+                event.preventDefault();
+                addForm();
+                return;
+            }
+            const removeButton = event.target.closest("[data-remove-form]");
+            if (removeButton && removeButton.getAttribute("data-remove-form") === prefix) {
+                event.preventDefault();
+                markForRemoval(removeButton);
+            }
+        });
+
+        document.addEventListener("change", function(event) {
+            const select = event.target.closest("[data-schedule-type-select]");
+            if (!select) { return; }
+            const wrapper = select.closest(".formset-item");
+            updateScheduleFields(wrapper);
+        });
+
+        initScheduleFields();
+    })();
+</script>
+{% endblock %}

@@ -75,6 +75,11 @@ class OrganizationSettings(models.Model):
     twilio_phone_number = models.CharField(max_length=30, blank=True)
     sms_blackout_start = models.TimeField(blank=True, null=True)
     sms_blackout_end = models.TimeField(blank=True, null=True)
+    kiosk_pin = models.CharField(
+        max_length=10,
+        blank=True,
+        help_text="Optional 4-6 digit code required to unlock kiosk mode.",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
