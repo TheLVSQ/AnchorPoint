@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    .kiosk-layout {
+        max-width: 800px;
+        margin: 0 auto;
+    }
+    .kiosk-form {
+        display: grid;
+        gap: 1rem;
+        margin-top: 1.5rem;
+    }
+    .kiosk-form input {
+        font-size: 1.25rem;
+        padding: 1rem;
+        border-radius: 16px;
+    }
+    .kiosk-results {
+        margin-top: 2rem;
+        display: grid;
+        gap: 1rem;
+    }
+    .family-card {
+        background: #fff;
+        border-radius: 20px;
+        padding: 1.25rem;
+        box-shadow: 0 20px 35px rgba(15, 23, 42, 0.08);
+    }
+    .family-card header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+    .family-card ul {
+        list-style: none;
+        padding: 0;
+        margin: 0.75rem 0 0;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+    .family-card li {
+        background: #eef2ff;
+        color: #1d4ed8;
+        padding: 0.4rem 0.85rem;
+        border-radius: 999px;
+        font-weight: 600;
+        font-size: 0.95rem;
+    }
+    .badge {
+        background: rgba(99, 102, 241, 0.15);
+        color: #4f46e5;
+        padding: 0.2rem 0.75rem;
+        border-radius: 999px;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+    .search-hint {
+        color: var(--muted);
+        margin-top: 0.5rem;
+    }
+</style>
+<section class="card kiosk-layout">
+    <div class="page-header" style="align-items: center;">
+        <span class="chip">Check-In Kiosk</span>
+        <div>
+            <h1>Find your family.</h1>
+            <p class="page-subtitle">
+                Enter a phone number or last name to pull up the household.
+                Volunteers can tap a family to continue the check-in flow.
+            </p>
+        </div>
+        <a class="btn ghost" href="{% url 'attendance:kiosk_lock' %}">Lock kiosk</a>
+    </div>
+    <form method="get" class="kiosk-form">
+        <div>
+            <label for="{{ form.query.id_for_label }}">Search Families</label>
+            {{ form.query }}
+            {% if form.query.errors %}
+                <p class="error-text">{{ form.query.errors.0 }}</p>
+            {% endif %}
+            {% if form.fields.query.help_text %}
+                <p class="help-text">{{ form.fields.query.help_text }}</p>
+            {% endif %}
+        </div>
+        {% if form.non_field_errors %}
+            {% for error in form.non_field_errors %}
+                <p class="error-text">{{ error }}</p>
+            {% endfor %}
+        {% endif %}
+        <button type="submit">Search</button>
+        <p class="search-hint">Tip: enter a full phone number for precise matches or a last name to browse.</p>
+        {% if query_feedback %}
+            <p class="search-hint">Searching by {{ query_feedback }}.</p>
+        {% endif %}
+        {% if not open_windows %}
+            <p class="error-text">No active check-in windows are open right now.</p>
+        {% endif %}
+    </form>
+</section>
+
+{% if query_performed %}
+    <section class="kiosk-layout kiosk-results">
+        {% if households %}
+            <p class="quick-label">{{ result_count }} family{% if result_count != 1 %}ies{% endif %} found</p>
+            {% for household in households %}
+                <article class="family-card">
+                    <header>
+                        <div>
+                            <h2>{{ household.name }}</h2>
+                            {% if household.phone %}
+                                <p class="search-hint">Household phone: {{ household.phone }}</p>
+                            {% endif %}
+                        </div>
+                        {% if household.pk in selectable_households %}
+                            <a class="btn ghost" href="{% url 'attendance:kiosk_family_select' household.pk %}">Select family</a>
+                        {% else %}
+                            <button class="btn ghost" type="button" disabled>Not eligible</button>
+                        {% endif %}
+                    </header>
+                    <ul>
+                        {% for membership in household.memberships.all %}
+                            <li>
+                                {{ membership.person.first_name }} {{ membership.person.last_name }}
+                                {% if membership.relationship_type == "adult" %}
+                                    (Adult)
+                                {% else %}
+                                    ({{ membership.get_relationship_type_display }})
+                                {% endif %}
+                            </li>
+                        {% empty %}
+                            <li>No members attached yet.</li>
+                        {% endfor %}
+                    </ul>
+                </article>
+            {% endfor %}
+        {% else %}
+            <div class="family-card">
+                <header>
+                    <div>
+                        <h2>No matches found</h2>
+                        <p class="search-hint">
+                            Double-check the spelling or try the phone number used during registration.
+                        </p>
+                    </div>
+                </header>
+            </div>
+        {% endif %}
+
+        {% if open_windows %}
+            <div class="family-card">
+                <h3>Active Check-Ins</h3>
+                <ul>
+                    {% for window_data in open_windows %}
+                        <li>{{ window_data.window.display_label }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        {% endif %}
+    </section>
+{% endif %}
+{% endblock %}

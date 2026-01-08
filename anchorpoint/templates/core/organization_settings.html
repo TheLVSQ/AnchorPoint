@@ -163,6 +163,21 @@
             </div>
         </div>
 
+        <div class="form-section">
+            <h2>Kiosk Security</h2>
+            <p class="page-subtitle">Set a PIN volunteers must enter before using check-in mode.</p>
+            <div class="form-grid">
+                <div class="form-field">
+                    <label for="{{ form.kiosk_pin.id_for_label }}">Kiosk PIN</label>
+                    {{ form.kiosk_pin }}
+                    <p class="help-text">Leave blank to disable the PIN requirement.</p>
+                    {% if form.kiosk_pin.errors %}
+                        <p class="error-text">{{ form.kiosk_pin.errors.0 }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
         <div class="form-actions">
             <button type="submit">Save Settings</button>
         </div>

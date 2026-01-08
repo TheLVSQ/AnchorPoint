@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="card hero">
+    <div class="hero-content">
+        <span class="chip">Check-In</span>
+        <h1>Coordinate your kiosk experiences.</h1>
+        <p class="page-subtitle">
+            Pair kids ministry groups with the exact service times they are available so volunteers always launch the right flow.
+        </p>
+        <div class="hero-actions">
+            <a class="btn" href="{% url 'attendance:configuration_create' %}">New Configuration</a>
+            <a class="btn ghost" href="#configurations-list">Browse setups</a>
+            <a class="btn ghost" href="{% url 'attendance:kiosk_lookup' %}">Open kiosk mode</a>
+        </div>
+    </div>
+    <div class="hero-panel">
+        <p class="hero-panel__label">At a glance</p>
+        <div class="hero-panel__stat">
+            <span>Total Programs</span>
+            <strong>{{ total_configs }}</strong>
+        </div>
+        <div class="hero-panel__stat">
+            <span>Active</span>
+            <strong>{{ active_configs }}</strong>
+        </div>
+    </div>
+</section>
+
+<section class="card list-card" id="configurations-list">
+    <div class="list-card__header">
+        <div>
+            <p class="quick-label">Configurations</p>
+            <h2>Check-In Programs</h2>
+        </div>
+        <a class="ghost-link" href="{% url 'attendance:configuration_create' %}">New configuration -></a>
+    </div>
+    <div class="list-card__body">
+        {% for config in configurations %}
+            <div class="list-item">
+                <div>
+                    <strong>{{ config.name }}</strong>
+                    {% if config.location_name %}
+                        <span>{{ config.location_name }}</span>
+                    {% endif %}
+                    {% if config.description %}
+                        <p class="page-subtitle">{{ config.description }}</p>
+                    {% endif %}
+                    <p class="page-subtitle">
+                        <strong>Schedule:</strong>
+                        {{ config.schedule_summary }}
+                    </p>
+                    <p class="page-subtitle">
+                        <strong>Groups:</strong>
+                        {% with assigned=config.groups.all %}
+                            {% if assigned %}
+                                {% for group in assigned %}
+                                    <span class="detail-pill">{{ group.name }}</span>
+                                {% endfor %}
+                            {% else %}
+                                <span>No groups assigned</span>
+                            {% endif %}
+                        {% endwith %}
+                    </p>
+                    {% if config.welcome_message %}
+                        <p class="page-subtitle">
+                            <strong>Welcome:</strong> "{{ config.welcome_message }}"
+                        </p>
+                    {% endif %}
+                </div>
+                <div>
+                    <span class="detail-pill">{% if config.is_active %}Active{% else %}Paused{% endif %}</span>
+                    <a class="btn ghost" href="{% url 'attendance:configuration_edit' config.pk %}">Edit</a>
+                </div>
+            </div>
+        {% empty %}
+            <p class="empty-state">No check-in programs yet. Create your first configuration to start planning kiosk availability.</p>
+        {% endfor %}
+    </div>
+</section>
+{% endblock %}

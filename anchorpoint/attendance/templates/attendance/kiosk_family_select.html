@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    .kiosk-layout {
+        max-width: 900px;
+        margin: 0 auto;
+    }
+    .family-card {
+        background: #fff;
+        border-radius: 20px;
+        padding: 1.25rem;
+        box-shadow: 0 20px 35px rgba(15, 23, 42, 0.08);
+        margin-bottom: 1.5rem;
+    }
+    .person-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        padding: 0.65rem 0;
+        border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+    }
+    .person-row:last-child {
+        border-bottom: none;
+    }
+    .person-row input[type="checkbox"] {
+        width: 20px;
+        height: 20px;
+    }
+    .inactive {
+        opacity: 0.6;
+    }
+    .window-options label {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 0;
+    }
+</style>
+<section class="card kiosk-layout">
+    <div class="page-header" style="align-items:center;">
+        <div>
+            <span class="chip">Check-In</span>
+            <h1>{{ household.name }}</h1>
+            {% if household.phone %}
+                <p class="page-subtitle">Phone: {{ household.phone }}</p>
+            {% endif %}
+        </div>
+        <div class="hero-actions">
+            <a class="btn ghost" href="{% url 'attendance:kiosk_lookup' %}">Search again</a>
+            <a class="btn ghost" href="{% url 'attendance:kiosk_lock' %}">Lock kiosk</a>
+        </div>
+    </div>
+
+    {% if not open_windows %}
+        <p class="error-text">No active check-in windows are available right now.</p>
+    {% endif %}
+
+    <form method="post">
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+            {% for error in form.non_field_errors %}
+                <p class="error-text">{{ error }}</p>
+            {% endfor %}
+        {% endif %}
+
+        <div class="family-card">
+            <h2>Select individuals</h2>
+            {% if eligible_people %}
+                {% for entry in eligible_people %}
+                    {% with person=entry.person %}
+                        {% with groups=entry.groups %}
+                            {% with person_id=person.id|stringformat:"s" %}
+                                <label class="person-row" for="person-{{ person.id }}">
+                                    <div>
+                                        <strong>{{ person.first_name }} {{ person.last_name }}</strong>
+                                        <p class="search-hint">
+                                            {% for group in groups %}
+                                                {{ group.name }}{% if not forloop.last %}, {% endif %}
+                                            {% endfor %}
+                                        </p>
+                                    </div>
+                                    <input
+                                        type="checkbox"
+                                        id="person-{{ person.id }}"
+                                        name="person_ids"
+                                        value="{{ person.id }}"
+                                        {% if person.id|stringformat:"s" in selected_people %}checked{% endif %}
+                                    >
+                                </label>
+                            {% endwith %}
+                        {% endwith %}
+                    {% endwith %}
+                {% endfor %}
+            {% else %}
+                <p class="empty-state">No eligible members for the current check-in windows.</p>
+            {% endif %}
+            {% if unavailable_people %}
+                <p class="search-hint">Not eligible right now:</p>
+                <ul class="detail-list inactive">
+                    {% for person in unavailable_people %}
+                        <li>{{ person.first_name }} {{ person.last_name }}</li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+        </div>
+
+        <div class="family-card">
+            <h2>Select active check-in</h2>
+            {% if open_windows %}
+                <div class="window-options">
+                    {% for window_data in open_windows %}
+                        <label>
+                            <input
+                                type="radio"
+                                name="window_id"
+                                value="{{ window_data.window.id }}"
+                                {% if window_data.window.id|stringformat:"s" == selected_window %}checked{% endif %}
+                            >
+                            <span>{{ window_data.window.display_label }}</span>
+                        </label>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p class="empty-state">Configure a check-in schedule to continue.</p>
+            {% endif %}
+        </div>
+
+        <div class="form-actions">
+            <a class="btn ghost" href="{% url 'attendance:kiosk_lookup' %}">Cancel</a>
+            <button type="submit" {% if not eligible_people or not open_windows %}disabled{% endif %}>Check In</button>
+        </div>
+    </form>
+</section>
+{% endblock %}
