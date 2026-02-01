@@ -303,7 +303,6 @@ def _find_guardian_person(attendee):
     return None
 
 
-@login_required
 @permission_required(
     "events.change_eventregistrationattendee", raise_exception=True
 )
