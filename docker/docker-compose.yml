@@ -24,8 +24,6 @@ services:
     container_name: anchorpoint-postgres
     image: postgres:16
     restart: unless-stopped
-    env_file:
-      - ../.env.production
     environment:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASS}
