@@ -17,9 +17,9 @@ services:
   db:
     image: postgres:16
     environment:
-      POSTGRES_USER: anchorpoint
-      POSTGRES_PASSWORD: anchorpoint
-      POSTGRES_DB: anchorpoint
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASS}
+      POSTGRES_DB: ${DB_NAME}
     ports:
       - "5432:5432"
     volumes:
