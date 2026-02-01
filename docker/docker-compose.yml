@@ -21,6 +21,7 @@ services:
       start_period: 40s
 
   db:
+    container_name: anchorpoint-postgres
     image: postgres:16
     restart: unless-stopped
     environment:
