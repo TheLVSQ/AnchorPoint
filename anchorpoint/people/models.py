@@ -1,6 +1,12 @@
+import re
 from datetime import date
 
 from django.db import models
+
+
+def normalize_phone(phone: str) -> str:
+    """Strip all non-digit characters from a phone number."""
+    return re.sub(r"\D+", "", phone or "")
 
 
 class Person(models.Model):
@@ -34,6 +40,13 @@ class Person(models.Model):
     last_name = models.CharField(max_length=150)
     email = models.EmailField(blank=True, null=True)
     phone = models.CharField(max_length=50, blank=True, null=True)
+    normalized_phone = models.CharField(
+        max_length=20,
+        blank=True,
+        db_index=True,
+        editable=False,
+        help_text="Auto-generated digits-only version of phone for fast lookups.",
+    )
     phone_opt_in = models.BooleanField(
         default=True,
         help_text="Can this person receive text messages at their phone number?",
@@ -87,3 +100,7 @@ class Person(models.Model):
             self.postal_code,
         ]
         return "\n".join([p for p in parts if p])
+
+    def save(self, *args, **kwargs):
+        self.normalized_phone = normalize_phone(self.phone)
+        super().save(*args, **kwargs)
