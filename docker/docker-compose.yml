@@ -9,7 +9,7 @@ services:
     volumes:
       - media_data:/app/anchorpoint/media
     env_file:
-      - ../.env.production
+      - .env.production
     depends_on:
       db:
         condition: service_healthy
@@ -28,6 +28,8 @@ services:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASS}
       POSTGRES_DB: ${DB_NAME}
+    env_file:
+      - .env.production
     volumes:
       - postgres_data:/var/lib/postgresql/data/
     healthcheck:
