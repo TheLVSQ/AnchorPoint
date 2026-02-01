@@ -1,5 +1,5 @@
 from django.contrib import messages
-from django.contrib.auth.decorators import login_required, permission_required
+from django.contrib.auth.decorators import permission_required
 from django.db import transaction
 from django.db.models import Min
 from django.shortcuts import get_object_or_404, redirect, render
@@ -8,6 +8,8 @@ from django.utils import timezone
 
 import csv
 import io
+
+from core.permissions import staff_required
 from people.models import Person
 
 from .forms import (
@@ -40,7 +42,7 @@ def _has_valid_occurrence(formset):
     return False
 
 
-@login_required
+@staff_required
 def event_manage_list(request):
     events = (
         Event.objects.prefetch_related("occurrences", "registrations")
@@ -73,7 +75,7 @@ def event_manage_list(request):
     return render(request, "events/manage/event_list.html", context)
 
 
-@login_required
+@staff_required
 @transaction.atomic
 def event_create(request):
     event = Event(created_by=request.user)
@@ -118,7 +120,7 @@ def event_create(request):
     return render(request, "events/manage/event_form.html", context)
 
 
-@login_required
+@staff_required
 @transaction.atomic
 def event_edit(request, pk):
     event = get_object_or_404(Event, pk=pk)
@@ -161,7 +163,7 @@ def event_edit(request, pk):
     return render(request, "events/manage/event_form.html", context)
 
 
-@login_required
+@staff_required
 def event_registrations(request, pk):
     event = get_object_or_404(
         Event.objects.prefetch_related("registrations"), pk=pk
@@ -174,7 +176,7 @@ def event_registrations(request, pk):
     )
 
 
-@login_required
+@staff_required
 def event_roster(request, pk):
     event = get_object_or_404(
         Event.objects.prefetch_related("registration_attendees__person"), pk=pk
@@ -194,7 +196,7 @@ def event_roster(request, pk):
     )
 
 
-@login_required
+@staff_required
 def event_roster_export(request, pk):
     event = get_object_or_404(
         Event.objects.prefetch_related("registration_attendees__person"), pk=pk
@@ -301,7 +303,6 @@ def _find_guardian_person(attendee):
     return None
 
 
-@login_required
 @permission_required(
     "events.change_eventregistrationattendee", raise_exception=True
 )

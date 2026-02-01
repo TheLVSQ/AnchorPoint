@@ -1,13 +1,13 @@
 from django.contrib import messages
-from django.contrib.auth.decorators import login_required
 from django.db.models import Count
 from django.shortcuts import redirect, render
 
+from core.permissions import staff_required
 from .forms import GroupForm
 from .models import Group
 
 
-@login_required
+@staff_required
 def group_list(request):
     groups = Group.objects.all()
     category_counts = (
@@ -36,7 +36,7 @@ def group_list(request):
     return render(request, "groups/group_list.html", context)
 
 
-@login_required
+@staff_required
 def group_create(request):
     if request.method == "POST":
         form = GroupForm(request.POST)

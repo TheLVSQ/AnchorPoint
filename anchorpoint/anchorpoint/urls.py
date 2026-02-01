@@ -18,11 +18,19 @@ Including another URLconf
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
+from django.http import JsonResponse
 from django.urls import include, path
 from core import views as core_views
 from events import views as event_views
 
+
+def health_check(request):
+    """Simple health check endpoint for Docker/load balancer."""
+    return JsonResponse({"status": "ok"})
+
+
 urlpatterns = [
+    path("health/", health_check, name="health_check"),
     path("admin/", admin.site.urls),
     path("login/", core_views.login_view, name="login"),
     path("logout/", core_views.logout_view, name="logout"),
@@ -47,5 +55,6 @@ urlpatterns = [
     ),
 ]
 
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+# Serve media files - needed for phone blast audio files to be accessible by Twilio
+# In a larger production setup, you'd use nginx or a CDN instead
+urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
