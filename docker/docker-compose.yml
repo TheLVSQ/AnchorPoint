@@ -3,27 +3,38 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile
-    command: python manage.py runserver 0.0.0.0:8000
-    working_dir: /app/anchorpoint
+    restart: unless-stopped
     ports:
       - "8000:8000"
     volumes:
-      - ..:/app
+      - media_data:/app/anchorpoint/media
     env_file:
-      - ../.env
+      - ../.env.production
     depends_on:
-      - db
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health/')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   db:
     image: postgres:16
+    restart: unless-stopped
     environment:
-      POSTGRES_USER: anchorpoint
-      POSTGRES_PASSWORD: anchorpoint
-      POSTGRES_DB: anchorpoint
-    ports:
-      - "5432:5432"
+      POSTGRES_USER: ${DB_USER:-anchorpoint}
+      POSTGRES_PASSWORD: ${DB_PASS:-anchorpoint}
+      POSTGRES_DB: ${DB_NAME:-anchorpoint}
     volumes:
       - postgres_data:/var/lib/postgresql/data/
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-anchorpoint}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 volumes:
   postgres_data:
+  media_data:

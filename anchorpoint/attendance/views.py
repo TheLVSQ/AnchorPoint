@@ -1,5 +1,4 @@
 from django.contrib import messages
-from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.db.models import Prefetch, Q
 from django.shortcuts import get_object_or_404, redirect, render
@@ -7,6 +6,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from core.models import OrganizationSettings
+from core.permissions import staff_required
 from groups.models import GroupMembership
 from households.models import Household, HouseholdMember
 
@@ -24,7 +24,7 @@ KIOSK_SESSION_KEY = "kiosk_authenticated"
 KIOSK_CONFIRMATION_KEY = "kiosk_confirmation_records"
 
 
-@login_required
+@staff_required
 def configuration_list(request):
     configurations = (
         CheckInConfiguration.objects.prefetch_related("groups", "windows")
@@ -68,7 +68,7 @@ def _render_form(request, *, instance, success_message):
     )
 
 
-@login_required
+@staff_required
 def configuration_create(request):
     instance = CheckInConfiguration()
     return _render_form(
@@ -78,7 +78,7 @@ def configuration_create(request):
     )
 
 
-@login_required
+@staff_required
 def configuration_edit(request, pk):
     instance = get_object_or_404(CheckInConfiguration, pk=pk)
     return _render_form(

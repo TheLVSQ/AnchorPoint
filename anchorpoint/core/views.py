@@ -2,7 +2,6 @@ from django.contrib import messages
 from django.contrib.auth import authenticate, get_user_model, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import update_session_auth_hash
-from django.http import HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 from people.models import Person
 
@@ -16,6 +15,7 @@ from .forms import (
     UserProfileForm,
 )
 from .models import OrganizationSettings, UserProfile
+from .permissions import admin_required
 
 
 def login_view(request):
@@ -40,15 +40,6 @@ def logout_view(request):
 
 
 User = get_user_model()
-
-
-def user_is_admin(user):
-    if not user.is_authenticated:
-        return False
-    if user.is_superuser:
-        return True
-    profile = getattr(user, "profile", None)
-    return bool(profile and profile.is_admin)
 
 
 def dashboard(request):
@@ -118,10 +109,8 @@ def profile(request):
     return render(request, "core/profile.html", context)
 
 
-@login_required
+@admin_required
 def manage_roles(request):
-    if not user_is_admin(request.user):
-        return HttpResponseForbidden("You do not have permission to manage roles.")
 
     users = (
         User.objects.all()
@@ -153,10 +142,8 @@ def manage_roles(request):
     return render(request, "core/manage_roles.html", context)
 
 
-@login_required
+@admin_required
 def organization_settings(request):
-    if not user_is_admin(request.user):
-        return HttpResponseForbidden("You do not have permission to edit organization settings.")
 
     settings_instance = OrganizationSettings.load()
     release_form = ReleaseDocumentForm()
@@ -172,6 +159,7 @@ def organization_settings(request):
                 return redirect("organization_settings")
             messages.error(request, "Could not upload the release document.")
         elif form_type == "delete_release":
+            # Admin check already done by @admin_required decorator
             doc_id = request.POST.get("document_id")
             document = get_object_or_404(ReleaseDocument, pk=doc_id)
             document.delete()
@@ -201,10 +189,8 @@ def organization_settings(request):
     )
 
 
-@login_required
+@admin_required
 def settings_home(request):
-    if not user_is_admin(request.user):
-        return HttpResponseForbidden("You do not have permission to manage settings.")
 
     settings_instance = OrganizationSettings.load()
     settings_sections = [

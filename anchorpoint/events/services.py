@@ -1,4 +1,3 @@
-import re
 from typing import Optional, Tuple
 
 from django.db import transaction
@@ -6,7 +5,7 @@ from django.utils import timezone
 
 from groups.models import Group, GroupMembership
 from households.models import Household, HouseholdMember
-from people.models import Person
+from people.models import Person, normalize_phone
 
 from .models import EventRegistration, EventRegistrationAttendee
 
@@ -18,10 +17,6 @@ def _split_name(full_name: str) -> Tuple[str, str]:
     if len(parts) == 1:
         return parts[0], ""
     return parts[0], " ".join(parts[1:])
-
-
-def _normalize_phone(phone: str) -> str:
-    return re.sub(r"\D+", "", phone or "")
 
 
 def _match_person(email="", first_name="", last_name="", birthdate=None, phone=""):
@@ -39,11 +34,11 @@ def _match_person(email="", first_name="", last_name="", birthdate=None, phone="
         person = qs.first()
         if person:
             return person
-    phone_normalized = _normalize_phone(phone)
+    phone_normalized = normalize_phone(phone)
     if phone_normalized:
-        for candidate in Person.objects.exclude(phone="").iterator():
-            if _normalize_phone(candidate.phone) == phone_normalized:
-                return candidate
+        person = Person.objects.filter(normalized_phone=phone_normalized).first()
+        if person:
+            return person
     return None
 
 
