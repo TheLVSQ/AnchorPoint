@@ -173,7 +173,19 @@ def deliver_phone_blast(
     *,
     settings_obj: OrganizationSettings | None = None,
     service: TwilioService | None = None,
+    base_url: str | None = None,
 ) -> Tuple[int, int]:
+    """
+    Deliver a phone blast to all pending recipients.
+
+    Args:
+        blast: The PhoneBlast instance to deliver
+        settings_obj: Organization settings (optional, will load if not provided)
+        service: TwilioService instance (optional, will create if not provided)
+        base_url: The public base URL for audio files (e.g., "https://app.example.com").
+                  Required for Twilio to fetch audio files. If not provided, will attempt
+                  to use the site URL from organization settings.
+    """
     settings_obj = settings_obj or OrganizationSettings.load()
     service = service or TwilioService(settings_obj)
     if not blast.audio_file:
@@ -183,7 +195,20 @@ def deliver_phone_blast(
     blast.started_at = timezone.now()
     blast.save(update_fields=["status", "started_at"])
 
-    audio_url = blast.audio_file.url
+    # Build absolute URL for audio file - Twilio needs a public URL
+    if base_url:
+        audio_url = f"{base_url.rstrip('/')}{blast.audio_file.url}"
+    elif settings_obj.website:
+        # Fall back to organization website setting
+        audio_url = f"{settings_obj.website.rstrip('/')}{blast.audio_file.url}"
+    else:
+        # Last resort - use relative URL (won't work with Twilio in production!)
+        audio_url = blast.audio_file.url
+        logger.warning(
+            "Phone blast %s using relative audio URL - this may not work with Twilio. "
+            "Set a base_url or configure Organization Settings > Website.",
+            blast.pk,
+        )
     success_count = 0
     failure_count = 0
     for call in blast.calls.select_related("person"):

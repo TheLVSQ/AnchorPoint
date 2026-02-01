@@ -6,6 +6,7 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from messaging.models import CommunicationLog
 
+from core.permissions import staff_required
 from households.forms import (
     HouseholdMembershipForm,
     HouseholdQuickCreateForm,
@@ -15,7 +16,7 @@ from .models import Person
 from .forms import PersonForm
 
 
-@login_required
+@staff_required
 def people_list(request):
     query = request.GET.get("q")
 
@@ -29,7 +30,7 @@ def people_list(request):
     return render(request, "people/people_list.html", {"people": people})
 
 
-@login_required
+@staff_required
 def people_add(request):
     if request.method == "POST":
         form = PersonForm(request.POST, request.FILES)
@@ -43,7 +44,7 @@ def people_add(request):
     return render(request, "people/people_form.html", {"form": form})
 
 
-@login_required
+@staff_required
 def people_detail(request, pk):
     person = get_object_or_404(Person, pk=pk)
     households = (
@@ -73,7 +74,7 @@ def people_detail(request, pk):
     return render(request, "people/people_detail.html", context)
 
 
-@login_required
+@staff_required
 def people_edit(request, pk):
     person = get_object_or_404(Person, pk=pk)
 
@@ -89,7 +90,7 @@ def people_edit(request, pk):
     return render(request, "people/people_form.html", {"form": form})
 
 
-@login_required
+@staff_required
 def people_household_add(request, pk):
     person = get_object_or_404(Person, pk=pk)
     if request.method == "POST":
@@ -116,7 +117,7 @@ def people_household_add(request, pk):
     return redirect("people_detail", pk=pk)
 
 
-@login_required
+@staff_required
 def people_household_create(request, pk):
     person = get_object_or_404(Person, pk=pk)
     if request.method == "POST":
@@ -135,7 +136,7 @@ def people_household_create(request, pk):
     return redirect("people_detail", pk=pk)
 
 
-@login_required
+@staff_required
 def people_household_remove(request, pk, household_pk):
     person = get_object_or_404(Person, pk=pk)
     membership = get_object_or_404(
@@ -147,7 +148,7 @@ def people_household_remove(request, pk, household_pk):
     return redirect("people_detail", pk=pk)
 
 
-@login_required
+@staff_required
 def people_lookup(request):
     query = (request.GET.get("q") or "").strip()
     results = []
