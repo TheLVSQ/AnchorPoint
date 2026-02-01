@@ -1,9 +1,8 @@
 from django.contrib import messages
-from django.contrib.auth.decorators import login_required
-from django.http import HttpResponseForbidden
 from django.shortcuts import redirect, render
 
 from core.models import OrganizationSettings
+from core.permissions import communications_required
 
 from .forms import PhoneBlastForm, SmsMessageForm
 from .models import PhoneBlast, PhoneCall, SmsMessage, SmsRecipient
@@ -13,13 +12,6 @@ from .services import (
     deliver_phone_blast,
     deliver_sms_message,
 )
-
-
-def _has_access(user):
-    if not user.is_authenticated:
-        return False
-    profile = getattr(user, "profile", None)
-    return bool(profile and profile.has_communications_access)
 
 
 def _twilio_ready(settings_obj: OrganizationSettings) -> bool:
@@ -32,10 +24,8 @@ def _twilio_ready(settings_obj: OrganizationSettings) -> bool:
     )
 
 
-@login_required
+@communications_required
 def communications_home(request):
-    if not _has_access(request.user):
-        return HttpResponseForbidden("You do not have permission to use communications.")
 
     sms_messages = SmsMessage.objects.select_related("created_by").order_by("-created_at")[
         :5
@@ -52,10 +42,8 @@ def communications_home(request):
     return render(request, "messaging/home.html", context)
 
 
-@login_required
+@communications_required
 def sms_compose(request):
-    if not _has_access(request.user):
-        return HttpResponseForbidden("You do not have permission to send SMS messages.")
 
     settings_obj = OrganizationSettings.load()
     twilio_ready = _twilio_ready(settings_obj)
@@ -115,10 +103,8 @@ def sms_compose(request):
     )
 
 
-@login_required
+@communications_required
 def phone_blast_create(request):
-    if not _has_access(request.user):
-        return HttpResponseForbidden("You do not have permission to send phone blasts.")
 
     settings_obj = OrganizationSettings.load()
     twilio_ready = _twilio_ready(settings_obj)
@@ -160,7 +146,13 @@ def phone_blast_create(request):
                 )
             else:
                 try:
-                    deliver_phone_blast(blast, settings_obj=settings_obj)
+                    # Build base URL for audio file access
+                    base_url = request.build_absolute_uri("/").rstrip("/")
+                    deliver_phone_blast(
+                        blast,
+                        settings_obj=settings_obj,
+                        base_url=base_url,
+                    )
                 except (TwilioConfigurationError, TwilioRequestError) as exc:
                     messages.error(request, f"Unable to start calls: {exc}")
                 else:
