@@ -38,6 +38,15 @@ services:
       timeout: 5s
       retries: 5
 
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
+    depends_on:
+      - web
+
+
+
 volumes:
   postgres_data:
   media_data:
