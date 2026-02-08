@@ -26,7 +26,8 @@ SECRET_KEY = os.getenv("SECRET_KEY")
 if not SECRET_KEY:
     raise ValueError(
         "SECRET_KEY environment variable is required. "
-        "Generate one with: python -c \"from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())\""
+        """Generate one with: python -c \"from django.core.management.utils 
+        import get_random_secret_key; print(get_random_secret_key())\""""
     )
 
 # SECURITY WARNING: don't run with debug turned on in production!
