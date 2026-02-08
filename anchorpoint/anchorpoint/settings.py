@@ -160,8 +160,12 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 if not DEBUG:
     # HTTPS settings (Cloudflare handles SSL termination)
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
-    SESSION_COOKIE_SECURE = True
-    CSRF_COOKIE_SECURE = True
+
+    # Only enforce secure cookies if HTTPS is required
+    # Set REQUIRE_HTTPS=True in env when using Cloudflare tunnel
+    if os.getenv("REQUIRE_HTTPS", "False").lower() == "true":
+        SESSION_COOKIE_SECURE = True
+        CSRF_COOKIE_SECURE = True
 
     # Additional security headers
     SECURE_CONTENT_TYPE_NOSNIFF = True
