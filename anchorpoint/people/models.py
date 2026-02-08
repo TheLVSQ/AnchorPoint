@@ -36,6 +36,13 @@ class Person(models.Model):
         ("widowed", "Widowed"),
     ]
 
+    GENDER_CHOICES = [
+        ("male", "Male"),
+        ("female", "Female"),
+        ("other", "Other"),
+        ("unknown", "Prefer not to say"),
+    ]
+
     first_name = models.CharField(max_length=150)
     last_name = models.CharField(max_length=150)
     email = models.EmailField(blank=True, null=True)
@@ -57,6 +64,9 @@ class Person(models.Model):
     )
     marital_status = models.CharField(
         max_length=20, choices=MARITAL_STATUS_CHOICES, blank=True, null=True
+    )
+    gender = models.CharField(
+        max_length=20, choices=GENDER_CHOICES, blank=True, null=True
     )
     profile_photo = models.ImageField(
         upload_to="people/photos/", blank=True, null=True
@@ -90,6 +100,13 @@ class Person(models.Model):
             (today.month, today.day) < (self.birthdate.month, self.birthdate.day)
         )
         return years
+
+    @property
+    def is_minor(self):
+        """Returns True if person is under 18, False if 18+, None if unknown."""
+        if self.age is None:
+            return None
+        return self.age < 18
 
     @property
     def formatted_address(self):
