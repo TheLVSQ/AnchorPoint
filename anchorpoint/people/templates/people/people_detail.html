@@ -17,6 +17,11 @@
             {% if person.get_grade_display %}
                 &middot; {{ person.get_grade_display }}
             {% endif %}
+            {% if person.is_minor == True %}
+                &middot; <span class="chip chip--warning">Minor</span>
+            {% elif person.is_minor == False %}
+                &middot; <span class="chip">Adult</span>
+            {% endif %}
         </p>
         <div class="hero-actions">
             <a class="btn" href="{% url 'people_edit' person.pk %}">Edit person</a>
@@ -37,6 +42,11 @@
             <li>
                 <span>Age</span>
                 {{ person.age|default:"-" }}
+                {% if person.is_minor == True %}<small>(Minor)</small>{% elif person.is_minor == False %}<small>(Adult)</small>{% endif %}
+            </li>
+            <li>
+                <span>Gender</span>
+                {{ person.get_gender_display|default:"-" }}
             </li>
             <li>
                 <span>Grade</span>

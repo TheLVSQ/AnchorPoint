@@ -12,6 +12,7 @@ class PersonForm(forms.ModelForm):
             "phone",
             "phone_opt_in",
             "birthdate",
+            "gender",
             "grade",
             "marital_status",
             "profile_photo",
