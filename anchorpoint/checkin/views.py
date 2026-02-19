@@ -8,7 +8,7 @@ from django.utils import timezone
 from django.db.models import Q
 
 from people.models import Person, normalize_phone
-from households.models import HouseholdMembership
+from households.models import HouseholdMember
 from core.permissions import staff_required
 
 from .models import (
@@ -72,9 +72,9 @@ def kiosk_lookup(request, session_id):
 
                 # Find all people in the same households
                 for person in people:
-                    memberships = HouseholdMembership.objects.filter(person=person)
+                    memberships = HouseholdMember.objects.filter(person=person)
                     for membership in memberships:
-                        household_members = HouseholdMembership.objects.filter(
+                        household_members = HouseholdMember.objects.filter(
                             household=membership.household
                         ).values_list("person_id", flat=True)
                         person_ids.update(household_members)
