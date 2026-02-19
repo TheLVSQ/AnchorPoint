@@ -3,7 +3,6 @@
 ## Enhancements to Add
 
 - [ ] Google Authentication
-- [ ] Test Twilio phone blast
 - [ ] Embed code generator for event info
 - [ ] Add live results to people search
 
