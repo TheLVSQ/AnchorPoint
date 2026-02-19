@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block content %}
+
+<a class="ghost-link" href="{% url 'checkin:printer_list' %}">&larr; Back to Printers</a>
+
+<div class="page-header">
+    <h1>{{ title }}</h1>
+</div>
+
+<div class="detail-card" style="max-width: 600px;">
+    <form method="post">
+        {% csrf_token %}
+
+        <div class="form-field">
+            {{ form.name.label_tag }}
+            {{ form.name }}
+            <p class="stat-hint">A friendly name for this printer</p>
+        </div>
+
+        <div class="form-field">
+            {{ form.printer_type.label_tag }}
+            {{ form.printer_type }}
+        </div>
+
+        <div class="form-field">
+            {{ form.connection_string.label_tag }}
+            {{ form.connection_string }}
+            <p class="stat-hint">{{ form.connection_string.help_text }}</p>
+        </div>
+
+        <h3 style="margin: 1.5rem 0 1rem;">Label Settings</h3>
+
+        <div class="form-grid">
+            <div class="form-field">
+                {{ form.label_width_mm.label_tag }}
+                {{ form.label_width_mm }}
+                <p class="stat-hint">Common: 62mm (Brother), 58mm, 80mm</p>
+            </div>
+            <div class="form-field">
+                {{ form.label_height_mm.label_tag }}
+                {{ form.label_height_mm }}
+                <p class="stat-hint">Leave blank for continuous roll</p>
+            </div>
+        </div>
+
+        <div class="form-field">
+            {{ form.dpi.label_tag }}
+            {{ form.dpi }}
+            <p class="stat-hint">Usually 203 for thermal printers, 300 for higher-end models</p>
+        </div>
+
+        <div class="form-grid">
+            <div class="form-field">
+                <label style="display: flex; align-items: center; gap: 0.5rem;">
+                    {{ form.is_default }}
+                    Default printer
+                </label>
+            </div>
+            <div class="form-field">
+                <label style="display: flex; align-items: center; gap: 0.5rem;">
+                    {{ form.is_active }}
+                    Active
+                </label>
+            </div>
+        </div>
+
+        <div class="hero-actions">
+            <button type="submit" class="btn">Save Printer</button>
+            <a href="{% url 'checkin:printer_list' %}" class="btn ghost">Cancel</a>
+        </div>
+    </form>
+</div>
+
+{% endblock %}

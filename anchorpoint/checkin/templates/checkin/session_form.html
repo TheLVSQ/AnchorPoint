@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block content %}
+
+<a class="ghost-link" href="{% url 'checkin:session_list' %}">&larr; Back to Sessions</a>
+
+<div class="page-header">
+    <h1>{{ title }}</h1>
+</div>
+
+<div class="detail-card" style="max-width: 600px;">
+    <form method="post">
+        {% csrf_token %}
+
+        <div class="form-field">
+            {{ form.name.label_tag }}
+            {{ form.name }}
+            {% for error in form.name.errors %}<span class="error-text">{{ error }}</span>{% endfor %}
+        </div>
+
+        <div class="form-grid">
+            <div class="form-field">
+                {{ form.date.label_tag }}
+                {{ form.date }}
+            </div>
+            <div class="form-field">
+                {{ form.start_time.label_tag }}
+                {{ form.start_time }}
+            </div>
+            <div class="form-field">
+                {{ form.end_time.label_tag }}
+                {{ form.end_time }}
+            </div>
+        </div>
+
+        <div class="form-field">
+            {{ form.rooms.label_tag }}
+            <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem;">
+                {% for room in form.rooms %}
+                    <label style="display: flex; align-items: center; gap: 0.25rem; padding: 0.5rem; background: var(--gray-100); border-radius: 4px;">
+                        {{ room.tag }}
+                        {{ room.choice_label }}
+                    </label>
+                {% endfor %}
+            </div>
+            <p class="stat-hint" style="margin-top: 0.5rem;">
+                <a href="{% url 'checkin:room_list' %}">Manage rooms</a>
+            </p>
+        </div>
+
+        <div class="form-field">
+            <label style="display: flex; align-items: center; gap: 0.5rem;">
+                {{ form.is_active }}
+                Active (available for check-in)
+            </label>
+        </div>
+
+        <div class="hero-actions">
+            <button type="submit" class="btn">Save Session</button>
+            <a href="{% url 'checkin:session_list' %}" class="btn ghost">Cancel</a>
+        </div>
+    </form>
+</div>
+
+{% endblock %}

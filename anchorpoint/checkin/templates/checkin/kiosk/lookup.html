@@ -1,0 +1,84 @@
+{% extends "checkin/kiosk/base.html" %}
+
+{% block title %}Find Your Family{% endblock %}
+
+{% block content %}
+<a href="{% url 'checkin:kiosk_home' %}" class="back-link">&larr; Back</a>
+
+<div class="kiosk-header">
+    <h1>Find Your Family</h1>
+    <p>Enter your phone number</p>
+</div>
+
+<div class="kiosk-content">
+    {% if form.errors %}
+        <div class="error-message">
+            {% for error in form.phone.errors %}
+                {{ error }}
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <form method="post" id="lookupForm">
+        {% csrf_token %}
+        <div class="phone-display" id="phoneDisplay">
+            <span id="phoneValue"></span>
+        </div>
+        <input type="hidden" name="phone" id="phoneInput">
+
+        <div class="keypad">
+            <button type="button" class="keypad-btn" data-digit="1">1</button>
+            <button type="button" class="keypad-btn" data-digit="2">2</button>
+            <button type="button" class="keypad-btn" data-digit="3">3</button>
+            <button type="button" class="keypad-btn" data-digit="4">4</button>
+            <button type="button" class="keypad-btn" data-digit="5">5</button>
+            <button type="button" class="keypad-btn" data-digit="6">6</button>
+            <button type="button" class="keypad-btn" data-digit="7">7</button>
+            <button type="button" class="keypad-btn" data-digit="8">8</button>
+            <button type="button" class="keypad-btn" data-digit="9">9</button>
+            <button type="button" class="keypad-btn delete" id="backspace">&larr;</button>
+            <button type="button" class="keypad-btn" data-digit="0">0</button>
+            <button type="submit" class="keypad-btn action">Go</button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function() {
+    let phone = '';
+    const display = document.getElementById('phoneValue');
+    const input = document.getElementById('phoneInput');
+
+    function formatPhone(digits) {
+        if (digits.length === 0) return '';
+        if (digits.length <= 3) return `(${digits}`;
+        if (digits.length <= 6) return `(${digits.slice(0,3)}) ${digits.slice(3)}`;
+        return `(${digits.slice(0,3)}) ${digits.slice(3,6)}-${digits.slice(6,10)}`;
+    }
+
+    function updateDisplay() {
+        display.textContent = formatPhone(phone) || 'Enter phone number';
+        display.style.color = phone ? 'inherit' : '#9ca3af';
+        input.value = phone;
+    }
+
+    document.querySelectorAll('.keypad-btn[data-digit]').forEach(btn => {
+        btn.addEventListener('click', function() {
+            if (phone.length < 10) {
+                phone += this.dataset.digit;
+                updateDisplay();
+            }
+        });
+    });
+
+    document.getElementById('backspace').addEventListener('click', function() {
+        phone = phone.slice(0, -1);
+        updateDisplay();
+    });
+
+    updateDisplay();
+})();
+</script>
+{% endblock %}

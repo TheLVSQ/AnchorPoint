@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block content %}
+
+<a class="ghost-link" href="{% url 'checkin:room_list' %}">&larr; Back to Rooms</a>
+
+<div class="page-header">
+    <h1>{{ title }}</h1>
+</div>
+
+<div class="detail-card" style="max-width: 600px;">
+    <form method="post">
+        {% csrf_token %}
+
+        <div class="form-grid">
+            <div class="form-field">
+                {{ form.name.label_tag }}
+                {{ form.name }}
+            </div>
+            <div class="form-field">
+                {{ form.building.label_tag }}
+                {{ form.building }}
+            </div>
+        </div>
+
+        <div class="form-grid">
+            <div class="form-field">
+                {{ form.capacity.label_tag }}
+                {{ form.capacity }}
+                <p class="stat-hint">Leave blank for unlimited</p>
+            </div>
+            <div class="form-field">
+                {{ form.sort_order.label_tag }}
+                {{ form.sort_order }}
+                <p class="stat-hint">Lower numbers appear first</p>
+            </div>
+        </div>
+
+        <h3 style="margin: 1.5rem 0 1rem;">Age/Grade Auto-Assignment</h3>
+        <p class="stat-hint" style="margin-bottom: 1rem;">
+            People within these ranges will be automatically assigned to this room during check-in.
+        </p>
+
+        <div class="form-grid">
+            <div class="form-field">
+                {{ form.min_age.label_tag }}
+                {{ form.min_age }}
+            </div>
+            <div class="form-field">
+                {{ form.max_age.label_tag }}
+                {{ form.max_age }}
+            </div>
+        </div>
+
+        <div class="form-grid">
+            <div class="form-field">
+                {{ form.min_grade.label_tag }}
+                {{ form.min_grade }}
+            </div>
+            <div class="form-field">
+                {{ form.max_grade.label_tag }}
+                {{ form.max_grade }}
+            </div>
+        </div>
+
+        <div class="form-field">
+            <label style="display: flex; align-items: center; gap: 0.5rem;">
+                {{ form.is_active }}
+                Active
+            </label>
+        </div>
+
+        <div class="hero-actions">
+            <button type="submit" class="btn">Save Room</button>
+            <a href="{% url 'checkin:room_list' %}" class="btn ghost">Cancel</a>
+        </div>
+    </form>
+</div>
+
+{% endblock %}

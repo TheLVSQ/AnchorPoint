@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="page-header">
+    <h1>Check-In Dashboard</h1>
+    <p class="page-subtitle">{{ today|date:"l, F j, Y" }}</p>
+</div>
+
+<div class="hero-actions" style="margin-bottom: 2rem;">
+    <a href="{% url 'checkin:session_create' %}" class="btn">Create Session</a>
+    <a href="{% url 'checkin:room_list' %}" class="btn ghost">Manage Rooms</a>
+    <a href="{% url 'checkin:printer_list' %}" class="btn ghost">Printers</a>
+</div>
+
+{% if sessions %}
+    <div class="detail-grid">
+        {% for session in sessions %}
+            <section class="detail-card">
+                <h2>{{ session.name }}</h2>
+                <p class="stat-hint">{{ session.start_time|time:"g:i A" }} - {{ session.end_time|time:"g:i A" }}</p>
+
+                <div style="display: flex; gap: 2rem; margin: 1.5rem 0;">
+                    <div>
+                        <div style="font-size: 2.5rem; font-weight: 700; color: var(--primary);">
+                            {{ session.total_checked_in }}
+                        </div>
+                        <div class="stat-hint">Checked In</div>
+                    </div>
+                </div>
+
+                <div class="hero-actions">
+                    <a href="{% url 'checkin:session_detail' session.pk %}" class="btn">View Details</a>
+                    <a href="{% url 'checkin:checkout_lookup' session.pk %}" class="btn ghost">Checkout</a>
+                    <a href="{% url 'checkin:kiosk_lookup' session.pk %}" class="btn ghost" target="_blank">Open Kiosk</a>
+                </div>
+            </section>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="detail-card">
+        <p class="empty-state">No check-in sessions for today.</p>
+        <a href="{% url 'checkin:session_create' %}" class="btn" style="margin-top: 1rem;">Create Session</a>
+    </div>
+{% endif %}
+
+<section class="detail-card" style="margin-top: 2rem;">
+    <h2>Quick Links</h2>
+    <ul class="detail-list">
+        <li>
+            <a href="{% url 'checkin:session_list' %}">All Sessions</a>
+            <span>View past check-in sessions</span>
+        </li>
+        <li>
+            <a href="{% url 'checkin:room_list' %}">Room Setup</a>
+            <span>Configure rooms and age groups</span>
+        </li>
+        <li>
+            <a href="{% url 'checkin:printer_list' %}">Printer Setup</a>
+            <span>Configure label printers</span>
+        </li>
+        <li>
+            <a href="{% url 'checkin:kiosk_home' %}" target="_blank">Kiosk Mode</a>
+            <span>Open self-service check-in</span>
+        </li>
+    </ul>
+</section>
+
+{% endblock %}

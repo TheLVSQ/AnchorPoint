@@ -338,6 +338,11 @@
             border-radius: 999px;
         }
 
+        .chip--warning {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
         .card a {
             display: inline-block;
             margin-top: 12px;
@@ -1025,7 +1030,7 @@
                     <a href="{% url 'dashboard' %}">Dashboard</a>
                     <a href="{% url 'people_list' %}">People</a>
                     <a href="{% url 'groups:list' %}">Groups</a>
-                    <a href="{% url 'attendance:configuration_list' %}">Check-In</a>
+                    <a href="{% url 'checkin:dashboard' %}">Check-In</a>
                     <a href="{% url 'events:manage_list' %}">Events Admin</a>
                     {% if request.user.profile.has_communications_access %}
                         <a href="{% url 'messaging:home' %}">Communications</a>

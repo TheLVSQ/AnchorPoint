@@ -59,6 +59,7 @@ INSTALLED_APPS = [
     "registrations",
     "attendance",
     "messaging",
+    "checkin",
 ]
 
 MIDDLEWARE = [

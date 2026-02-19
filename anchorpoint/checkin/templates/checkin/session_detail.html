@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block content %}
+
+<a class="ghost-link" href="{% url 'checkin:dashboard' %}">&larr; Back to Dashboard</a>
+
+<div class="page-header">
+    <h1>{{ session.name }}</h1>
+    <p class="page-subtitle">
+        {{ session.date|date:"l, F j, Y" }} &middot;
+        {{ session.start_time|time:"g:i A" }} - {{ session.end_time|time:"g:i A" }}
+        {% if session.is_open %}
+            <span class="chip" style="background: #dcfce7; color: #166534;">Open</span>
+        {% else %}
+            <span class="chip">Closed</span>
+        {% endif %}
+    </p>
+</div>
+
+<div class="hero-actions" style="margin-bottom: 2rem;">
+    <a href="{% url 'checkin:checkout_lookup' session.pk %}" class="btn">Checkout</a>
+    <a href="{% url 'checkin:session_edit' session.pk %}" class="btn ghost">Edit Session</a>
+    <a href="{% url 'checkin:kiosk_lookup' session.pk %}" class="btn ghost" target="_blank">Open Kiosk</a>
+</div>
+
+<div class="detail-grid">
+    <section class="detail-card">
+        <h2>Summary</h2>
+        <ul class="detail-list">
+            <li>
+                <span>Currently Checked In</span>
+                <strong>{{ checkins.count }}</strong>
+            </li>
+            <li>
+                <span>Total Check-Ins Today</span>
+                {{ session.checkins.count }}
+            </li>
+            <li>
+                <span>Rooms</span>
+                {{ session.rooms.count }}
+            </li>
+        </ul>
+    </section>
+
+    {% for room_name, room_checkins in rooms_data.items %}
+        <section class="detail-card">
+            <h2>{{ room_name }}</h2>
+            <p class="stat-hint">{{ room_checkins|length }} checked in</p>
+            <div class="list-card__body" style="margin-top: 1rem;">
+                {% for checkin in room_checkins %}
+                    <div class="list-item">
+                        <div>
+                            <strong>{{ checkin.person.first_name }} {{ checkin.person.last_name }}</strong>
+                            <span>Code: {{ checkin.security_code }}</span>
+                            {% if checkin.person.allergies %}
+                                <p class="stat-hint" style="color: #ea580c;">⚠️ {{ checkin.person.allergies }}</p>
+                            {% endif %}
+                        </div>
+                        {% if checkin.is_checked_out %}
+                            <span class="chip">Checked Out</span>
+                        {% else %}
+                            <span class="chip" style="background: #dcfce7; color: #166534;">Here</span>
+                        {% endif %}
+                    </div>
+                {% empty %}
+                    <p class="empty-state">No one checked in to this room</p>
+                {% endfor %}
+            </div>
+        </section>
+    {% empty %}
+        <section class="detail-card detail-card--full">
+            <p class="empty-state">No check-ins yet for this session.</p>
+        </section>
+    {% endfor %}
+</div>
+
+{% endblock %}

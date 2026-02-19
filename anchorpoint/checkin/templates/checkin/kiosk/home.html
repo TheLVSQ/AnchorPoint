@@ -1,0 +1,25 @@
+{% extends "checkin/kiosk/base.html" %}
+
+{% block title %}Welcome{% endblock %}
+
+{% block content %}
+<div class="kiosk-header">
+    <h1>Welcome!</h1>
+    <p>Tap below to check in your family</p>
+</div>
+
+<div class="kiosk-content">
+    {% if sessions %}
+        {% for session in sessions %}
+            <a href="{% url 'checkin:kiosk_lookup' session.pk %}" class="btn-kiosk btn-kiosk-primary">
+                {{ session.name }}
+            </a>
+        {% endfor %}
+    {% else %}
+        <p style="color: var(--gray-500); padding: 40px 0;">
+            No check-in sessions are currently open.<br>
+            Please see a volunteer for assistance.
+        </p>
+    {% endif %}
+</div>
+{% endblock %}

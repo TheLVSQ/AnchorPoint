@@ -1,0 +1,51 @@
+{% extends "checkin/kiosk/base.html" %}
+
+{% block title %}Check-In Complete{% endblock %}
+
+{% block content %}
+<div class="kiosk-header">
+    <h1 style="color: var(--success);">✓ Check-In Complete!</h1>
+    <p>Your security code is:</p>
+</div>
+
+<div class="kiosk-content">
+    <div class="security-code">{{ security_code }}</div>
+
+    <p style="color: var(--gray-500); margin-bottom: 20px;">
+        Keep this code for pickup
+    </p>
+
+    <div class="checkin-summary">
+        {% for checkin in checkins %}
+            <div class="checkin-item">
+                <div>
+                    <span class="checkin-item-name">{{ checkin.person.first_name }} {{ checkin.person.last_name }}</span>
+                    {% if checkin.person.allergies %}
+                        <div class="allergy-warning">{{ checkin.person.allergies }}</div>
+                    {% endif %}
+                </div>
+                <span class="checkin-item-room">
+                    {% if checkin.room %}{{ checkin.room.name }}{% else %}No room{% endif %}
+                </span>
+            </div>
+        {% endfor %}
+    </div>
+
+    {% if print_success %}
+        <p style="color: var(--success); margin-bottom: 20px;">
+            🖨️ Labels printed successfully
+        </p>
+    {% endif %}
+
+    <a href="{% url 'checkin:kiosk_home' %}" class="btn-kiosk btn-kiosk-primary">
+        Done
+    </a>
+</div>
+
+<script>
+// Auto-redirect after 30 seconds
+setTimeout(function() {
+    window.location.href = "{% url 'checkin:kiosk_home' %}";
+}, 30000);
+</script>
+{% endblock %}
