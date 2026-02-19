@@ -7,8 +7,7 @@ from django.contrib import messages
 from django.utils import timezone
 from django.db.models import Q
 
-from people.models import Person
-from people.utils import normalize_phone
+from people.models import Person, normalize_phone
 from households.models import HouseholdMembership
 from core.permissions import staff_required
 
