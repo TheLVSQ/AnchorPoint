@@ -1,0 +1,55 @@
+{% extends "checkin/kiosk/base.html" %}
+{% load checkin_tags %}
+
+{% block title %}Room Selection{% endblock %}
+
+{% block content %}
+<a href="{% url 'checkin:kiosk_select' session.pk %}" class="back-link">&larr; Back</a>
+
+<div class="kiosk-header">
+    <h1>Select Rooms</h1>
+    <p>Choose a room for each person</p>
+</div>
+
+<div class="kiosk-content">
+    <form method="post">
+        {% csrf_token %}
+
+        {% for person in people %}
+            <div class="person-card" style="cursor: default; flex-direction: column; align-items: stretch;">
+                <div style="display: flex; align-items: center; margin-bottom: 10px;">
+                    <div class="person-info">
+                        <div class="person-name">{{ person.first_name }} {{ person.last_name }}</div>
+                        <div class="person-meta">
+                            {% if person.age %}Age {{ person.age }}{% endif %}
+                            {% if person.get_grade_display %} &bull; {{ person.get_grade_display }}{% endif %}
+                        </div>
+                    </div>
+                    {% if person.is_minor %}
+                        <span class="person-badge badge-minor">Child</span>
+                    {% else %}
+                        <span class="person-badge badge-adult">Adult</span>
+                    {% endif %}
+                </div>
+
+                <select name="room_{{ person.id }}" class="room-select">
+                    <option value="">-- Select Room --</option>
+                    {% for room in rooms %}
+                        <option
+                            value="{{ room.id }}"
+                            {% if auto_assignments|get_item:person.id == room.id %}selected{% endif %}
+                        >
+                            {{ room.name }}
+                            {% if room.building %}({{ room.building }}){% endif %}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+        {% endfor %}
+
+        <button type="submit" class="btn-kiosk btn-kiosk-success" style="margin-top: 20px;">
+            ✓ Complete Check-In
+        </button>
+    </form>
+</div>
+{% endblock %}

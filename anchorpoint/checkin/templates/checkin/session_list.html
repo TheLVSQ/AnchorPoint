@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="page-header">
+    <h1>Check-In Sessions</h1>
+    <p class="page-subtitle">All check-in sessions</p>
+</div>
+
+<div class="hero-actions" style="margin-bottom: 2rem;">
+    <a href="{% url 'checkin:session_create' %}" class="btn">Create Session</a>
+    <a href="{% url 'checkin:dashboard' %}" class="btn ghost">Dashboard</a>
+</div>
+
+<div class="list-card">
+    <div class="list-card__body">
+        {% for session in sessions %}
+            <div class="list-item">
+                <div>
+                    <strong>{{ session.name }}</strong>
+                    <span>{{ session.date|date:"M j, Y" }} &middot; {{ session.start_time|time:"g:i A" }}</span>
+                    <p class="stat-hint">{{ session.checkins.count }} check-ins</p>
+                </div>
+                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                    {% if session.is_active %}
+                        <span class="chip" style="background: #dcfce7; color: #166534;">Active</span>
+                    {% else %}
+                        <span class="chip">Inactive</span>
+                    {% endif %}
+                    <a href="{% url 'checkin:session_detail' session.pk %}" class="ghost-link">View &rarr;</a>
+                </div>
+            </div>
+        {% empty %}
+            <p class="empty-state">No check-in sessions created yet.</p>
+        {% endfor %}
+    </div>
+</div>
+
+{% endblock %}

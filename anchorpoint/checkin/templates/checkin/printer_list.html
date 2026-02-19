@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block content %}
+
+<a class="ghost-link" href="{% url 'checkin:dashboard' %}">&larr; Back to Dashboard</a>
+
+<div class="page-header">
+    <h1>Printers</h1>
+    <p class="page-subtitle">Configure label printers for check-in</p>
+</div>
+
+<div class="hero-actions" style="margin-bottom: 2rem;">
+    <a href="{% url 'checkin:printer_create' %}" class="btn">Add Printer</a>
+</div>
+
+<div class="list-card">
+    <div class="list-card__body">
+        {% for printer in printers %}
+            <div class="list-item">
+                <div>
+                    <strong>{{ printer.name }}</strong>
+                    <span>{{ printer.get_printer_type_display }}</span>
+                    <p class="stat-hint">{{ printer.connection_string }}</p>
+                </div>
+                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                    {% if printer.is_default %}
+                        <span class="chip" style="background: #dbeafe; color: #1e40af;">Default</span>
+                    {% endif %}
+                    {% if printer.is_active %}
+                        <span class="chip" style="background: #dcfce7; color: #166534;">Active</span>
+                    {% else %}
+                        <span class="chip">Inactive</span>
+                    {% endif %}
+                    <form method="post" action="{% url 'checkin:printer_test' printer.pk %}" style="display: inline;">
+                        {% csrf_token %}
+                        <button type="submit" class="btn ghost" style="padding: 0.25rem 0.5rem; font-size: 0.85rem;">
+                            Test
+                        </button>
+                    </form>
+                    <a href="{% url 'checkin:printer_edit' printer.pk %}" class="ghost-link">Edit</a>
+                </div>
+            </div>
+        {% empty %}
+            <p class="empty-state">No printers configured yet.</p>
+        {% endfor %}
+    </div>
+</div>
+
+<section class="detail-card" style="margin-top: 2rem;">
+    <h2>Setup Guide</h2>
+    <div class="detail-list">
+        <h3>ESC/POS (Generic Thermal Printers)</h3>
+        <p>Works with most cheap thermal printers. Connection examples:</p>
+        <ul style="margin: 0.5rem 0 1rem 1.5rem;">
+            <li><code>tcp://192.168.1.100:9100</code> - Network printer</li>
+            <li><code>usb://0x0416:0x5011</code> - USB printer (vendor:product)</li>
+            <li><code>file:///dev/usb/lp0</code> - Linux USB device</li>
+        </ul>
+
+        <h3>Brother QL Series</h3>
+        <p>Popular label printers (QL-800, QL-820NWB). Connection examples:</p>
+        <ul style="margin: 0.5rem 0 1rem 1.5rem;">
+            <li><code>tcp://192.168.1.100:9100</code> - Network (QL-820NWB)</li>
+            <li><code>usb://0x04f9:0x209c</code> - USB connection</li>
+        </ul>
+
+        <h3>CUPS (System Printer)</h3>
+        <p>Use any printer installed on the system. Connection is just the printer name:</p>
+        <ul style="margin: 0.5rem 0 1rem 1.5rem;">
+            <li><code>Brother_QL-820NWB</code> - CUPS printer name</li>
+            <li><code>HP_LaserJet</code> - Any system printer</li>
+        </ul>
+    </div>
+</section>
+
+{% endblock %}

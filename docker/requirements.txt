@@ -9,3 +9,8 @@ python-dotenv==1.2.1
 sqlparse==0.5.3
 tzdata==2025.2
 whitenoise==6.8.2
+
+# Optional: Install these for thermal printer support
+# python-escpos      # ESC/POS printers (generic thermal)
+# brother_ql         # Brother QL label printers
+# pycups             # CUPS printing (Linux/Mac)

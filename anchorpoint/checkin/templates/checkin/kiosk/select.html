@@ -1,0 +1,61 @@
+{% extends "checkin/kiosk/base.html" %}
+
+{% block title %}Select Family Members{% endblock %}
+
+{% block content %}
+<a href="{% url 'checkin:kiosk_lookup' session.pk %}" class="back-link">&larr; Back</a>
+
+<div class="kiosk-header">
+    <h1>Who's Checking In?</h1>
+    <p>Select everyone who is here today</p>
+</div>
+
+<div class="kiosk-content">
+    <form method="post" id="selectForm">
+        {% csrf_token %}
+
+        {% for person in people %}
+            <label class="person-card {% if person.id in already_checked_in %}disabled{% endif %}">
+                <input
+                    type="checkbox"
+                    name="person_ids"
+                    value="{{ person.id }}"
+                    {% if person.id in already_checked_in %}disabled{% endif %}
+                >
+                <div class="person-info">
+                    <div class="person-name">{{ person.first_name }} {{ person.last_name }}</div>
+                    <div class="person-meta">
+                        {% if person.age %}Age {{ person.age }}{% endif %}
+                        {% if person.get_grade_display %} &bull; {{ person.get_grade_display }}{% endif %}
+                    </div>
+                    {% if person.allergies %}
+                        <div class="allergy-warning">{{ person.allergies }}</div>
+                    {% endif %}
+                </div>
+                {% if person.id in already_checked_in %}
+                    <span class="person-badge badge-checked-in">Already Checked In</span>
+                {% elif person.is_minor %}
+                    <span class="person-badge badge-minor">Child</span>
+                {% else %}
+                    <span class="person-badge badge-adult">Adult</span>
+                {% endif %}
+            </label>
+        {% endfor %}
+
+        <button type="submit" class="btn-kiosk btn-kiosk-primary" style="margin-top: 20px;">
+            Continue &rarr;
+        </button>
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Toggle selected state visually
+document.querySelectorAll('.person-card input').forEach(input => {
+    input.addEventListener('change', function() {
+        this.closest('.person-card').classList.toggle('selected', this.checked);
+    });
+});
+</script>
+{% endblock %}

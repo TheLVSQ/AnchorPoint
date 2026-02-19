@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block content %}
+
+<a class="ghost-link" href="{% url 'checkin:dashboard' %}">&larr; Back to Dashboard</a>
+
+<div class="page-header">
+    <h1>Rooms</h1>
+    <p class="page-subtitle">Configure rooms for check-in</p>
+</div>
+
+<div class="hero-actions" style="margin-bottom: 2rem;">
+    <a href="{% url 'checkin:room_create' %}" class="btn">Add Room</a>
+</div>
+
+<div class="list-card">
+    <div class="list-card__body">
+        {% for room in rooms %}
+            <div class="list-item">
+                <div>
+                    <strong>{{ room.name }}</strong>
+                    {% if room.building %}<span>{{ room.building }}</span>{% endif %}
+                    <p class="stat-hint">
+                        {% if room.capacity %}Capacity: {{ room.capacity }}{% endif %}
+                        {% if room.min_age or room.max_age %}
+                            &middot; Ages:
+                            {% if room.min_age %}{{ room.min_age }}{% else %}0{% endif %}-{% if room.max_age %}{{ room.max_age }}{% else %}∞{% endif %}
+                        {% endif %}
+                        {% if room.min_grade or room.max_grade %}
+                            &middot; Grades: {{ room.min_grade|default:"K" }}-{{ room.max_grade|default:"12" }}
+                        {% endif %}
+                    </p>
+                </div>
+                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                    {% if room.is_active %}
+                        <span class="chip" style="background: #dcfce7; color: #166534;">Active</span>
+                    {% else %}
+                        <span class="chip">Inactive</span>
+                    {% endif %}
+                    <a href="{% url 'checkin:room_edit' room.pk %}" class="ghost-link">Edit</a>
+                </div>
+            </div>
+        {% empty %}
+            <p class="empty-state">No rooms configured yet.</p>
+        {% endfor %}
+    </div>
+</div>
+
+{% endblock %}

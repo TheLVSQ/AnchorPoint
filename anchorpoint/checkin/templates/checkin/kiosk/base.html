@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>{% block title %}Check-In{% endblock %} | {{ org_settings.organization_name }}</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --success: #16a34a;
+            --warning: #ea580c;
+            --danger: #dc2626;
+            --gray-100: #f3f4f6;
+            --gray-200: #e5e7eb;
+            --gray-500: #6b7280;
+            --gray-700: #374151;
+            --gray-900: #111827;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            color: var(--gray-900);
+        }
+
+        .kiosk-container {
+            background: white;
+            border-radius: 24px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            width: 100%;
+            max-width: 600px;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .kiosk-header {
+            margin-bottom: 30px;
+        }
+
+        .kiosk-header h1 {
+            font-size: 2rem;
+            color: var(--gray-900);
+            margin-bottom: 8px;
+        }
+
+        .kiosk-header p {
+            color: var(--gray-500);
+            font-size: 1.1rem;
+        }
+
+        .kiosk-content {
+            margin-bottom: 30px;
+        }
+
+        /* Large touch-friendly buttons */
+        .btn-kiosk {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px 40px;
+            font-size: 1.25rem;
+            font-weight: 600;
+            border: none;
+            border-radius: 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+            min-height: 70px;
+            width: 100%;
+            margin-bottom: 15px;
+        }
+
+        .btn-kiosk-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-kiosk-primary:hover, .btn-kiosk-primary:active {
+            background: var(--primary-dark);
+            transform: scale(1.02);
+        }
+
+        .btn-kiosk-secondary {
+            background: var(--gray-100);
+            color: var(--gray-700);
+        }
+
+        .btn-kiosk-secondary:hover, .btn-kiosk-secondary:active {
+            background: var(--gray-200);
+        }
+
+        .btn-kiosk-success {
+            background: var(--success);
+            color: white;
+        }
+
+        /* Numeric keypad */
+        .keypad {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            max-width: 300px;
+            margin: 20px auto;
+        }
+
+        .keypad-btn {
+            padding: 25px;
+            font-size: 1.5rem;
+            font-weight: 600;
+            border: 2px solid var(--gray-200);
+            border-radius: 12px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .keypad-btn:hover, .keypad-btn:active {
+            background: var(--gray-100);
+            border-color: var(--primary);
+        }
+
+        .keypad-btn.action {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .keypad-btn.delete {
+            background: var(--gray-100);
+        }
+
+        /* Phone input display */
+        .phone-display {
+            font-size: 2rem;
+            font-weight: 600;
+            letter-spacing: 2px;
+            padding: 20px;
+            background: var(--gray-100);
+            border-radius: 12px;
+            margin-bottom: 20px;
+            min-height: 70px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Person selection cards */
+        .person-card {
+            display: flex;
+            align-items: center;
+            padding: 20px;
+            border: 2px solid var(--gray-200);
+            border-radius: 12px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: all 0.15s;
+            text-align: left;
+        }
+
+        .person-card:hover {
+            border-color: var(--primary);
+        }
+
+        .person-card.selected {
+            border-color: var(--primary);
+            background: #eff6ff;
+        }
+
+        .person-card.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .person-card input {
+            width: 24px;
+            height: 24px;
+            margin-right: 15px;
+        }
+
+        .person-info {
+            flex: 1;
+        }
+
+        .person-name {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--gray-900);
+        }
+
+        .person-meta {
+            font-size: 0.9rem;
+            color: var(--gray-500);
+        }
+
+        .person-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .badge-minor {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .badge-adult {
+            background: var(--gray-100);
+            color: var(--gray-700);
+        }
+
+        .badge-checked-in {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        /* Security code display */
+        .security-code {
+            font-size: 4rem;
+            font-weight: 800;
+            letter-spacing: 8px;
+            color: var(--primary);
+            padding: 30px;
+            background: #eff6ff;
+            border-radius: 16px;
+            margin: 20px 0;
+        }
+
+        /* Room selection */
+        .room-select {
+            width: 100%;
+            padding: 15px;
+            font-size: 1.1rem;
+            border: 2px solid var(--gray-200);
+            border-radius: 8px;
+            margin-top: 10px;
+        }
+
+        /* Checkin summary */
+        .checkin-summary {
+            text-align: left;
+            margin: 20px 0;
+        }
+
+        .checkin-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 15px;
+            background: var(--gray-100);
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+
+        .checkin-item-name {
+            font-weight: 600;
+        }
+
+        .checkin-item-room {
+            color: var(--gray-500);
+        }
+
+        /* Error message */
+        .error-message {
+            background: #fef2f2;
+            color: #991b1b;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        /* Allergy warning */
+        .allergy-warning {
+            display: inline-flex;
+            align-items: center;
+            background: #fef3c7;
+            color: #92400e;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            margin-top: 5px;
+        }
+
+        .allergy-warning::before {
+            content: "⚠️";
+            margin-right: 5px;
+        }
+
+        /* Back link */
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            color: var(--gray-500);
+            text-decoration: none;
+            margin-bottom: 20px;
+        }
+
+        .back-link:hover {
+            color: var(--gray-700);
+        }
+
+        /* Footer */
+        .kiosk-footer {
+            color: rgba(255, 255, 255, 0.8);
+            margin-top: 20px;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="kiosk-container">
+        {% block content %}{% endblock %}
+    </div>
+
+    <div class="kiosk-footer">
+        {{ org_settings.organization_name }} &bull; Powered by AnchorPoint
+    </div>
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>
