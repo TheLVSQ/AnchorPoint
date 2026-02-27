@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block content %}
+
+<a class="ghost-link" href="{% url 'user_list' %}">&larr; Back to Users</a>
+
+<div class="page-header" style="margin-top: 1rem;">
+    <h1>{{ title }}</h1>
+</div>
+
+<div class="detail-card" style="max-width: 560px;">
+    <form method="post" autocomplete="off">
+        {% csrf_token %}
+
+        <div class="form-grid">
+            <div class="form-field">
+                <label>First Name</label>
+                {{ form.first_name }}
+                {% for e in form.first_name.errors %}<span class="error-text">{{ e }}</span>{% endfor %}
+            </div>
+            <div class="form-field">
+                <label>Last Name</label>
+                {{ form.last_name }}
+                {% for e in form.last_name.errors %}<span class="error-text">{{ e }}</span>{% endfor %}
+            </div>
+        </div>
+
+        <div class="form-field">
+            <label>Username</label>
+            {{ form.username }}
+            {% for e in form.username.errors %}<span class="error-text">{{ e }}</span>{% endfor %}
+        </div>
+
+        <div class="form-field">
+            <label>Email <span class="stat-hint" style="display:inline;">(optional)</span></label>
+            {{ form.email }}
+            {% for e in form.email.errors %}<span class="error-text">{{ e }}</span>{% endfor %}
+        </div>
+
+        <div class="form-field">
+            <label>Role</label>
+            {{ form.role }}
+            {% for e in form.role.errors %}<span class="error-text">{{ e }}</span>{% endfor %}
+        </div>
+
+        {% if form.can_manage_communications %}
+            <div class="form-field">
+                <label style="display: flex; align-items: center; gap: 0.5rem; font-weight: 500;">
+                    {{ form.can_manage_communications }}
+                    Communications access
+                </label>
+            </div>
+        {% endif %}
+
+        {% if form.password %}
+            <hr style="margin: 1.5rem 0; border: none; border-top: 1px solid var(--border);">
+            <h3 style="margin: 0 0 1rem; font-size: 1rem;">Set Password</h3>
+
+            <div class="form-field">
+                <label>Password</label>
+                {{ form.password }}
+                {% for e in form.password.errors %}<span class="error-text">{{ e }}</span>{% endfor %}
+            </div>
+
+            <div class="form-field">
+                <label>Confirm Password</label>
+                {{ form.confirm_password }}
+                {% for e in form.confirm_password.errors %}<span class="error-text">{{ e }}</span>{% endfor %}
+            </div>
+        {% endif %}
+
+        <div class="hero-actions" style="margin-top: 1.5rem;">
+            <button type="submit" class="btn">Save User</button>
+            <a href="{% url 'user_list' %}" class="btn ghost">Cancel</a>
+        </div>
+    </form>
+</div>
+
+{% if target_user %}
+    <div class="detail-card" style="max-width: 560px; margin-top: 1.5rem;">
+        <h2 style="font-size: 1rem; margin-bottom: 1rem;">Password</h2>
+        <p class="stat-hint" style="margin-bottom: 1rem;">To change this user's password, use the dedicated password form.</p>
+        <a href="{% url 'user_set_password' target_user.pk %}" class="btn ghost">Set New Password</a>
+    </div>
+{% endif %}
+
+{% endblock %}

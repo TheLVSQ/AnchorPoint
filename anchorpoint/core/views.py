@@ -9,9 +9,12 @@ from events.forms import ReleaseDocumentForm
 from events.models import ReleaseDocument
 
 from .forms import (
+    CreateUserForm,
+    EditUserForm,
     OrganizationSettingsForm,
     ProfileForm,
     RoleAssignmentForm,
+    SetPasswordForm,
     UserProfileForm,
 )
 from .models import OrganizationSettings, UserProfile
@@ -221,3 +224,83 @@ def settings_home(request):
             "settings_instance": settings_instance,
         },
     )
+
+
+# ---------------------------------------------------------------------------
+# User Management
+# ---------------------------------------------------------------------------
+
+@admin_required
+def user_list(request):
+    users = (
+        User.objects.all()
+        .select_related("profile")
+        .order_by("first_name", "last_name", "username")
+    )
+    return render(request, "core/user_list.html", {"users": users})
+
+
+@admin_required
+def user_create(request):
+    if request.method == "POST":
+        form = CreateUserForm(request.POST)
+        if form.is_valid():
+            user = User.objects.create_user(
+                username=form.cleaned_data["username"],
+                first_name=form.cleaned_data["first_name"],
+                last_name=form.cleaned_data["last_name"],
+                email=form.cleaned_data.get("email", ""),
+                password=form.cleaned_data["password"],
+            )
+            profile, _ = UserProfile.objects.get_or_create(user=user)
+            profile.role = form.cleaned_data["role"]
+            profile.save(update_fields=["role"])
+            messages.success(request, f"User '{user.get_full_name() or user.username}' created successfully.")
+            return redirect("user_list")
+    else:
+        form = CreateUserForm()
+    return render(request, "core/user_form.html", {"form": form, "title": "Add User"})
+
+
+@admin_required
+def user_edit(request, user_id):
+    target_user = get_object_or_404(User, pk=user_id)
+    profile, _ = UserProfile.objects.get_or_create(user=target_user)
+
+    if request.method == "POST":
+        form = EditUserForm(request.POST, instance=target_user)
+        if form.is_valid():
+            form.save()
+            profile.role = form.cleaned_data["role"]
+            profile.can_manage_communications = form.cleaned_data.get("can_manage_communications", False)
+            profile.save(update_fields=["role", "can_manage_communications"])
+            messages.success(request, "User updated.")
+            return redirect("user_list")
+    else:
+        form = EditUserForm(instance=target_user)
+
+    return render(request, "core/user_form.html", {
+        "form": form,
+        "title": f"Edit {target_user.get_full_name() or target_user.username}",
+        "target_user": target_user,
+    })
+
+
+@admin_required
+def user_set_password(request, user_id):
+    target_user = get_object_or_404(User, pk=user_id)
+
+    if request.method == "POST":
+        form = SetPasswordForm(request.POST)
+        if form.is_valid():
+            target_user.set_password(form.cleaned_data["new_password"])
+            target_user.save()
+            messages.success(request, f"Password updated for {target_user.get_full_name() or target_user.username}.")
+            return redirect("user_list")
+    else:
+        form = SetPasswordForm()
+
+    return render(request, "core/user_set_password.html", {
+        "form": form,
+        "target_user": target_user,
+    })

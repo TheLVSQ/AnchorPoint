@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="page-header">
+    <h1>Users</h1>
+    <p class="page-subtitle">Manage who has access to AnchorPoint</p>
+</div>
+
+<div class="hero-actions" style="margin-bottom: 2rem;">
+    <a href="{% url 'user_create' %}" class="btn">+ Add User</a>
+</div>
+
+<div class="list-card">
+    <div class="list-card__body">
+        {% for user in users %}
+            <div class="list-item">
+                <div>
+                    <strong>{{ user.get_full_name|default:user.username }}</strong>
+                    <span>@{{ user.username }}{% if user.email %} &middot; {{ user.email }}{% endif %}</span>
+                    <p class="stat-hint">
+                        {% with role=user.profile.get_role_display %}
+                            {% if role %}{{ role }}{% else %}No role{% endif %}
+                        {% endwith %}
+                        {% if user.profile.can_manage_communications %}
+                            &middot; Communications access
+                        {% endif %}
+                    </p>
+                </div>
+                <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
+                    {% if user == request.user %}
+                        <span class="chip">You</span>
+                    {% endif %}
+                    {% if user.is_active %}
+                        <span class="chip" style="background: #dcfce7; color: #166534;">Active</span>
+                    {% else %}
+                        <span class="chip" style="background: #fee2e2; color: #991b1b;">Inactive</span>
+                    {% endif %}
+                    <a href="{% url 'user_edit' user.pk %}" class="ghost-link">Edit</a>
+                    <a href="{% url 'user_set_password' user.pk %}" class="ghost-link">Set Password</a>
+                </div>
+            </div>
+        {% empty %}
+            <p class="empty-state">No users found.</p>
+        {% endfor %}
+    </div>
+</div>
+
+{% endblock %}
