@@ -18,14 +18,17 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY . .
 
-# Create directory for static files
-RUN mkdir -p /app/anchorpoint/staticfiles
+# Copy gunicorn config
+COPY docker/gunicorn.conf.py ./gunicorn.conf.py
 
-# Collect static files
+# Create directories for static and media files
+RUN mkdir -p /app/anchorpoint/staticfiles /app/anchorpoint/media
+
+# Collect static files (requires a dummy SECRET_KEY at build time)
 WORKDIR /app/anchorpoint
-RUN python manage.py collectstatic --noinput --clear 2>/dev/null || true
+RUN SECRET_KEY=build-time-placeholder python manage.py collectstatic --noinput --clear
 
 EXPOSE 8000
 
-# Run with gunicorn
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "2", "anchorpoint.wsgi:application"]
+# Run with gunicorn using config file
+CMD ["gunicorn", "--config", "/app/gunicorn.conf.py", "anchorpoint.wsgi:application"]
