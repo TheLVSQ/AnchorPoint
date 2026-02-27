@@ -5,7 +5,7 @@ services:
       dockerfile: docker/Dockerfile
     restart: unless-stopped
     ports:
-      - "8888:8000"
+      - "80:8000"
     volumes:
       - media_data:/app/anchorpoint/media
     env_file:
@@ -37,13 +37,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-
-  tunnel:
-    image: cloudflare/cloudflared:latest
-    restart: unless-stopped
-    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
-    depends_on:
-      - web
 
 volumes:
   postgres_data:
