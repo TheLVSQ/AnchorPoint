@@ -1,0 +1,18 @@
+# ============================================================
+#SAVE THESE CREDENTIALS - THEY WON'T BE SHOWN AGAIN!
+#============================================================
+#  Role:     ADMIN
+  Username: admin
+  Password: rz3txk0218Ii
+  Email:    admin@example.com
+----------------------------------------
+  Role:     STAFF
+  Username: tester1
+  Password: flLEfMGLDaHu
+  Email:    tester1@example.com
+----------------------------------------
+  Role:     STAFF
+  Username: tester2
+  Password: 4H01hTET2GVQ
+  Email:    tester2@example.com
+----------------------------------------
