@@ -19,7 +19,7 @@
             --muted: #5b6476;
             --primary: #2563eb;
             --primary-strong: #1b45c8;
-            --accent: #f97316;
+            --accent: #0d9488;
             --border: #e2e8f0;
             --radius: 14px;
             --shadow-soft: 0 25px 60px rgba(15, 23, 42, 0.08);
@@ -30,7 +30,7 @@
         }
 
         body {
-            background: linear-gradient(135deg, #eef2ff 0%, #fef6f0 40%, #f8fbff 100%);
+            background: #f8fafc;
             margin: 0;
             min-height: 100vh;
             font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -43,8 +43,8 @@
             position: fixed;
             inset: 0;
             pointer-events: none;
-            background: radial-gradient(circle at 20% 20%, rgba(37, 99, 235, 0.08), transparent 50%),
-                        radial-gradient(circle at 80% 0%, rgba(251, 146, 60, 0.12), transparent 55%);
+            background: radial-gradient(circle at 20% 20%, rgba(37, 99, 235, 0.06), transparent 50%),
+                        radial-gradient(circle at 80% 0%, rgba(13, 148, 136, 0.06), transparent 55%);
             z-index: -1;
         }
 
@@ -230,6 +230,7 @@
             display: flex;
             flex-direction: column;
             padding: 1.5rem;
+            overflow-y: auto;
         }
 
         .nav-drawer.open {
@@ -491,7 +492,7 @@
         }
 
         .stat-card.upcoming {
-            background: linear-gradient(120deg, rgba(249, 115, 22, 0.08), rgba(37, 99, 235, 0.08));
+            background: linear-gradient(120deg, rgba(13, 148, 136, 0.08), rgba(37, 99, 235, 0.08));
         }
 
         .stat-label {
