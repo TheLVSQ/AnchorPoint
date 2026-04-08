@@ -5,7 +5,7 @@ services:
       dockerfile: docker/Dockerfile
     restart: unless-stopped
     ports:
-      - "80:8000"
+      - "127.0.0.1:80:8000"
     volumes:
       - media_data:/app/anchorpoint/media
     env_file:
