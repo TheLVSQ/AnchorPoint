@@ -1,0 +1,12 @@
+Hi {{ registration.first_name }},
+
+Thanks for registering for {{ event.title }}!
+
+{% if event.next_occurrence %}Date:     {{ event.next_occurrence.starts_at|date:"F j, Y" }} at {{ event.next_occurrence.starts_at|time:"g:i A" }}
+{% endif %}{% if event.location_name %}Location: {{ event.location_name }}{% if event.location_city %}, {{ event.location_city }}{% endif %}
+{% endif %}
+{% if event.contact_email %}Questions? Contact us at {{ event.contact_email }}.{% endif %}
+
+We look forward to seeing you!
+
+— {{ org.name|default:"AnchorPoint" }}

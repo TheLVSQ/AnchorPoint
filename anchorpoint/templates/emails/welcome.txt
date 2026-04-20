@@ -1,0 +1,8 @@
+Welcome, {{ user.first_name|default:user.username }}!
+
+Your account has been created for {{ org.name|default:"AnchorPoint" }}.
+You can now log in to access the system.
+
+If you have any questions, please reach out to your administrator.
+
+— The {{ org.name|default:"AnchorPoint" }} Team
