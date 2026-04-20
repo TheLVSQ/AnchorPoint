@@ -7,7 +7,10 @@
 - [ ] Add live results to people search
 - [ ] Review design: modernize to be visually appealing but not overwhelming
 
+- [ ] Email: Add ability to send emails (transactional + blast)
+
 - [ ] Check-in
+-- [ ] Printer connection/setup
 -- [ ] Create Room flow > Age/Grade Auto-Assignment
 --- [ ] Change Min/Max to a dropdown with values for K-12
 --- [ ] Make the 'Active' checkbox for the room availability next to the word 'Active' and make it hard to miss
