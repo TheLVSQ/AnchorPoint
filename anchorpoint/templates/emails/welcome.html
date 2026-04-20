@@ -1,0 +1,12 @@
+{% extends "emails/base.html" %}
+{% block content %}
+<h2 style="color: #1a3a5c; margin-top: 0;">Welcome, {{ user.first_name|default:user.username }}!</h2>
+<p style="color: #444444; line-height: 1.6;">
+  Your account has been created for {{ org.name|default:"AnchorPoint" }}.
+  You can now log in to access the system.
+</p>
+<p style="color: #444444; line-height: 1.6;">
+  If you have any questions, please reach out to your administrator.
+</p>
+<p style="color: #444444;">— The {{ org.name|default:"AnchorPoint" }} Team</p>
+{% endblock %}

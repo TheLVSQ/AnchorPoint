@@ -1,0 +1,31 @@
+{% extends "emails/base.html" %}
+{% block content %}
+<h2 style="color: #1a3a5c; margin-top: 0;">New Registration</h2>
+<p style="color: #444444; line-height: 1.6;">
+  A new registration has been submitted for <strong>{{ event.title }}</strong>.
+</p>
+<table style="width: 100%; border-collapse: collapse; margin: 16px 0;">
+  <tr>
+    <td style="padding: 8px 0; color: #666666; width: 140px;">Name</td>
+    <td style="padding: 8px 0; color: #222222;">{{ registration.first_name }} {{ registration.last_name }}</td>
+  </tr>
+  <tr>
+    <td style="padding: 8px 0; color: #666666;">Email</td>
+    <td style="padding: 8px 0; color: #222222;">{{ registration.email }}</td>
+  </tr>
+  {% if registration.phone %}
+  <tr>
+    <td style="padding: 8px 0; color: #666666;">Phone</td>
+    <td style="padding: 8px 0; color: #222222;">{{ registration.phone }}</td>
+  </tr>
+  {% endif %}
+  <tr>
+    <td style="padding: 8px 0; color: #666666;">Attendees</td>
+    <td style="padding: 8px 0; color: #222222;">{{ registration.number_of_attendees }}</td>
+  </tr>
+  <tr>
+    <td style="padding: 8px 0; color: #666666;">Submitted</td>
+    <td style="padding: 8px 0; color: #222222;">{{ registration.created_at|date:"F j, Y g:i A" }}</td>
+  </tr>
+</table>
+{% endblock %}
