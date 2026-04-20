@@ -440,6 +440,13 @@ def public_event_register(request, registration_token):
                 attendee.event = event
                 attendee.save()
             match_registration_attendees(registration)
+            # Send confirmation to registrant and notify staff
+            from core.email_service import (
+                send_registration_confirmation,
+                send_staff_registration_notification,
+            )
+            send_registration_confirmation(registration)
+            send_staff_registration_notification(registration)
             submitted = True
             form = None
             attendee_formset = None
