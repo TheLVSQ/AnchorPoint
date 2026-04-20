@@ -55,6 +55,9 @@ def ensure_user_profile(sender, instance, created, **kwargs):
     # Ensure every user has a profile so role checks never fail in templates.
     if created:
         UserProfile.objects.create(user=instance)
+        # Send welcome email — import here to avoid circular imports
+        from core.email_service import send_welcome_email
+        send_welcome_email(instance)
     else:
         UserProfile.objects.get_or_create(user=instance)
 
