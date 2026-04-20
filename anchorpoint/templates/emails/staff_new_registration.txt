@@ -1,0 +1,7 @@
+New Registration — {{ event.title }}
+
+Name:      {{ registration.first_name }} {{ registration.last_name }}
+Email:     {{ registration.email }}
+{% if registration.phone %}Phone:     {{ registration.phone }}
+{% endif %}Attendees: {{ registration.number_of_attendees }}
+Submitted: {{ registration.created_at|date:"F j, Y g:i A" }}

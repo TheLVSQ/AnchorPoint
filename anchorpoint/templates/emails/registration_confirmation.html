@@ -1,0 +1,27 @@
+{% extends "emails/base.html" %}
+{% block content %}
+<h2 style="color: #1a3a5c; margin-top: 0;">You're registered!</h2>
+<p style="color: #444444; line-height: 1.6;">
+  Hi {{ registration.first_name }}, thanks for registering for
+  <strong>{{ event.title }}</strong>.
+</p>
+{% if event.next_occurrence %}
+<p style="color: #444444; line-height: 1.6;">
+  <strong>Date:</strong> {{ event.next_occurrence.starts_at|date:"F j, Y" }}
+  at {{ event.next_occurrence.starts_at|time:"g:i A" }}
+</p>
+{% endif %}
+{% if event.location_name %}
+<p style="color: #444444; line-height: 1.6;">
+  <strong>Location:</strong> {{ event.location_name }}{% if event.location_city %}, {{ event.location_city }}{% endif %}
+</p>
+{% endif %}
+{% if event.contact_email %}
+<p style="color: #444444; line-height: 1.6;">
+  Questions? Contact us at
+  <a href="mailto:{{ event.contact_email }}" style="color: #1a3a5c;">{{ event.contact_email }}</a>.
+</p>
+{% endif %}
+<p style="color: #444444;">We look forward to seeing you!</p>
+<p style="color: #444444;">— {{ org.name|default:"AnchorPoint" }}</p>
+{% endblock %}
