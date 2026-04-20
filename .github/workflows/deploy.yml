@@ -13,12 +13,12 @@ jobs:
 
       - name: Build Docker image
         working-directory: /home/deploy/anchorpoint/docker
-        run: docker compose build
+        run: docker compose --env-file .env.production build
 
       - name: Recreate containers
         working-directory: /home/deploy/anchorpoint/docker
-        run: docker compose up -d
+        run: docker compose --env-file .env.production up -d
 
       - name: Run migrations
         working-directory: /home/deploy/anchorpoint/docker
-        run: docker compose exec -T web python manage.py migrate
+        run: docker compose --env-file .env.production exec -T web python manage.py migrate
