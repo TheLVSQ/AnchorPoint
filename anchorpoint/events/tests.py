@@ -2,7 +2,7 @@ from datetime import timedelta
 
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import TestCase
+from django.test import Client, TestCase
 from django.urls import reverse
 from django.utils import timezone
 
@@ -410,3 +410,60 @@ class EventRosterViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response["Content-Type"], "text/csv")
         self.assertIn("Casey Reed", response.content.decode())
+
+
+from django.core import mail
+from django.test import override_settings
+
+
+@override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
+class RegistrationEmailTest(TestCase):
+    def setUp(self):
+        from events.models import Event
+        import datetime
+        mail.outbox.clear()
+        self.client = Client()
+        self.event = Event.objects.create(
+            title="Summer Camp",
+            is_published=True,
+            registration_open=True,
+        )
+        self.event.occurrences.create(
+            starts_at=timezone.now() + datetime.timedelta(days=30),
+            ends_at=timezone.now() + datetime.timedelta(days=31),
+        )
+
+    def _post_registration(self, email="registrant@example.com"):
+        return self.client.post(
+            f"/register/{self.event.registration_token}/",
+            {
+                "contact-first_name": "Jane",
+                "contact-last_name": "Doe",
+                "contact-email": email,
+                "attendee-TOTAL_FORMS": "1",
+                "attendee-INITIAL_FORMS": "0",
+                "attendee-MIN_NUM_FORMS": "0",
+                "attendee-MAX_NUM_FORMS": "10",
+                "attendee-0-first_name": "Jane",
+                "attendee-0-last_name": "Doe",
+                "attendee-0-is_minor": "",
+            },
+        )
+
+    def test_registration_confirmation_sent_to_registrant(self):
+        self._post_registration(email="jane@example.com")
+        confirmation_emails = [e for e in mail.outbox if "jane@example.com" in e.to]
+        self.assertEqual(len(confirmation_emails), 1)
+        self.assertIn("Summer Camp", confirmation_emails[0].subject)
+
+    def test_staff_notification_sent_to_staff(self):
+        from core.models import UserProfile
+        staff = get_user_model().objects.create_user(
+            username="staff1", email="staff@example.com", password="pass"
+        )
+        staff.profile.role = UserProfile.Role.STAFF
+        staff.profile.save()
+        mail.outbox.clear()
+        self._post_registration()
+        staff_emails = [e for e in mail.outbox if "staff@example.com" in e.bcc]
+        self.assertEqual(len(staff_emails), 1)
