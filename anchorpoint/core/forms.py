@@ -114,6 +114,10 @@ class OrganizationSettingsForm(forms.ModelForm):
             "kiosk_pin",
         ]
         widgets = {
+            "twilio_account_sid": forms.TextInput(attrs={"placeholder": "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"}),
+            "twilio_auth_token": forms.TextInput(attrs={"placeholder": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"}),
+            "twilio_phone_number": forms.TextInput(attrs={"placeholder": "+15551234567"}),
+            "phone_number": forms.TextInput(attrs={"placeholder": "+15551234567"}),
             "sms_blackout_start": forms.TimeInput(attrs={"type": "time"}),
             "sms_blackout_end": forms.TimeInput(attrs={"type": "time"}),
         }
