@@ -440,6 +440,8 @@ class RegistrationEmailTest(TestCase):
                 "contact-first_name": "Jane",
                 "contact-last_name": "Doe",
                 "contact-email": email,
+                "contact-accept_liability": "on",
+                "contact-liability_release_signature": "Jane Doe",
                 "attendee-TOTAL_FORMS": "1",
                 "attendee-INITIAL_FORMS": "0",
                 "attendee-MIN_NUM_FORMS": "0",
