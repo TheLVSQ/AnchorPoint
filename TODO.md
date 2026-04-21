@@ -19,6 +19,10 @@
 -- [ ] Change page to show only one save button, not one save per person
 -- [ ] Update page to be something other than all users view.
 
+- [x] UI Enhancements
+-- [x] Add Favicon
+
+
 ## Bugs to Squash
 
 - [ ] Mobile navigation menu doesn't scroll on mobile
