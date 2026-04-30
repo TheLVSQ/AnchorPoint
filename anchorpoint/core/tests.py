@@ -121,6 +121,47 @@ class EmailServiceTest(TestCase):
         self.assertEqual(len(mail.outbox), 0)
 
 
+class CheckinAdminRequiredTests(TestCase):
+    def setUp(self):
+        User = get_user_model()
+        self.admin = User.objects.create_user(username="admin", password="pw")
+        self.admin.profile.role = UserProfile.Role.ADMIN
+        self.admin.profile.save()
+
+        self.staff = User.objects.create_user(username="staff", password="pw")
+        self.staff.profile.role = UserProfile.Role.STAFF
+        self.staff.profile.save()
+
+        self.vol_admin = User.objects.create_user(username="voladmin", password="pw")
+        self.vol_admin.profile.role = UserProfile.Role.VOLUNTEER_ADMIN
+        self.vol_admin.profile.save()
+
+        self.volunteer = User.objects.create_user(username="vol", password="pw")
+        self.volunteer.profile.role = UserProfile.Role.VOLUNTEER
+        self.volunteer.profile.save()
+
+    def test_admin_allowed(self):
+        from core.permissions import is_checkin_admin
+        self.assertTrue(is_checkin_admin(self.admin))
+
+    def test_staff_allowed(self):
+        from core.permissions import is_checkin_admin
+        self.assertTrue(is_checkin_admin(self.staff))
+
+    def test_volunteer_admin_allowed(self):
+        from core.permissions import is_checkin_admin
+        self.assertTrue(is_checkin_admin(self.vol_admin))
+
+    def test_volunteer_denied(self):
+        from core.permissions import is_checkin_admin
+        self.assertFalse(is_checkin_admin(self.volunteer))
+
+    def test_unauthenticated_denied(self):
+        from django.contrib.auth.models import AnonymousUser
+        from core.permissions import is_checkin_admin
+        self.assertFalse(is_checkin_admin(AnonymousUser()))
+
+
 @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
 class WelcomeEmailSignalTest(TestCase):
     def setUp(self):

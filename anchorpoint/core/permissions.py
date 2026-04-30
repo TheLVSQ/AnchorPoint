@@ -40,6 +40,18 @@ def is_staff_or_above(user):
     return profile.role in ("admin", "staff", "volunteer_admin")
 
 
+def is_checkin_admin(user):
+    """Check if user can manage check-in configurations (admin, staff, or volunteer admin)."""
+    if not user.is_authenticated:
+        return False
+    if user.is_superuser:
+        return True
+    profile = _get_user_profile(user)
+    if not profile:
+        return False
+    return profile.role in ("admin", "staff", "volunteer_admin")
+
+
 def has_communications_access(user):
     """Check if user can manage SMS and phone blasts."""
     if not user.is_authenticated:
@@ -111,6 +123,28 @@ def communications_required(view_func):
         if not has_communications_access(request.user):
             return HttpResponseForbidden(
                 "You do not have permission to manage communications."
+            )
+        return view_func(request, *args, **kwargs)
+    return wrapper
+
+
+def checkin_admin_required(view_func):
+    """
+    Decorator that requires check-in admin access (admin, staff, or volunteer admin).
+
+    Usage:
+        @checkin_admin_required
+        def checkin_config_view(request):
+            ...
+    """
+    @wraps(view_func)
+    def wrapper(request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            from django.shortcuts import redirect
+            return redirect("login")
+        if not is_checkin_admin(request.user):
+            return HttpResponseForbidden(
+                "You do not have permission to manage check-in settings."
             )
         return view_func(request, *args, **kwargs)
     return wrapper
