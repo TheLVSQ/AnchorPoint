@@ -1,3 +1,6 @@
+# Worktrees
+.worktrees/
+
 # Environment and secrets
 .env
 .env.*
@@ -56,5 +59,6 @@ Thumbs.db
 
 # Claude Code local settings
 .claude/settings.local.json
+docs/superpowers
 .superpowers/
 .gitignore
