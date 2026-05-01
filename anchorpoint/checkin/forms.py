@@ -55,11 +55,22 @@ class CheckInSessionForm(forms.ModelForm):
 
     class Meta:
         model = CheckInSession
-        fields = ["name", "date", "start_time", "end_time", "rooms", "is_active"]
+        fields = [
+            "name",
+            "date",
+            "checkin_opens",
+            "checkin_closes",
+            "event_starts",
+            "event_ends",
+            "rooms",
+            "is_active",
+        ]
         widgets = {
             "date": forms.DateInput(attrs={"type": "date"}),
-            "start_time": forms.TimeInput(attrs={"type": "time"}),
-            "end_time": forms.TimeInput(attrs={"type": "time"}),
+            "checkin_opens": forms.TimeInput(attrs={"type": "time"}),
+            "checkin_closes": forms.TimeInput(attrs={"type": "time"}),
+            "event_starts": forms.TimeInput(attrs={"type": "time"}),
+            "event_ends": forms.TimeInput(attrs={"type": "time"}),
             "rooms": forms.CheckboxSelectMultiple,
         }
 
@@ -73,10 +84,6 @@ class RoomForm(forms.ModelForm):
             "name",
             "building",
             "capacity",
-            "min_age",
-            "max_age",
-            "min_grade",
-            "max_grade",
             "sort_order",
             "is_active",
         ]
@@ -90,20 +97,12 @@ class PrinterConfigForm(forms.ModelForm):
         fields = [
             "name",
             "printer_type",
-            "connection_string",
-            "label_width_mm",
-            "label_height_mm",
-            "dpi",
+            "connection_type",
+            "host",
+            "port",
             "is_default",
             "is_active",
         ]
-        help_texts = {
-            "connection_string": (
-                "Examples: tcp://192.168.1.100:9100 (network), "
-                "usb://0x0416:0x5011 (USB), "
-                "Brother_QL-820NWB (CUPS printer name)"
-            ),
-        }
 
 
 class SecurityCodeLookupForm(forms.Form):

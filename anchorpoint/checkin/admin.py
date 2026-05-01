@@ -1,10 +1,42 @@
 from django.contrib import admin
-from .models import Room, CheckInSession, CheckIn, PrinterConfiguration, LabelTemplate
+from .models import (
+    Room,
+    CheckInSession,
+    CheckIn,
+    CheckInConfiguration,
+    CheckInWindow,
+    PrinterConfiguration,
+    LabelTemplate,
+)
+
+
+@admin.register(CheckInConfiguration)
+class CheckInConfigurationAdmin(admin.ModelAdmin):
+    list_display = ["name", "is_active", "created_at"]
+    list_filter = ["is_active"]
+    search_fields = ["name"]
+    filter_horizontal = ["rooms", "groups"]
+    readonly_fields = ["created_at", "updated_at"]
+
+
+@admin.register(CheckInWindow)
+class CheckInWindowAdmin(admin.ModelAdmin):
+    list_display = [
+        "configuration",
+        "schedule_type",
+        "day_of_week",
+        "specific_date",
+        "checkin_opens",
+        "checkin_closes",
+        "is_active",
+    ]
+    list_filter = ["is_active", "schedule_type", "configuration"]
+    search_fields = ["configuration__name", "notes"]
 
 
 @admin.register(Room)
 class RoomAdmin(admin.ModelAdmin):
-    list_display = ["name", "building", "capacity", "min_age", "max_age", "sort_order", "is_active"]
+    list_display = ["name", "building", "capacity", "sort_order", "is_active"]
     list_filter = ["is_active", "building"]
     list_editable = ["sort_order", "is_active"]
     search_fields = ["name", "building"]
@@ -13,7 +45,7 @@ class RoomAdmin(admin.ModelAdmin):
 
 @admin.register(CheckInSession)
 class CheckInSessionAdmin(admin.ModelAdmin):
-    list_display = ["name", "date", "start_time", "end_time", "is_active", "total_checked_in"]
+    list_display = ["name", "date", "checkin_opens", "checkin_closes", "is_active", "total_checked_in"]
     list_filter = ["is_active", "date"]
     search_fields = ["name"]
     date_hierarchy = "date"
@@ -34,7 +66,6 @@ class CheckInAdmin(admin.ModelAdmin):
         "room",
         "security_code",
         "checked_in_at",
-        "is_checked_out",
     ]
     list_filter = ["session", "room", "checked_out_at"]
     search_fields = [
@@ -45,19 +76,15 @@ class CheckInAdmin(admin.ModelAdmin):
     raw_id_fields = ["person", "session"]
     readonly_fields = ["checked_in_at", "checked_in_by", "checked_out_at", "checked_out_by"]
 
-    def is_checked_out(self, obj):
-        return obj.is_checked_out
-    is_checked_out.boolean = True
-
 
 @admin.register(PrinterConfiguration)
 class PrinterConfigurationAdmin(admin.ModelAdmin):
-    list_display = ["name", "printer_type", "connection_string", "is_default", "is_active"]
+    list_display = ["name", "printer_type", "host", "is_default", "is_active"]
     list_filter = ["printer_type", "is_active", "is_default"]
     list_editable = ["is_active"]
 
 
 @admin.register(LabelTemplate)
 class LabelTemplateAdmin(admin.ModelAdmin):
-    list_display = ["name", "label_type", "is_default"]
-    list_filter = ["label_type", "is_default"]
+    list_display = ["name", "width_mm", "height_mm", "is_active"]
+    list_filter = ["is_active"]
