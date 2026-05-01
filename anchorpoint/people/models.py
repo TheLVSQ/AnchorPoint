@@ -85,6 +85,10 @@ class Person(models.Model):
     first_visit_date = models.DateField(blank=True, null=True)
     allergies = models.TextField(blank=True, null=True)
     security_notes = models.TextField(blank=True, null=True)
+    # Custody/security tracking (only relevant for minors)
+    custody_flag = models.BooleanField(default=False)
+    custody_notes = models.TextField(blank=True)
+    unauthorized_pickup = models.TextField(blank=True)
     status = models.CharField(max_length=50, default="guest")
     notes = models.TextField(blank=True, null=True)
 
