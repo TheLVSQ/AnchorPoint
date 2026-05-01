@@ -9,6 +9,7 @@ urlpatterns = [
     path("kiosk/", views.kiosk_lookup, name="kiosk_lookup"),
     path("kiosk/unlock/", views.kiosk_unlock, name="kiosk_unlock"),
     path("kiosk/lock/", views.kiosk_lock, name="kiosk_lock"),
+    path("kiosk/select-config/", views.kiosk_select_config, name="kiosk_select_config"),
     path("kiosk/family/<int:household_id>/", views.kiosk_family_select, name="kiosk_family_select"),
     path("kiosk/confirmation/", views.kiosk_confirmation, name="kiosk_confirmation"),
     path("kiosk/register/", views.kiosk_quick_register, name="kiosk_quick_register"),
@@ -21,6 +22,7 @@ urlpatterns = [
     path("configurations/", views.configuration_list, name="configuration_list"),
     path("configurations/new/", views.configuration_create, name="configuration_create"),
     path("configurations/<int:pk>/", views.configuration_edit, name="configuration_edit"),
+    path("configurations/<int:pk>/delete/", views.configuration_delete, name="configuration_delete"),
 
     # Dashboard and admin (staff_required)
     path("", views.dashboard, name="dashboard"),

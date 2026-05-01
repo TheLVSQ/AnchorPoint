@@ -53,6 +53,7 @@
               <span class="chip">Open Now</span>
             {% endif %}
             <a href="{% url 'checkin:configuration_edit' config.pk %}" class="ghost-link">Edit &rarr;</a>
+            <a href="{% url 'checkin:configuration_delete' config.pk %}" class="ghost-link" style="color:var(--danger,#dc2626);">Delete</a>
           </div>
         </div>
       {% endfor %}

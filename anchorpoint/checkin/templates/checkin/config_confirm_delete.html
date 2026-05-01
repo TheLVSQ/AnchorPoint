@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Delete Configuration{% endblock %}
+{% block content %}
+<div class="container py-4" style="max-width:500px;">
+  <h2>Delete "{{ config.name }}"?</h2>
+  <p class="text-muted">This will delete the configuration and all its schedule windows. Active sessions will be unaffected.</p>
+  <form method="post" class="d-flex gap-3 mt-4">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-danger">Delete</button>
+    <a href="{% url 'checkin:configuration_list' %}" class="btn btn-outline-secondary">Cancel</a>
+  </form>
+</div>
+{% endblock %}
