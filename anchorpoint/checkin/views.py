@@ -106,11 +106,17 @@ def kiosk_lookup(request):
             "org": org, "next_window": next_window,
         })
 
-    # Auto-select if only one config is open
     if len(open_configs) == 1:
         config, window = open_configs[0]
         session = get_or_create_session(config, window)
         request.session[KIOSK_SESSION_ID_KEY] = session.pk
+    elif len(open_configs) > 1:
+        # Multiple configs open — if none selected yet, show picker
+        if not request.session.get(KIOSK_SESSION_ID_KEY):
+            return render(request, "checkin/kiosk/config_picker.html", {
+                "open_configs": open_configs,
+                "org": org,
+            })
 
     session = _get_active_session(request)
     if not session:
@@ -276,6 +282,24 @@ def kiosk_quick_register(request):
     })
 
 
+def kiosk_select_config(request):
+    redir = _ensure_kiosk(request)
+    if redir:
+        return redir
+    if request.method == "POST":
+        config_pk = request.POST.get("config_pk")
+        window_pk = request.POST.get("window_pk")
+        if config_pk and window_pk:
+            try:
+                config = CheckInConfiguration.objects.get(pk=config_pk, is_active=True)
+                window = CheckInWindow.objects.get(pk=window_pk, configuration=config, is_active=True)
+                session = get_or_create_session(config, window)
+                request.session[KIOSK_SESSION_ID_KEY] = session.pk
+            except (CheckInConfiguration.DoesNotExist, CheckInWindow.DoesNotExist):
+                pass
+    return redirect("checkin:kiosk_lookup")
+
+
 def kiosk_lock(request):
     request.session.pop(KIOSK_SESSION_KEY, None)
     request.session.pop(KIOSK_SESSION_ID_KEY, None)
@@ -361,6 +385,15 @@ def configuration_create(request):
 def configuration_edit(request, pk):
     config = get_object_or_404(CheckInConfiguration, pk=pk)
     return _config_form(request, instance=config)
+
+
+@checkin_admin_required
+def configuration_delete(request, pk):
+    config = get_object_or_404(CheckInConfiguration, pk=pk)
+    if request.method == "POST":
+        config.delete()
+        return redirect("checkin:configuration_list")
+    return render(request, "checkin/config_confirm_delete.html", {"config": config})
 
 
 def _config_form(request, instance):

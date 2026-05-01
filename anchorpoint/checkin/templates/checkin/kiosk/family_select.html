@@ -22,7 +22,7 @@
                    style="width:22px;height:22px;cursor:pointer;accent-color:#4f46e5;">
           {% endif %}
           <label for="sel_{{ person.pk }}" style="flex:1;cursor:{% if eligible %}pointer{% else %}default{% endif %};">
-            <div style="font-size:18px;font-weight:700;">{{ person.first_name }} {{ person.last_name }}</div>
+            <div style="font-size:18px;font-weight:700;">{{ person.first_name }} {{ person.last_name }}{% if person.allergies or person.custody_flag %}<span style="display:inline-flex;gap:4px;margin-left:8px;vertical-align:middle;">{% if person.allergies %}<span style="font-size:14px;" title="Allergy alert">✚</span>{% endif %}{% if person.custody_flag %}<span style="font-size:12px;line-height:1;" title="Custody concern"><svg viewBox="0 0 24 24" width="14" height="14" style="display:inline-block;vertical-align:middle;"><path d="M12 2L3 7v5c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-9-5z" fill="currentColor"/></svg></span>{% endif %}</span>{% endif %}</div>
             <div style="font-size:13px;color:#888;margin-top:2px;">
               {% if person.age %}Age {{ person.age }}{% endif %}
               {% if person.grade %} · {{ person.get_grade_display }}{% endif %}

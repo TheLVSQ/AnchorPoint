@@ -1,0 +1,19 @@
+{% extends "checkin/kiosk/base.html" %}
+{% block title %}Select Check-In{% endblock %}
+{% block content %}
+<div class="kiosk-card">
+  <div class="kiosk-title">Select Check-In</div>
+  <div class="kiosk-subtitle">Multiple check-ins are open. Which one are you attending?</div>
+  {% for config, window in open_configs %}
+    <form method="post" action="{% url 'checkin:kiosk_select_config' %}" style="margin-bottom:12px;">
+      {% csrf_token %}
+      <input type="hidden" name="config_pk" value="{{ config.pk }}">
+      <input type="hidden" name="window_pk" value="{{ window.pk }}">
+      <button type="submit" class="btn btn-secondary" style="width:100%;padding:18px;text-align:left;">
+        <div style="font-size:20px;font-weight:700;">{{ config.name }}</div>
+        <div style="font-size:14px;color:#888;margin-top:4px;">{{ window.display_label }}</div>
+      </button>
+    </form>
+  {% endfor %}
+</div>
+{% endblock %}
