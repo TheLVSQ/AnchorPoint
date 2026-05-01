@@ -40,7 +40,7 @@ def kiosk_home(request):
     sessions = CheckInSession.objects.filter(
         date=today,
         is_active=True,
-    ).order_by("start_time")
+    ).order_by("checkin_opens")
 
     return render(
         request,
@@ -142,28 +142,9 @@ def kiosk_rooms(request, session_id):
     people = Person.objects.filter(id__in=selected_ids)
     rooms = session.rooms.filter(is_active=True).order_by("sort_order", "name")
 
-    # Auto-assign rooms based on age/grade
+    # Auto-assignment is now handled by CheckInConfiguration eligibility filters.
+    # No room auto-assignment at this stage.
     auto_assignments = {}
-    for person in people:
-        age = person.age
-        grade = person.grade
-
-        for room in rooms:
-            # Check age range
-            if room.min_age and age and age < room.min_age:
-                continue
-            if room.max_age and age and age > room.max_age:
-                continue
-
-            # Check grade range (simplified - could be enhanced)
-            if room.min_grade and grade and grade < room.min_grade:
-                continue
-            if room.max_grade and grade and grade > room.max_grade:
-                continue
-
-            # This room is a match
-            auto_assignments[person.id] = room.id
-            break
 
     if request.method == "POST":
         # Process room assignments and create check-ins
@@ -317,7 +298,7 @@ def checkout_confirm(request, session_id):
 def dashboard(request):
     """Check-in dashboard showing current sessions."""
     today = timezone.localdate()
-    sessions = CheckInSession.objects.filter(date=today).order_by("start_time")
+    sessions = CheckInSession.objects.filter(date=today).order_by("checkin_opens")
 
     return render(
         request,
@@ -360,7 +341,7 @@ def session_detail(request, session_id):
 @staff_required
 def session_list(request):
     """List all check-in sessions."""
-    sessions = CheckInSession.objects.all().order_by("-date", "-start_time")
+    sessions = CheckInSession.objects.all().order_by("-date", "-checkin_opens")
 
     return render(
         request,
