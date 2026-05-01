@@ -1,0 +1,172 @@
+{% extends "checkin/kiosk/base.html" %}
+{% block title %}New Family{% endblock %}
+{% block content %}
+<div class="kiosk-card">
+  <div class="kiosk-title">New Family</div>
+  <div class="kiosk-subtitle">Enter your information to check in</div>
+
+  <form method="post" id="reg-form">
+    {% csrf_token %}
+    <input type="hidden" name="child_count" id="child_count" value="{{ child_forms|length }}">
+
+    <div style="font-size:14px;color:#666;text-transform:uppercase;letter-spacing:0.06em;
+                margin-bottom:12px;margin-top:8px;">Parent / Guardian</div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div class="form-group">
+        <label>First Name</label>
+        <input type="text" name="parent_first_name" value="{{ parent_form.parent_first_name.value|default:'' }}"
+               placeholder="First name" autofocus>
+      </div>
+      <div class="form-group">
+        <label>Last Name</label>
+        <input type="text" name="parent_last_name" value="{{ parent_form.parent_last_name.value|default:'' }}"
+               placeholder="Last name">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Phone Number</label>
+      <input type="tel" name="parent_phone" value="{{ parent_form.parent_phone.value|default:'' }}"
+             placeholder="Phone number">
+    </div>
+    <div class="form-group">
+      <label>Email (optional)</label>
+      <input type="email" name="parent_email" value="{{ parent_form.parent_email.value|default:'' }}"
+             placeholder="Email address">
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;">
+      <input type="checkbox" name="phone_opt_in" id="phone_opt_in"
+             style="width:20px;height:20px;accent-color:#4f46e5;"
+             {% if parent_form.phone_opt_in.value %}checked{% endif %}>
+      <label for="phone_opt_in" style="font-size:14px;color:#aaa;cursor:pointer;">
+        Allow SMS updates from {{ org.name }}
+      </label>
+    </div>
+
+    <div id="children-container">
+      {% for cf in child_forms %}
+        <div class="child-section" data-index="{{ forloop.counter0 }}">
+          <div style="display:flex;justify-content:space-between;align-items:center;
+                      margin-bottom:12px;margin-top:20px;">
+            <div style="font-size:14px;color:#666;text-transform:uppercase;letter-spacing:0.06em;">
+              Child {{ forloop.counter }}
+            </div>
+            {% if not forloop.first %}
+              <button type="button" class="btn btn-secondary remove-child"
+                      style="padding:6px 14px;font-size:13px;" data-index="{{ forloop.counter0 }}">
+                Remove
+              </button>
+            {% endif %}
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div class="form-group">
+              <label>First Name</label>
+              <input type="text" name="child_{{ forloop.counter0 }}-first_name"
+                     value="{{ cf.first_name.value|default:'' }}" placeholder="First name">
+            </div>
+            <div class="form-group">
+              <label>Last Name</label>
+              <input type="text" name="child_{{ forloop.counter0 }}-last_name"
+                     value="{{ cf.last_name.value|default:'' }}" placeholder="Same as parent">
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Birthdate</label>
+            <input type="date" name="child_{{ forloop.counter0 }}-birthdate"
+                   value="{{ cf.birthdate.value|default:'' }}">
+          </div>
+          <div class="form-group">
+            <label>Allergies (optional)</label>
+            <textarea name="child_{{ forloop.counter0 }}-allergies"
+                      rows="2" placeholder="List any allergies">{{ cf.allergies.value|default:'' }}</textarea>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+            <input type="checkbox" name="child_{{ forloop.counter0 }}-custody_flag"
+                   id="custody_{{ forloop.counter0 }}"
+                   style="width:20px;height:20px;accent-color:#4f46e5;"
+                   {% if cf.custody_flag.value %}checked{% endif %}
+                   onchange="toggleCustody({{ forloop.counter0 }}, this.checked)">
+            <label for="custody_{{ forloop.counter0 }}" style="font-size:14px;color:#aaa;cursor:pointer;">
+              Security/custody concern
+            </label>
+          </div>
+          <div id="custody_details_{{ forloop.counter0 }}"
+               style="display:{% if cf.custody_flag.value %}block{% else %}none{% endif %};
+                      background:#0d0d20;border-radius:8px;padding:14px;margin-bottom:12px;">
+            <div class="form-group">
+              <label>Custody notes</label>
+              <textarea name="child_{{ forloop.counter0 }}-custody_notes"
+                        rows="2" placeholder="Who has custody, any concerns...">{{ cf.custody_notes.value|default:'' }}</textarea>
+            </div>
+            <div class="form-group">
+              <label>Persons NOT allowed to pick up</label>
+              <textarea name="child_{{ forloop.counter0 }}-unauthorized_pickup"
+                        rows="2" placeholder="Names of unauthorized persons...">{{ cf.unauthorized_pickup.value|default:'' }}</textarea>
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+
+    <button type="button" id="add-child" class="btn btn-secondary" style="margin-top:8px;margin-bottom:24px;">
+      + Add Another Child
+    </button>
+
+    <button type="submit" class="btn btn-primary btn-lg">Continue to Check-In</button>
+    <div style="margin-top:14px;text-align:center;">
+      <a href="{% url 'checkin:kiosk_lookup' %}" style="color:#666;font-size:14px;text-decoration:none;">
+        Back to Search
+      </a>
+    </div>
+  </form>
+</div>
+
+{% block extra_js %}
+<script>
+  function toggleCustody(idx, show) {
+    document.getElementById('custody_details_' + idx).style.display = show ? 'block' : 'none';
+  }
+
+  document.getElementById('add-child').addEventListener('click', function() {
+    var countEl = document.getElementById('child_count');
+    var idx = parseInt(countEl.value);
+    countEl.value = idx + 1;
+
+    var html = `
+      <div class="child-section" data-index="${idx}">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;margin-top:20px;">
+          <div style="font-size:14px;color:#666;text-transform:uppercase;letter-spacing:0.06em;">Child ${idx + 1}</div>
+          <button type="button" class="btn btn-secondary remove-child" style="padding:6px 14px;font-size:13px;" data-index="${idx}">Remove</button>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div class="form-group"><label>First Name</label><input type="text" name="child_${idx}-first_name" placeholder="First name"></div>
+          <div class="form-group"><label>Last Name</label><input type="text" name="child_${idx}-last_name" placeholder="Same as parent"></div>
+        </div>
+        <div class="form-group"><label>Birthdate</label><input type="date" name="child_${idx}-birthdate"></div>
+        <div class="form-group"><label>Allergies (optional)</label><textarea name="child_${idx}-allergies" rows="2" placeholder="List any allergies"></textarea></div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+          <input type="checkbox" name="child_${idx}-custody_flag" id="custody_${idx}"
+                 style="width:20px;height:20px;accent-color:#4f46e5;"
+                 onchange="toggleCustody(${idx}, this.checked)">
+          <label for="custody_${idx}" style="font-size:14px;color:#aaa;cursor:pointer;">Security/custody concern</label>
+        </div>
+        <div id="custody_details_${idx}" style="display:none;background:#0d0d20;border-radius:8px;padding:14px;margin-bottom:12px;">
+          <div class="form-group"><label>Custody notes</label><textarea name="child_${idx}-custody_notes" rows="2" placeholder="Who has custody, any concerns..."></textarea></div>
+          <div class="form-group"><label>Persons NOT allowed to pick up</label><textarea name="child_${idx}-unauthorized_pickup" rows="2" placeholder="Names of unauthorized persons..."></textarea></div>
+        </div>
+      </div>`;
+
+    document.getElementById('children-container').insertAdjacentHTML('beforeend', html);
+  });
+
+  document.getElementById('children-container').addEventListener('click', function(e) {
+    if (e.target.classList.contains('remove-child') || e.target.closest('.remove-child')) {
+      var btn = e.target.classList.contains('remove-child') ? e.target : e.target.closest('.remove-child');
+      var section = btn.closest('.child-section');
+      section.remove();
+      document.getElementById('child_count').value = document.querySelectorAll('.child-section').length;
+    }
+  });
+</script>
+{% endblock %}
+{% endblock %}
