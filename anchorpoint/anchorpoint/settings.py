@@ -57,7 +57,6 @@ INSTALLED_APPS = [
     "events",
     "groups",
     "registrations",
-    "attendance",
     "messaging",
     "checkin",
 ]

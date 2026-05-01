@@ -50,7 +50,6 @@ urlpatterns = [
     path("people/", include("people.urls")),
     path("groups/", include("groups.urls")),
     path("events/", include("events.urls")),
-    path("attendance/", include(("attendance.urls", "attendance"), namespace="attendance")),
     path("communications/", include(("messaging.urls", "messaging"), namespace="messaging")),
     path("checkin/", include(("checkin.urls", "checkin"), namespace="checkin")),
     path(
