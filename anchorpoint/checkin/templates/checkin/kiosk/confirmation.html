@@ -1,0 +1,116 @@
+{% extends "checkin/kiosk/base.html" %}
+{% block title %}Checked In!{% endblock %}
+{% block content %}
+<div class="kiosk-card" style="text-align:center;">
+  <div style="font-size:48px;margin-bottom:16px;">✓</div>
+  <div class="kiosk-title">You're All Set!</div>
+  <div class="kiosk-subtitle">Labels are printing now</div>
+
+  <div style="margin:28px 0;padding:24px;background:#0d0d20;border-radius:12px;">
+    <div style="font-size:12px;color:#666;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px;">
+      Security Code
+    </div>
+    <div style="font-size:48px;font-weight:800;letter-spacing:12px;font-variant-numeric:tabular-nums;">
+      {{ security_code }}
+    </div>
+    <div style="font-size:13px;color:#666;margin-top:8px;">
+      Present the pickup tag at pickup
+    </div>
+  </div>
+
+  {% for checkin in checkins %}
+    <div style="display:flex;justify-content:space-between;padding:10px 0;
+                border-bottom:1px solid #1e1e34;font-size:16px;">
+      <span style="font-weight:600;">{{ checkin.person.first_name }} {{ checkin.person.last_name }}</span>
+      <span style="color:#888;">{{ checkin.room.name }}</span>
+    </div>
+  {% endfor %}
+
+  <div style="margin-top:28px;">
+    <a href="{% url 'checkin:kiosk_lookup' %}" class="btn btn-secondary" style="padding:14px 32px;">
+      Check In Another Family
+    </a>
+  </div>
+  <div id="countdown" style="margin-top:16px;font-size:13px;color:#555;"></div>
+</div>
+
+<!-- Hidden print area — shown only during print -->
+<div class="print-labels" style="display:none;">
+  {% for checkin in checkins %}
+    <div class="label">
+      <div>
+        <div style="font-size:26px;font-weight:800;line-height:1.1;">
+          {{ checkin.person.first_name }} {{ checkin.person.last_name }}
+        </div>
+        <div style="font-size:14px;color:#555;margin-top:3px;">
+          {{ checkin.room.name }}{% if checkin.person.grade %} · {{ checkin.person.get_grade_display }}{% endif %}
+        </div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:auto;padding-top:8px;">
+        <div style="font-size:11px;color:#999;">
+          {{ session.name }} · {{ session.date|date:"M j" }}
+        </div>
+        <div style="text-align:right;">
+          {% if checkin.person.allergies or checkin.person.custody_flag %}
+            <div style="display:flex;gap:4px;justify-content:flex-end;margin-bottom:2px;">
+              {% if checkin.person.allergies %}
+                <span style="font-size:16px;">✚</span>
+              {% endif %}
+              {% if checkin.person.custody_flag %}
+                <span style="font-size:14px;line-height:1;">
+                  <svg viewBox="0 0 24 24" width="16" height="16" style="display:inline-block;vertical-align:middle;">
+                    <path d="M12 2L3 7v5c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-9-5z" fill="currentColor"/>
+                  </svg>
+                </span>
+              {% endif %}
+            </div>
+          {% endif %}
+          <div style="font-size:28px;font-weight:800;letter-spacing:4px;font-variant-numeric:tabular-nums;">
+            {{ checkin.security_code }}
+          </div>
+        </div>
+      </div>
+    </div>
+  {% endfor %}
+
+  <!-- Pickup tag -->
+  <div class="label" style="text-align:center;display:flex;flex-direction:column;
+                             justify-content:center;gap:6px;min-height:65mm;">
+    <div style="font-size:10px;color:#999;text-transform:uppercase;letter-spacing:1px;">Pickup Tag</div>
+    <div style="font-size:40px;font-weight:800;letter-spacing:8px;font-variant-numeric:tabular-nums;">
+      {{ security_code }}
+    </div>
+    <div>
+      <div style="font-size:14px;color:#555;">
+        {% for checkin in checkins %}{{ checkin.person.first_name }}{% if not forloop.last %} · {% endif %}{% endfor %}
+      </div>
+      <div style="font-size:10px;color:#999;margin-top:3px;">
+        {{ session.name }} · {{ session.date|date:"M j" }}
+      </div>
+    </div>
+  </div>
+</div>
+
+{% block extra_js %}
+<script>
+  // Auto-print on load
+  window.addEventListener('load', function() {
+    window.print();
+  });
+
+  // Countdown redirect
+  var seconds = 8;
+  var el = document.getElementById('countdown');
+  function tick() {
+    if (seconds <= 0) {
+      window.location.href = "{% url 'checkin:kiosk_lookup' %}";
+      return;
+    }
+    el.textContent = 'Returning to check-in in ' + seconds + 's...';
+    seconds--;
+    setTimeout(tick, 1000);
+  }
+  tick();
+</script>
+{% endblock %}
+{% endblock %}
