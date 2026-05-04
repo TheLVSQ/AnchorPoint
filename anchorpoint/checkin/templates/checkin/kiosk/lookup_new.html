@@ -1,0 +1,56 @@
+{% extends "checkin/kiosk/base.html" %}
+{% block title %}Family Check-In{% endblock %}
+{% block content %}
+<div class="kiosk-card">
+  {% if session.configuration.welcome_message %}
+    <div style="font-size:16px;color:#a0a0c0;margin-bottom:16px;">
+      {{ session.configuration.welcome_message }}
+    </div>
+  {% endif %}
+  {% if session.configuration.location_name %}
+    <div style="font-size:13px;color:#666;margin-bottom:20px;text-transform:uppercase;letter-spacing:0.08em;">
+      {{ session.configuration.location_name }}
+    </div>
+  {% endif %}
+  <form method="get">
+    <div class="form-group">
+      <input type="text" name="query" value="{{ query }}"
+             placeholder="Enter last name or phone number"
+             style="font-size:20px;" autofocus autocomplete="off">
+    </div>
+    <button type="submit" class="btn btn-primary btn-lg">Search</button>
+  </form>
+
+  {% if query %}
+    <div style="margin-top:28px;">
+      {% if households %}
+        <div style="font-size:13px;color:#666;margin-bottom:12px;text-transform:uppercase;letter-spacing:0.06em;">
+          Results
+        </div>
+        {% for household in households %}
+          <a href="{% url 'checkin:kiosk_family_select' household.pk %}"
+             style="display:block;background:#0d0d20;border:1px solid #2a2a44;border-radius:12px;
+                    padding:18px 20px;margin-bottom:10px;text-decoration:none;color:#fff;">
+            <div style="font-size:20px;font-weight:700;">{{ household.name }}</div>
+            <div style="font-size:14px;color:#888;margin-top:4px;">
+              {% for person in household.members.all %}
+                {{ person.first_name }}{% if not forloop.last %}, {% endif %}
+              {% endfor %}
+            </div>
+          </a>
+        {% endfor %}
+      {% else %}
+        <div style="color:#888;text-align:center;padding:20px 0;">
+          No families found for "{{ query }}"
+        </div>
+      {% endif %}
+    </div>
+  {% endif %}
+
+  <div style="margin-top:32px;text-align:center;">
+    <a href="{% url 'checkin:kiosk_quick_register' %}" class="btn btn-secondary">
+      I'm New Here
+    </a>
+  </div>
+</div>
+{% endblock %}

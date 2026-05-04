@@ -1,10 +1,14 @@
 import random
 import string
+
+from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
 from django.db import models
-from django.contrib.auth.models import User
 from django.utils import timezone
 
 from people.models import Person
+
+User = get_user_model()
 
 
 # Characters that are easy to read and won't be confused
@@ -12,147 +16,261 @@ from people.models import Person
 SECURITY_CODE_CHARS = "ABCDEFGHJKMNPQRTUVWXYZ234679"
 
 
-def generate_security_code(length=4):
-    """Generate a random security code for check-in."""
-    return "".join(random.choices(SECURITY_CODE_CHARS, k=length))
+def generate_security_code():
+    """Generate a 4-character random alphanumeric security code."""
+    return "".join(random.choices(SECURITY_CODE_CHARS, k=4))
+
+
+class CheckInConfiguration(models.Model):
+    """Named check-in configuration controlling schedule, eligibility, and rooms."""
+
+    name = models.CharField(max_length=150, unique=True)
+    description = models.TextField(blank=True)
+    welcome_message = models.CharField(max_length=255, blank=True)
+    location_name = models.CharField(max_length=120, blank=True)
+    is_active = models.BooleanField(default=True)
+
+    rooms = models.ManyToManyField("Room", related_name="configurations", blank=True)
+
+    # Eligibility filters — all optional, OR logic
+    min_age = models.PositiveIntegerField(null=True, blank=True)
+    max_age = models.PositiveIntegerField(null=True, blank=True)
+    min_grade = models.CharField(
+        max_length=20, choices=Person.GRADE_CHOICES, blank=True
+    )
+    max_grade = models.CharField(
+        max_length=20, choices=Person.GRADE_CHOICES, blank=True
+    )
+    groups = models.ManyToManyField(
+        "groups.Group", related_name="checkin_app_configurations", blank=True
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+    def active_windows(self):
+        return self.windows.filter(is_active=True)
+
+    def open_windows(self, reference_time=None):
+        now = reference_time or timezone.localtime()
+        return [w for w in self.active_windows() if w.is_checkin_open(now)]
+
+    def is_open(self, reference_time=None):
+        return bool(self.open_windows(reference_time))
+
+    def schedule_summary(self):
+        windows = list(self.active_windows())
+        if not windows:
+            return "No schedule"
+        parts = []
+        for w in windows:
+            opens = w.checkin_opens.strftime("%I:%M %p").lstrip("0")
+            closes = w.checkin_closes.strftime("%I:%M %p").lstrip("0")
+            if w.schedule_type == CheckInWindow.TYPE_SPECIFIC_DATE and w.specific_date:
+                parts.append(f"{w.specific_date:%b %d, %Y} {opens}-{closes}")
+            else:
+                day = w.get_day_of_week_display() if w.day_of_week is not None else "Day"
+                parts.append(f"{day} {opens}-{closes}")
+        return ", ".join(parts)
+
+    def has_filters(self):
+        return any([
+            self.min_age is not None,
+            self.max_age is not None,
+            self.min_grade,
+            self.max_grade,
+            self.groups.exists(),
+        ])
+
+
+class CheckInWindow(models.Model):
+    """Schedule window with four-time model for check-in availability."""
+
+    TYPE_WEEKLY = "weekly"
+    TYPE_SPECIFIC_DATE = "specific_date"
+    TYPE_CHOICES = [
+        (TYPE_WEEKLY, "Recurring (weekly)"),
+        (TYPE_SPECIFIC_DATE, "Specific date"),
+    ]
+
+    DAY_CHOICES = [
+        (0, "Sunday"),
+        (1, "Monday"),
+        (2, "Tuesday"),
+        (3, "Wednesday"),
+        (4, "Thursday"),
+        (5, "Friday"),
+        (6, "Saturday"),
+    ]
+
+    configuration = models.ForeignKey(
+        CheckInConfiguration, related_name="windows", on_delete=models.CASCADE
+    )
+    schedule_type = models.CharField(
+        max_length=20, choices=TYPE_CHOICES, default=TYPE_WEEKLY
+    )
+    day_of_week = models.IntegerField(choices=DAY_CHOICES, blank=True, null=True)
+    specific_date = models.DateField(blank=True, null=True)
+
+    checkin_opens = models.TimeField()
+    event_starts = models.TimeField()
+    checkin_closes = models.TimeField()
+    event_ends = models.TimeField()
+
+    is_active = models.BooleanField(default=True)
+    notes = models.CharField(max_length=120, blank=True)
+
+    class Meta:
+        ordering = ["schedule_type", "specific_date", "day_of_week", "checkin_opens"]
+
+    def __str__(self):
+        if self.schedule_type == self.TYPE_SPECIFIC_DATE and self.specific_date:
+            return f"{self.configuration.name} on {self.specific_date:%Y-%m-%d}"
+        day = dict(self.DAY_CHOICES).get(self.day_of_week, "Day")
+        return f"{self.configuration.name} on {day} ({self.checkin_opens}-{self.checkin_closes})"
+
+    def clean(self):
+        if self.schedule_type == self.TYPE_SPECIFIC_DATE:
+            if not self.specific_date:
+                raise ValidationError("Specific date is required for date-based windows.")
+        else:
+            if self.day_of_week is None:
+                raise ValidationError("Day of week is required for weekly windows.")
+        if self.checkin_opens and self.checkin_closes and self.checkin_opens >= self.checkin_closes:
+            raise ValidationError("Check-in close time must be after check-in open time.")
+        if self.event_starts and self.event_ends and self.event_starts >= self.event_ends:
+            raise ValidationError("Event end time must be after event start time.")
+
+    def is_checkin_open(self, reference_time=None):
+        now = reference_time or timezone.localtime()
+        current_time = now.time()
+        if self.schedule_type == self.TYPE_SPECIFIC_DATE:
+            if not self.specific_date or self.specific_date != now.date():
+                return False
+        else:
+            if self.day_of_week is None or self.day_of_week != now.weekday():
+                return False
+        return self.checkin_opens <= current_time <= self.checkin_closes
+
+    @property
+    def display_label(self):
+        opens = self.checkin_opens.strftime("%I:%M %p").lstrip("0")
+        closes = self.checkin_closes.strftime("%I:%M %p").lstrip("0")
+        if self.schedule_type == self.TYPE_SPECIFIC_DATE and self.specific_date:
+            return f"{self.configuration.name} • {self.specific_date:%b %d} {opens}-{closes}"
+        day = self.get_day_of_week_display() if self.day_of_week is not None else "Day"
+        return f"{self.configuration.name} • {day} {opens}-{closes}"
 
 
 class Room(models.Model):
-    """Physical room where people are checked in."""
+    """Physical check-in room. Eligibility is on CheckInConfiguration, not here."""
 
     name = models.CharField(max_length=100)
     building = models.CharField(max_length=100, blank=True)
     capacity = models.PositiveIntegerField(null=True, blank=True)
-
-    # Age/grade range for auto-assignment
-    min_age = models.PositiveIntegerField(null=True, blank=True)
-    max_age = models.PositiveIntegerField(null=True, blank=True)
-    min_grade = models.CharField(max_length=20, blank=True)
-    max_grade = models.CharField(max_length=20, blank=True)
-
-    # For ordering rooms in selection lists
     sort_order = models.PositiveIntegerField(default=0)
-
     is_active = models.BooleanField(default=True)
 
     class Meta:
         ordering = ["sort_order", "name"]
 
     def __str__(self):
-        if self.building:
-            return f"{self.name} ({self.building})"
         return self.name
-
-    def current_count(self, session):
-        """Get current number of people checked into this room for a session."""
-        return CheckIn.objects.filter(
-            session=session, room=self, checked_out_at__isnull=True
-        ).count()
-
-    def is_at_capacity(self, session):
-        """Check if room is at capacity for a session."""
-        if not self.capacity:
-            return False
-        return self.current_count(session) >= self.capacity
 
 
 class CheckInSession(models.Model):
-    """Represents a check-in event/service time."""
+    """Concrete instance of a configuration + window for a specific date."""
 
-    name = models.CharField(max_length=100)  # "Sunday 9am Service"
+    configuration = models.ForeignKey(
+        CheckInConfiguration,
+        on_delete=models.CASCADE,
+        related_name="sessions",
+        null=True,
+        blank=True,
+    )
+    window = models.ForeignKey(
+        CheckInWindow,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="sessions",
+    )
+
+    name = models.CharField(max_length=100)
     date = models.DateField()
-    start_time = models.TimeField()
-    end_time = models.TimeField()
 
-    # Optional link to an event
+    checkin_opens = models.TimeField()
+    checkin_closes = models.TimeField()
+    event_starts = models.TimeField()
+    event_ends = models.TimeField()
+
     event = models.ForeignKey(
         "events.Event", on_delete=models.SET_NULL, null=True, blank=True
     )
 
-    # Rooms available for this session
     rooms = models.ManyToManyField(Room, blank=True)
-
     is_active = models.BooleanField(default=True)
-
     created_at = models.DateTimeField(auto_now_add=True)
     created_by = models.ForeignKey(
-        User,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
+        User, on_delete=models.SET_NULL, null=True, blank=True,
         related_name="created_sessions",
     )
 
     class Meta:
-        ordering = ["-date", "-start_time"]
+        ordering = ["-date", "-checkin_opens"]
 
     def __str__(self):
         return f"{self.name} - {self.date}"
 
     @property
     def is_open(self):
-        """Check if session is currently open for check-in."""
         if not self.is_active:
             return False
         now = timezone.localtime()
         if self.date != now.date():
             return False
-        return self.start_time <= now.time() <= self.end_time
+        return self.checkin_opens <= now.time() <= self.checkin_closes
 
     def total_checked_in(self):
-        """Get total number of people currently checked in."""
         return self.checkins.filter(checked_out_at__isnull=True).count()
 
 
 class CheckIn(models.Model):
-    """Individual check-in record."""
+    """Individual check-in record for one person at one session."""
 
     session = models.ForeignKey(
         CheckInSession, on_delete=models.CASCADE, related_name="checkins"
     )
-    person = models.ForeignKey(
-        Person, on_delete=models.CASCADE, related_name="checkins"
-    )
+    person = models.ForeignKey(Person, on_delete=models.CASCADE, related_name="checkins")
     room = models.ForeignKey(
-        Room, on_delete=models.SET_NULL, null=True, blank=True, related_name="checkins"
+        Room, on_delete=models.SET_NULL, null=True, blank=True
     )
-
-    # Security code for pickup verification - same for all family members
-    security_code = models.CharField(max_length=8, db_index=True)
-
-    # Check-in tracking
+    security_code = models.CharField(max_length=4)
     checked_in_at = models.DateTimeField(auto_now_add=True)
     checked_in_by = models.ForeignKey(
-        User,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="checkins_performed",
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="checked_in_by",
     )
-
-    # Check-out tracking
     checked_out_at = models.DateTimeField(null=True, blank=True)
     checked_out_by = models.ForeignKey(
-        User,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="checkouts_performed",
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="checked_out_by",
     )
-
-    # Label printing tracking
     child_label_printed = models.BooleanField(default=False)
     parent_label_printed = models.BooleanField(default=False)
-
-    # Notes (allergies alert, special instructions)
     notes = models.TextField(blank=True)
 
     class Meta:
-        unique_together = ["session", "person"]
         ordering = ["-checked_in_at"]
 
     def __str__(self):
-        return f"{self.person} - {self.session}"
+        return f"{self.person} at {self.session}"
 
     @property
     def is_checked_out(self):
@@ -166,83 +284,27 @@ class CheckIn(models.Model):
 
 
 class PrinterConfiguration(models.Model):
-    """Printer setup for label printing."""
-
-    PRINTER_TYPES = [
-        ("escpos", "ESC/POS (Generic Thermal)"),
-        ("brother", "Brother QL Series"),
-        ("cups", "CUPS/System Printer"),
-        ("zpl", "Zebra (ZPL)"),
-    ]
+    """Printer settings for label printing."""
 
     name = models.CharField(max_length=100)
-    printer_type = models.CharField(max_length=20, choices=PRINTER_TYPES)
-
-    # Connection details (varies by type)
-    # ESC/POS USB: "/dev/usb/lp0" or "usb://0x0416:0x5011"
-    # ESC/POS Network: "tcp://192.168.1.100:9100"
-    # Brother: "tcp://192.168.1.100:9100" or "usb://0x04f9:0x209c"
-    # CUPS: "Brother_QL-820NWB" (printer name)
-    # ZPL: "tcp://192.168.1.100:9100"
-    connection_string = models.CharField(max_length=255)
-
-    # Label settings
-    label_width_mm = models.PositiveIntegerField(default=62)
-    label_height_mm = models.PositiveIntegerField(
-        null=True, blank=True, help_text="Leave blank for continuous roll"
-    )
-
-    # DPI setting (203 is common for thermal, 300 for higher-end)
-    dpi = models.PositiveIntegerField(default=203)
-
+    printer_type = models.CharField(max_length=50, blank=True)
+    connection_type = models.CharField(max_length=50, blank=True)
+    host = models.CharField(max_length=255, blank=True)
+    port = models.PositiveIntegerField(null=True, blank=True)
     is_default = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
 
-    class Meta:
-        verbose_name = "Printer Configuration"
-        verbose_name_plural = "Printer Configurations"
-
     def __str__(self):
-        return f"{self.name} ({self.get_printer_type_display()})"
-
-    def save(self, *args, **kwargs):
-        # Ensure only one default printer
-        if self.is_default:
-            PrinterConfiguration.objects.filter(is_default=True).exclude(
-                pk=self.pk
-            ).update(is_default=False)
-        super().save(*args, **kwargs)
+        return self.name
 
 
 class LabelTemplate(models.Model):
-    """Customizable label designs stored as JSON."""
-
-    LABEL_TYPES = [
-        ("child", "Child Name Tag"),
-        ("parent", "Parent Claim Tag"),
-        ("allergy", "Allergy Alert"),
-        ("visitor", "Visitor Badge"),
-    ]
+    """Label template configuration."""
 
     name = models.CharField(max_length=100)
-    label_type = models.CharField(max_length=20, choices=LABEL_TYPES)
-
-    # Template stored as JSON with layout instructions
-    # Example: {"elements": [{"type": "text", "field": "name", "x": 10, "y": 20, "font_size": 48}]}
-    template_json = models.JSONField(default=dict)
-
-    is_default = models.BooleanField(default=False)
-
-    class Meta:
-        ordering = ["label_type", "name"]
+    width_mm = models.PositiveIntegerField(default=62)
+    height_mm = models.PositiveIntegerField(default=76)
+    is_active = models.BooleanField(default=True)
 
     def __str__(self):
-        return f"{self.name} ({self.get_label_type_display()})"
-
-    def save(self, *args, **kwargs):
-        # Ensure only one default per label type
-        if self.is_default:
-            LabelTemplate.objects.filter(
-                label_type=self.label_type, is_default=True
-            ).exclude(pk=self.pk).update(is_default=False)
-        super().save(*args, **kwargs)
+        return self.name

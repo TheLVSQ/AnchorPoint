@@ -21,13 +21,6 @@
                     {% if room.building %}<span>{{ room.building }}</span>{% endif %}
                     <p class="stat-hint">
                         {% if room.capacity %}Capacity: {{ room.capacity }}{% endif %}
-                        {% if room.min_age or room.max_age %}
-                            &middot; Ages:
-                            {% if room.min_age %}{{ room.min_age }}{% else %}0{% endif %}-{% if room.max_age %}{{ room.max_age }}{% else %}∞{% endif %}
-                        {% endif %}
-                        {% if room.min_grade or room.max_grade %}
-                            &middot; Grades: {{ room.min_grade|default:"K" }}-{{ room.max_grade|default:"12" }}
-                        {% endif %}
                     </p>
                 </div>
                 <div style="display: flex; gap: 0.5rem; align-items: center;">
