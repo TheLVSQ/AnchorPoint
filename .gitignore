@@ -62,3 +62,7 @@ Thumbs.db
 docs/superpowers
 .superpowers/
 .gitignore
+
+# Graphify files
+anchorpoint/graphify-out/
+graphify-out/cache/
