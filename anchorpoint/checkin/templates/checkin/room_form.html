@@ -35,33 +35,6 @@
             </div>
         </div>
 
-        <h3 style="margin: 1.5rem 0 1rem;">Age/Grade Auto-Assignment</h3>
-        <p class="stat-hint" style="margin-bottom: 1rem;">
-            People within these ranges will be automatically assigned to this room during check-in.
-        </p>
-
-        <div class="form-grid">
-            <div class="form-field">
-                {{ form.min_age.label_tag }}
-                {{ form.min_age }}
-            </div>
-            <div class="form-field">
-                {{ form.max_age.label_tag }}
-                {{ form.max_age }}
-            </div>
-        </div>
-
-        <div class="form-grid">
-            <div class="form-field">
-                {{ form.min_grade.label_tag }}
-                {{ form.min_grade }}
-            </div>
-            <div class="form-field">
-                {{ form.max_grade.label_tag }}
-                {{ form.max_grade }}
-            </div>
-        </div>
-
         <div class="form-field">
             <label style="display: flex; align-items: center; gap: 0.5rem;">
                 {{ form.is_active }}

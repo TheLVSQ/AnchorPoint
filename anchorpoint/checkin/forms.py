@@ -1,125 +1,153 @@
 from django import forms
-from .models import Room, CheckInSession, CheckIn, PrinterConfiguration
+from django.forms import inlineformset_factory
+
+from .models import CheckInConfiguration, CheckInSession, CheckInWindow, Room, PrinterConfiguration
 
 
-class PhoneLookupForm(forms.Form):
-    """Form for looking up family by phone number."""
+class CheckInConfigurationForm(forms.ModelForm):
+    class Meta:
+        model = CheckInConfiguration
+        fields = [
+            "name", "description", "welcome_message", "location_name",
+            "is_active", "rooms", "min_age", "max_age", "min_grade",
+            "max_grade", "groups",
+        ]
+        widgets = {
+            "description": forms.Textarea(attrs={"rows": 3}),
+            "rooms": forms.CheckboxSelectMultiple(),
+            "groups": forms.CheckboxSelectMultiple(),
+        }
 
-    phone = forms.CharField(
-        max_length=20,
-        widget=forms.TextInput(
-            attrs={
-                "placeholder": "Enter phone number",
-                "autocomplete": "off",
-                "inputmode": "numeric",
-                "pattern": "[0-9]*",
-            }
-        ),
+
+class CheckInWindowForm(forms.ModelForm):
+    class Meta:
+        model = CheckInWindow
+        fields = [
+            "schedule_type", "day_of_week", "specific_date",
+            "checkin_opens", "event_starts", "checkin_closes", "event_ends",
+            "is_active", "notes",
+        ]
+        widgets = {
+            "specific_date": forms.DateInput(attrs={"type": "date"}),
+            "checkin_opens": forms.TimeInput(attrs={"type": "time"}),
+            "event_starts": forms.TimeInput(attrs={"type": "time"}),
+            "checkin_closes": forms.TimeInput(attrs={"type": "time"}),
+            "event_ends": forms.TimeInput(attrs={"type": "time"}),
+        }
+
+
+CheckInWindowFormSet = inlineformset_factory(
+    CheckInConfiguration,
+    CheckInWindow,
+    form=CheckInWindowForm,
+    extra=1,
+    min_num=1,
+    validate_min=True,
+    can_delete=True,
+)
+
+
+class KioskPinForm(forms.Form):
+    pin = forms.CharField(max_length=6, widget=forms.PasswordInput)
+
+    def __init__(self, *args, expected_pin=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.expected_pin = expected_pin
+
+    def clean_pin(self):
+        pin = self.cleaned_data["pin"]
+        if self.expected_pin and pin != self.expected_pin:
+            raise forms.ValidationError("Incorrect PIN.")
+        return pin
+
+
+class KioskLookupForm(forms.Form):
+    query = forms.CharField(
+        max_length=100,
+        widget=forms.TextInput(attrs={
+            "placeholder": "Last name or phone number",
+            "autofocus": True,
+            "autocomplete": "off",
+        }),
     )
 
 
-class CheckInForm(forms.Form):
-    """Form for selecting people to check in."""
+class FamilyMemberSelectForm(forms.Form):
+    """Dynamic form for selecting family members and rooms at check-in."""
 
-    person_ids = forms.MultipleChoiceField(
-        widget=forms.CheckboxSelectMultiple,
-        required=True,
-    )
-
-    def __init__(self, *args, people=None, **kwargs):
+    def __init__(self, *args, members_with_eligibility=None, rooms=None, **kwargs):
         super().__init__(*args, **kwargs)
-        if people:
-            self.fields["person_ids"].choices = [
-                (str(p.id), f"{p.first_name} {p.last_name}")
-                for p in people
-            ]
+        self.members_with_eligibility = members_with_eligibility or []
+        room_choices = [(r.pk, str(r)) for r in (rooms or [])]
 
-
-class RoomSelectionForm(forms.Form):
-    """Form for selecting room assignments."""
-
-    def __init__(self, *args, people=None, rooms=None, **kwargs):
-        super().__init__(*args, **kwargs)
-        if people and rooms:
-            room_choices = [(str(r.id), r.name) for r in rooms]
-            for person in people:
-                self.fields[f"room_{person.id}"] = forms.ChoiceField(
-                    choices=room_choices,
-                    label=f"{person.first_name}'s room",
-                    required=False,
+        for person, eligible in self.members_with_eligibility:
+            if eligible:
+                self.fields[f"select_{person.pk}"] = forms.BooleanField(
+                    required=False, label=str(person)
                 )
+                self.fields[f"room_{person.pk}"] = forms.ChoiceField(
+                    choices=room_choices, required=False
+                )
+
+    def get_selected(self):
+        """Return list of (person_id, room_id) for selected members."""
+        selected = []
+        for person, eligible in self.members_with_eligibility:
+            if eligible and self.cleaned_data.get(f"select_{person.pk}"):
+                room_id = self.cleaned_data.get(f"room_{person.pk}")
+                selected.append((person.pk, int(room_id) if room_id else None))
+        return selected
+
+
+class QuickRegistrationForm(forms.Form):
+    parent_first_name = forms.CharField(max_length=150)
+    parent_last_name = forms.CharField(max_length=150)
+    parent_phone = forms.CharField(max_length=20)
+    parent_email = forms.EmailField(required=False)
+    phone_opt_in = forms.BooleanField(required=False)
+
+
+class QuickRegistrationChildForm(forms.Form):
+    first_name = forms.CharField(max_length=150)
+    last_name = forms.CharField(max_length=150, required=False)
+    birthdate = forms.DateField(widget=forms.DateInput(attrs={"type": "date"}))
+    allergies = forms.CharField(required=False, widget=forms.Textarea(attrs={"rows": 2}))
+    custody_flag = forms.BooleanField(required=False)
+    custody_notes = forms.CharField(required=False, widget=forms.Textarea(attrs={"rows": 2}))
+    unauthorized_pickup = forms.CharField(required=False, widget=forms.Textarea(attrs={"rows": 2}))
 
 
 class CheckInSessionForm(forms.ModelForm):
-    """Form for creating/editing check-in sessions."""
-
     class Meta:
         model = CheckInSession
-        fields = ["name", "date", "start_time", "end_time", "rooms", "is_active"]
+        fields = [
+            "name", "date", "checkin_opens", "checkin_closes",
+            "event_starts", "event_ends", "rooms", "is_active",
+        ]
         widgets = {
             "date": forms.DateInput(attrs={"type": "date"}),
-            "start_time": forms.TimeInput(attrs={"type": "time"}),
-            "end_time": forms.TimeInput(attrs={"type": "time"}),
-            "rooms": forms.CheckboxSelectMultiple,
+            "checkin_opens": forms.TimeInput(attrs={"type": "time"}),
+            "checkin_closes": forms.TimeInput(attrs={"type": "time"}),
+            "event_starts": forms.TimeInput(attrs={"type": "time"}),
+            "event_ends": forms.TimeInput(attrs={"type": "time"}),
+            "rooms": forms.CheckboxSelectMultiple(),
         }
 
 
 class RoomForm(forms.ModelForm):
-    """Form for creating/editing rooms."""
-
     class Meta:
         model = Room
-        fields = [
-            "name",
-            "building",
-            "capacity",
-            "min_age",
-            "max_age",
-            "min_grade",
-            "max_grade",
-            "sort_order",
-            "is_active",
-        ]
+        fields = ["name", "building", "capacity", "sort_order", "is_active"]
 
 
 class PrinterConfigForm(forms.ModelForm):
-    """Form for configuring printers."""
-
     class Meta:
         model = PrinterConfiguration
-        fields = [
-            "name",
-            "printer_type",
-            "connection_string",
-            "label_width_mm",
-            "label_height_mm",
-            "dpi",
-            "is_default",
-            "is_active",
-        ]
-        help_texts = {
-            "connection_string": (
-                "Examples: tcp://192.168.1.100:9100 (network), "
-                "usb://0x0416:0x5011 (USB), "
-                "Brother_QL-820NWB (CUPS printer name)"
-            ),
-        }
+        fields = "__all__"
 
 
 class SecurityCodeLookupForm(forms.Form):
-    """Form for looking up check-ins by security code (for checkout)."""
-
-    security_code = forms.CharField(
-        max_length=8,
-        widget=forms.TextInput(
-            attrs={
-                "placeholder": "Enter security code",
-                "autocomplete": "off",
-                "style": "text-transform: uppercase;",
-            }
-        ),
-    )
+    security_code = forms.CharField(max_length=8)
 
     def clean_security_code(self):
-        code = self.cleaned_data["security_code"]
-        return code.upper().strip()
+        return self.cleaned_data["security_code"].upper().strip()

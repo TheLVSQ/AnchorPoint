@@ -1,0 +1,85 @@
+{% extends "checkin/kiosk/base.html" %}
+{% block title %}Select Members{% endblock %}
+{% block content %}
+<div class="kiosk-card">
+  <div class="kiosk-title">{{ household.name }}</div>
+  <div class="kiosk-subtitle">Select who is checking in today</div>
+
+  <form method="post">
+    {% csrf_token %}
+    {% if form.non_field_errors %}
+      <div class="error-text" style="margin-bottom:16px;">{{ form.non_field_errors.0 }}</div>
+    {% endif %}
+
+    {% for person, eligible in members_with_eligibility %}
+      <div style="background:#0d0d20;border:1px solid {% if eligible %}#2a2a44{% else %}#1a1a2a{% endif %};
+                  border-radius:12px;padding:16px 20px;margin-bottom:10px;
+                  {% if not eligible %}opacity:0.5;{% endif %}">
+        <div style="display:flex;align-items:center;gap:14px;">
+          {% if eligible %}
+            <input type="checkbox" name="select_{{ person.pk }}"
+                   id="sel_{{ person.pk }}"
+                   style="width:22px;height:22px;cursor:pointer;accent-color:#4f46e5;">
+          {% endif %}
+          <label for="sel_{{ person.pk }}" style="flex:1;cursor:{% if eligible %}pointer{% else %}default{% endif %};">
+            <div style="font-size:18px;font-weight:700;">{{ person.first_name }} {{ person.last_name }}{% if person.allergies or person.custody_flag %}<span style="display:inline-flex;gap:4px;margin-left:8px;vertical-align:middle;">{% if person.allergies %}<span style="font-size:14px;" title="Allergy alert">✚</span>{% endif %}{% if person.custody_flag %}<span style="font-size:12px;line-height:1;" title="Custody concern"><svg viewBox="0 0 24 24" width="14" height="14" style="display:inline-block;vertical-align:middle;"><path d="M12 2L3 7v5c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-9-5z" fill="currentColor"/></svg></span>{% endif %}</span>{% endif %}</div>
+            <div style="font-size:13px;color:#888;margin-top:2px;">
+              {% if person.age %}Age {{ person.age }}{% endif %}
+              {% if person.grade %} · {{ person.get_grade_display }}{% endif %}
+              {% if not eligible %} · Not eligible for this check-in{% endif %}
+            </div>
+          </label>
+        </div>
+        {% if eligible %}
+          <div style="margin-top:12px;padding-left:36px;">
+            <div style="font-size:12px;color:#666;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.06em;">Room</div>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;">
+              {% for room in rooms %}
+                <label style="cursor:pointer;">
+                  <input type="radio" name="room_{{ person.pk }}" value="{{ room.pk }}"
+                         style="display:none;" required>
+                  <span class="room-btn" data-person="{{ person.pk }}" data-room="{{ room.pk }}"
+                        style="display:inline-block;padding:8px 16px;border-radius:8px;
+                               background:#1a1a30;border:1px solid #333;font-size:14px;
+                               cursor:pointer;transition:all 0.15s;">
+                    {{ room.name }}
+                  </span>
+                </label>
+              {% endfor %}
+            </div>
+          </div>
+        {% endif %}
+      </div>
+    {% endfor %}
+
+    <div style="margin-top:24px;display:flex;gap:12px;">
+      <button type="submit" class="btn btn-primary" style="flex:1;padding:18px;">
+        Check In
+      </button>
+      <a href="{% url 'checkin:kiosk_lookup' %}" class="btn btn-secondary" style="padding:18px 24px;">
+        Back
+      </a>
+    </div>
+  </form>
+</div>
+{% block extra_js %}
+<script>
+  // Highlight selected room buttons
+  document.querySelectorAll('input[type="radio"][name^="room_"]').forEach(radio => {
+    radio.addEventListener('change', () => {
+      const personId = radio.name.split('_')[1];
+      document.querySelectorAll(`.room-btn[data-person="${personId}"]`).forEach(btn => {
+        btn.style.background = '#1a1a30';
+        btn.style.borderColor = '#333';
+        btn.style.color = '#fff';
+      });
+      const selected = document.querySelector(`.room-btn[data-person="${personId}"][data-room="${radio.value}"]`);
+      if (selected) {
+        selected.style.background = '#4f46e5';
+        selected.style.borderColor = '#4f46e5';
+      }
+    });
+  });
+</script>
+{% endblock %}
+{% endblock %}
