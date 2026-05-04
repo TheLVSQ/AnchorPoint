@@ -11639,9 +11639,9 @@
       "source_file": "anchorpoint\\checkin\\admin.py",
       "source_location": "L14",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "anchorpoint_checkin_admin_py",
-      "target": "checkin_admin_checkinconfigurationadmin",
-      "confidence_score": 1.0
+      "target": "checkin_admin_checkinconfigurationadmin"
     },
     {
       "relation": "contains",
@@ -11649,9 +11649,9 @@
       "source_file": "anchorpoint\\checkin\\admin.py",
       "source_location": "L23",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "anchorpoint_checkin_admin_py",
-      "target": "checkin_admin_checkinwindowadmin",
-      "confidence_score": 1.0
+      "target": "checkin_admin_checkinwindowadmin"
     },
     {
       "relation": "contains",
@@ -11709,9 +11709,9 @@
       "source_file": "anchorpoint\\checkin\\admin.py",
       "source_location": "L2",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "checkin_admin_checkinconfigurationadmin",
-      "target": "checkin_models_room",
-      "confidence_score": 0.5
+      "target": "checkin_models_room"
     },
     {
       "relation": "uses",
@@ -11719,9 +11719,9 @@
       "source_file": "anchorpoint\\checkin\\admin.py",
       "source_location": "L2",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "checkin_admin_checkinconfigurationadmin",
-      "target": "checkin_models_checkinsession",
-      "confidence_score": 0.5
+      "target": "checkin_models_checkinsession"
     },
     {
       "relation": "uses",
@@ -11729,9 +11729,9 @@
       "source_file": "anchorpoint\\checkin\\admin.py",
       "source_location": "L2",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "checkin_admin_checkinconfigurationadmin",
-      "target": "checkin_models_checkin",
-      "confidence_score": 0.5
+      "target": "checkin_models_checkin"
     },
     {
       "relation": "uses",
@@ -11739,9 +11739,9 @@
       "source_file": "anchorpoint\\checkin\\admin.py",
       "source_location": "L2",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "checkin_admin_checkinconfigurationadmin",
-      "target": "checkin_models_checkinconfiguration",
-      "confidence_score": 0.5
+      "target": "checkin_models_checkinconfiguration"
     },
     {
       "relation": "uses",
@@ -11749,9 +11749,9 @@
       "source_file": "anchorpoint\\checkin\\admin.py",
       "source_location": "L2",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "checkin_admin_checkinconfigurationadmin",
-      "target": "checkin_models_checkinwindow",
-      "confidence_score": 0.5
+      "target": "checkin_models_checkinwindow"
     },
     {
       "relation": "uses",
@@ -11759,9 +11759,9 @@
       "source_file": "anchorpoint\\checkin\\admin.py",
       "source_location": "L2",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "checkin_admin_checkinconfigurationadmin",
-      "target": "checkin_models_printerconfiguration",
-      "confidence_score": 0.5
+      "target": "checkin_models_printerconfiguration"
     },
     {
       "relation": "uses",
@@ -11769,9 +11769,9 @@
       "source_file": "anchorpoint\\checkin\\admin.py",
       "source_location": "L2",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "checkin_admin_checkinconfigurationadmin",
-      "target": "checkin_models_labeltemplate",
-      "confidence_score": 0.5
+      "target": "checkin_models_labeltemplate"
     },
     {
       "relation": "uses",
@@ -11779,9 +11779,9 @@
       "source_file": "anchorpoint\\checkin\\admin.py",
       "source_location": "L2",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "checkin_admin_checkinwindowadmin",
-      "target": "checkin_models_room",
-      "confidence_score": 0.5
+      "target": "checkin_models_room"
     },
     {
       "relation": "uses",
@@ -11789,9 +11789,9 @@
       "source_file": "anchorpoint\\checkin\\admin.py",
       "source_location": "L2",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "checkin_admin_checkinwindowadmin",
-      "target": "checkin_models_checkinsession",
-      "confidence_score": 0.5
+      "target": "checkin_models_checkinsession"
     },
     {
       "relation": "uses",
@@ -11799,9 +11799,9 @@
       "source_file": "anchorpoint\\checkin\\admin.py",
       "source_location": "L2",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "checkin_admin_checkinwindowadmin",
-      "target": "checkin_models_checkin",
-      "confidence_score": 0.5
+      "target": "checkin_models_checkin"
     },
     {
       "relation": "uses",
@@ -11809,9 +11809,9 @@
       "source_file": "anchorpoint\\checkin\\admin.py",
       "source_location": "L2",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "checkin_admin_checkinwindowadmin",
-      "target": "checkin_models_checkinconfiguration",
-      "confidence_score": 0.5
+      "target": "checkin_models_checkinconfiguration"
     },
     {
       "relation": "uses",
@@ -11819,9 +11819,9 @@
       "source_file": "anchorpoint\\checkin\\admin.py",
       "source_location": "L2",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "checkin_admin_checkinwindowadmin",
-      "target": "checkin_models_checkinwindow",
-      "confidence_score": 0.5
+      "target": "checkin_models_checkinwindow"
     },
     {
       "relation": "uses",
@@ -11829,9 +11829,9 @@
       "source_file": "anchorpoint\\checkin\\admin.py",
       "source_location": "L2",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "checkin_admin_checkinwindowadmin",
-      "target": "checkin_models_printerconfiguration",
-      "confidence_score": 0.5
+      "target": "checkin_models_printerconfiguration"
     },
     {
       "relation": "uses",
@@ -11839,9 +11839,9 @@
       "source_file": "anchorpoint\\checkin\\admin.py",
       "source_location": "L2",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "checkin_admin_checkinwindowadmin",
-      "target": "checkin_models_labeltemplate",
-      "confidence_score": 0.5
+      "target": "checkin_models_labeltemplate"
     },
     {
       "relation": "uses",
@@ -11879,9 +11879,9 @@
       "source_file": "anchorpoint\\checkin\\admin.py",
       "source_location": "L2",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "checkin_admin_roomadmin",
-      "target": "checkin_models_checkinconfiguration",
-      "confidence_score": 0.5
+      "target": "checkin_models_checkinconfiguration"
     },
     {
       "relation": "uses",
@@ -11889,9 +11889,9 @@
       "source_file": "anchorpoint\\checkin\\admin.py",
       "source_location": "L2",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "checkin_admin_roomadmin",
-      "target": "checkin_models_checkinwindow",
-      "confidence_score": 0.5
+      "target": "checkin_models_checkinwindow"
     },
     {
       "relation": "uses",
@@ -11969,9 +11969,9 @@
       "source_file": "anchorpoint\\checkin\\admin.py",
       "source_location": "L2",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "checkin_admin_checkinsessionadmin",
-      "target": "checkin_models_checkinconfiguration",
-      "confidence_score": 0.5
+      "target": "checkin_models_checkinconfiguration"
     },
     {
       "relation": "uses",
@@ -11979,9 +11979,9 @@
       "source_file": "anchorpoint\\checkin\\admin.py",
       "source_location": "L2",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "checkin_admin_checkinsessionadmin",
-      "target": "checkin_models_checkinwindow",
-      "confidence_score": 0.5
+      "target": "checkin_models_checkinwindow"
     },
     {
       "relation": "uses",
@@ -12049,9 +12049,9 @@
       "source_file": "anchorpoint\\checkin\\admin.py",
       "source_location": "L2",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "checkin_admin_checkinadmin",
-      "target": "checkin_models_checkinconfiguration",
-      "confidence_score": 0.5
+      "target": "checkin_models_checkinconfiguration"
     },
     {
       "relation": "uses",
@@ -12059,9 +12059,9 @@
       "source_file": "anchorpoint\\checkin\\admin.py",
       "source_location": "L2",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "checkin_admin_checkinadmin",
-      "target": "checkin_models_checkinwindow",
-      "confidence_score": 0.5
+      "target": "checkin_models_checkinwindow"
     },
     {
       "relation": "uses",
@@ -12139,9 +12139,9 @@
       "source_file": "anchorpoint\\checkin\\admin.py",
       "source_location": "L2",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "checkin_admin_printerconfigurationadmin",
-      "target": "checkin_models_checkinconfiguration",
-      "confidence_score": 0.5
+      "target": "checkin_models_checkinconfiguration"
     },
     {
       "relation": "uses",
@@ -12149,9 +12149,9 @@
       "source_file": "anchorpoint\\checkin\\admin.py",
       "source_location": "L2",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "checkin_admin_printerconfigurationadmin",
-      "target": "checkin_models_checkinwindow",
-      "confidence_score": 0.5
+      "target": "checkin_models_checkinwindow"
     },
     {
       "relation": "uses",
@@ -12219,9 +12219,9 @@
       "source_file": "anchorpoint\\checkin\\admin.py",
       "source_location": "L2",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "checkin_admin_labeltemplateadmin",
-      "target": "checkin_models_checkinconfiguration",
-      "confidence_score": 0.5
+      "target": "checkin_models_checkinconfiguration"
     },
     {
       "relation": "uses",
@@ -12229,9 +12229,9 @@
       "source_file": "anchorpoint\\checkin\\admin.py",
       "source_location": "L2",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "checkin_admin_labeltemplateadmin",
-      "target": "checkin_models_checkinwindow",
-      "confidence_score": 0.5
+      "target": "checkin_models_checkinwindow"
     },
     {
       "relation": "uses",
@@ -12390,9 +12390,9 @@
       "source_file": "anchorpoint\\checkin\\forms.py",
       "source_location": "L7",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "anchorpoint_checkin_forms_py",
-      "target": "checkin_forms_checkinconfigurationform",
-      "confidence_score": 1.0
+      "target": "checkin_forms_checkinconfigurationform"
     },
     {
       "relation": "contains",
@@ -12410,9 +12410,9 @@
       "source_file": "anchorpoint\\checkin\\forms.py",
       "source_location": "L22",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "anchorpoint_checkin_forms_py",
-      "target": "checkin_forms_checkinwindowform",
-      "confidence_score": 1.0
+      "target": "checkin_forms_checkinwindowform"
     },
     {
       "relation": "contains",
@@ -12420,9 +12420,9 @@
       "source_file": "anchorpoint\\checkin\\forms.py",
       "source_location": "L50",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "anchorpoint_checkin_forms_py",
-      "target": "checkin_forms_kioskpinform",
-      "confidence_score": 1.0
+      "target": "checkin_forms_kioskpinform"
     },
     {
       "relation": "contains",
@@ -12430,9 +12430,9 @@
       "source_file": "anchorpoint\\checkin\\forms.py",
       "source_location": "L64",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "anchorpoint_checkin_forms_py",
-      "target": "checkin_forms_kiosklookupform",
-      "confidence_score": 1.0
+      "target": "checkin_forms_kiosklookupform"
     },
     {
       "relation": "contains",
@@ -12440,9 +12440,9 @@
       "source_file": "anchorpoint\\checkin\\forms.py",
       "source_location": "L75",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "anchorpoint_checkin_forms_py",
-      "target": "checkin_forms_familymemberselectform",
-      "confidence_score": 1.0
+      "target": "checkin_forms_familymemberselectform"
     },
     {
       "relation": "contains",
@@ -12450,9 +12450,9 @@
       "source_file": "anchorpoint\\checkin\\forms.py",
       "source_location": "L102",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "anchorpoint_checkin_forms_py",
-      "target": "checkin_forms_quickregistrationform",
-      "confidence_score": 1.0
+      "target": "checkin_forms_quickregistrationform"
     },
     {
       "relation": "contains",
@@ -12460,9 +12460,9 @@
       "source_file": "anchorpoint\\checkin\\forms.py",
       "source_location": "L110",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "anchorpoint_checkin_forms_py",
-      "target": "checkin_forms_quickregistrationchildform",
-      "confidence_score": 1.0
+      "target": "checkin_forms_quickregistrationchildform"
     },
     {
       "relation": "contains",
@@ -12551,9 +12551,9 @@
       "source_file": "anchorpoint\\checkin\\forms.py",
       "source_location": "L4",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "checkin_forms_checkinconfigurationform",
-      "target": "checkin_models_checkinconfiguration",
-      "confidence_score": 0.5
+      "target": "checkin_models_checkinconfiguration"
     },
     {
       "relation": "uses",
@@ -12561,9 +12561,9 @@
       "source_file": "anchorpoint\\checkin\\forms.py",
       "source_location": "L4",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "checkin_forms_checkinconfigurationform",
-      "target": "checkin_models_checkinsession",
-      "confidence_score": 0.5
+      "target": "checkin_models_checkinsession"
     },
     {
       "relation": "uses",
@@ -12571,9 +12571,9 @@
       "source_file": "anchorpoint\\checkin\\forms.py",
       "source_location": "L4",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "checkin_forms_checkinconfigurationform",
-      "target": "checkin_models_checkinwindow",
-      "confidence_score": 0.5
+      "target": "checkin_models_checkinwindow"
     },
     {
       "relation": "uses",
@@ -12581,9 +12581,9 @@
       "source_file": "anchorpoint\\checkin\\forms.py",
       "source_location": "L4",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "checkin_forms_checkinconfigurationform",
-      "target": "checkin_models_room",
-      "confidence_score": 0.5
+      "target": "checkin_models_room"
     },
     {
       "relation": "uses",
@@ -12591,9 +12591,9 @@
       "source_file": "anchorpoint\\checkin\\forms.py",
       "source_location": "L4",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "checkin_forms_checkinconfigurationform",
-      "target": "checkin_models_printerconfiguration",
-      "confidence_score": 0.5
+      "target": "checkin_models_printerconfiguration"
     },
     {
       "relation": "calls",
@@ -12612,9 +12612,9 @@
       "source_file": "anchorpoint\\checkin\\forms.py",
       "source_location": "L4",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "checkin_forms_meta",
-      "target": "checkin_models_checkinconfiguration",
-      "confidence_score": 0.5
+      "target": "checkin_models_checkinconfiguration"
     },
     {
       "relation": "uses",
@@ -12632,9 +12632,9 @@
       "source_file": "anchorpoint\\checkin\\forms.py",
       "source_location": "L4",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "checkin_forms_meta",
-      "target": "checkin_models_checkinwindow",
-      "confidence_score": 0.5
+      "target": "checkin_models_checkinwindow"
     },
     {
       "relation": "uses",
@@ -12682,9 +12682,9 @@
       "source_file": "anchorpoint\\checkin\\forms.py",
       "source_location": "L4",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "checkin_forms_checkinwindowform",
-      "target": "checkin_models_checkinconfiguration",
-      "confidence_score": 0.5
+      "target": "checkin_models_checkinconfiguration"
     },
     {
       "relation": "uses",
@@ -12692,9 +12692,9 @@
       "source_file": "anchorpoint\\checkin\\forms.py",
       "source_location": "L4",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "checkin_forms_checkinwindowform",
-      "target": "checkin_models_checkinsession",
-      "confidence_score": 0.5
+      "target": "checkin_models_checkinsession"
     },
     {
       "relation": "uses",
@@ -12702,9 +12702,9 @@
       "source_file": "anchorpoint\\checkin\\forms.py",
       "source_location": "L4",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "checkin_forms_checkinwindowform",
-      "target": "checkin_models_checkinwindow",
-      "confidence_score": 0.5
+      "target": "checkin_models_checkinwindow"
     },
     {
       "relation": "uses",
@@ -12712,9 +12712,9 @@
       "source_file": "anchorpoint\\checkin\\forms.py",
       "source_location": "L4",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "checkin_forms_checkinwindowform",
-      "target": "checkin_models_room",
-      "confidence_score": 0.5
+      "target": "checkin_models_room"
     },
     {
       "relation": "uses",
@@ -12722,9 +12722,9 @@
       "source_file": "anchorpoint\\checkin\\forms.py",
       "source_location": "L4",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "checkin_forms_checkinwindowform",
-      "target": "checkin_models_printerconfiguration",
-      "confidence_score": 0.5
+      "target": "checkin_models_printerconfiguration"
     },
     {
       "relation": "method",
@@ -12732,9 +12732,9 @@
       "source_file": "anchorpoint\\checkin\\forms.py",
       "source_location": "L53",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "checkin_forms_kioskpinform",
-      "target": "checkin_forms_kioskpinform_init",
-      "confidence_score": 1.0
+      "target": "checkin_forms_kioskpinform_init"
     },
     {
       "relation": "method",
@@ -12742,9 +12742,9 @@
       "source_file": "anchorpoint\\checkin\\forms.py",
       "source_location": "L57",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "checkin_forms_kioskpinform",
-      "target": "checkin_forms_kioskpinform_clean_pin",
-      "confidence_score": 1.0
+      "target": "checkin_forms_kioskpinform_clean_pin"
     },
     {
       "relation": "uses",
@@ -12752,9 +12752,9 @@
       "source_file": "anchorpoint\\checkin\\forms.py",
       "source_location": "L4",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "checkin_forms_kioskpinform",
-      "target": "checkin_models_checkinconfiguration",
-      "confidence_score": 0.5
+      "target": "checkin_models_checkinconfiguration"
     },
     {
       "relation": "uses",
@@ -12762,9 +12762,9 @@
       "source_file": "anchorpoint\\checkin\\forms.py",
       "source_location": "L4",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "checkin_forms_kioskpinform",
-      "target": "checkin_models_checkinsession",
-      "confidence_score": 0.5
+      "target": "checkin_models_checkinsession"
     },
     {
       "relation": "uses",
@@ -12772,9 +12772,9 @@
       "source_file": "anchorpoint\\checkin\\forms.py",
       "source_location": "L4",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "checkin_forms_kioskpinform",
-      "target": "checkin_models_checkinwindow",
-      "confidence_score": 0.5
+      "target": "checkin_models_checkinwindow"
     },
     {
       "relation": "uses",
@@ -12782,9 +12782,9 @@
       "source_file": "anchorpoint\\checkin\\forms.py",
       "source_location": "L4",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "checkin_forms_kioskpinform",
-      "target": "checkin_models_room",
-      "confidence_score": 0.5
+      "target": "checkin_models_room"
     },
     {
       "relation": "uses",
@@ -12792,9 +12792,9 @@
       "source_file": "anchorpoint\\checkin\\forms.py",
       "source_location": "L4",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "checkin_forms_kioskpinform",
-      "target": "checkin_models_printerconfiguration",
-      "confidence_score": 0.5
+      "target": "checkin_models_printerconfiguration"
     },
     {
       "relation": "calls",
@@ -12814,9 +12814,9 @@
       "source_file": "anchorpoint\\checkin\\forms.py",
       "source_location": "L54",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "checkin_forms_kioskpinform_init",
-      "target": "checkin_forms_familymemberselectform_init",
-      "confidence_score": 1.0
+      "target": "checkin_forms_familymemberselectform_init"
     },
     {
       "relation": "uses",
@@ -12824,9 +12824,9 @@
       "source_file": "anchorpoint\\checkin\\forms.py",
       "source_location": "L4",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "checkin_forms_kiosklookupform",
-      "target": "checkin_models_checkinconfiguration",
-      "confidence_score": 0.5
+      "target": "checkin_models_checkinconfiguration"
     },
     {
       "relation": "uses",
@@ -12834,9 +12834,9 @@
       "source_file": "anchorpoint\\checkin\\forms.py",
       "source_location": "L4",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "checkin_forms_kiosklookupform",
-      "target": "checkin_models_checkinsession",
-      "confidence_score": 0.5
+      "target": "checkin_models_checkinsession"
     },
     {
       "relation": "uses",
@@ -12844,9 +12844,9 @@
       "source_file": "anchorpoint\\checkin\\forms.py",
       "source_location": "L4",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "checkin_forms_kiosklookupform",
-      "target": "checkin_models_checkinwindow",
-      "confidence_score": 0.5
+      "target": "checkin_models_checkinwindow"
     },
     {
       "relation": "uses",
@@ -12854,9 +12854,9 @@
       "source_file": "anchorpoint\\checkin\\forms.py",
       "source_location": "L4",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "checkin_forms_kiosklookupform",
-      "target": "checkin_models_room",
-      "confidence_score": 0.5
+      "target": "checkin_models_room"
     },
     {
       "relation": "uses",
@@ -12864,9 +12864,9 @@
       "source_file": "anchorpoint\\checkin\\forms.py",
       "source_location": "L4",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "checkin_forms_kiosklookupform",
-      "target": "checkin_models_printerconfiguration",
-      "confidence_score": 0.5
+      "target": "checkin_models_printerconfiguration"
     },
     {
       "relation": "calls",
@@ -12885,9 +12885,9 @@
       "source_file": "anchorpoint\\checkin\\forms.py",
       "source_location": "L78",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "checkin_forms_familymemberselectform",
-      "target": "checkin_forms_familymemberselectform_init",
-      "confidence_score": 1.0
+      "target": "checkin_forms_familymemberselectform_init"
     },
     {
       "relation": "method",
@@ -12895,9 +12895,9 @@
       "source_file": "anchorpoint\\checkin\\forms.py",
       "source_location": "L92",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "checkin_forms_familymemberselectform",
-      "target": "checkin_forms_familymemberselectform_get_selected",
-      "confidence_score": 1.0
+      "target": "checkin_forms_familymemberselectform_get_selected"
     },
     {
       "relation": "rationale_for",
@@ -12905,9 +12905,9 @@
       "source_file": "anchorpoint\\checkin\\forms.py",
       "source_location": "L76",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "checkin_forms_rationale_76",
-      "target": "checkin_forms_familymemberselectform",
-      "confidence_score": 1.0
+      "target": "checkin_forms_familymemberselectform"
     },
     {
       "relation": "uses",
@@ -12915,9 +12915,9 @@
       "source_file": "anchorpoint\\checkin\\forms.py",
       "source_location": "L4",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "checkin_forms_familymemberselectform",
-      "target": "checkin_models_checkinconfiguration",
-      "confidence_score": 0.5
+      "target": "checkin_models_checkinconfiguration"
     },
     {
       "relation": "uses",
@@ -12925,9 +12925,9 @@
       "source_file": "anchorpoint\\checkin\\forms.py",
       "source_location": "L4",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "checkin_forms_familymemberselectform",
-      "target": "checkin_models_checkinsession",
-      "confidence_score": 0.5
+      "target": "checkin_models_checkinsession"
     },
     {
       "relation": "uses",
@@ -12935,9 +12935,9 @@
       "source_file": "anchorpoint\\checkin\\forms.py",
       "source_location": "L4",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "checkin_forms_familymemberselectform",
-      "target": "checkin_models_checkinwindow",
-      "confidence_score": 0.5
+      "target": "checkin_models_checkinwindow"
     },
     {
       "relation": "uses",
@@ -12945,9 +12945,9 @@
       "source_file": "anchorpoint\\checkin\\forms.py",
       "source_location": "L4",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "checkin_forms_familymemberselectform",
-      "target": "checkin_models_room",
-      "confidence_score": 0.5
+      "target": "checkin_models_room"
     },
     {
       "relation": "uses",
@@ -12955,9 +12955,9 @@
       "source_file": "anchorpoint\\checkin\\forms.py",
       "source_location": "L4",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "checkin_forms_familymemberselectform",
-      "target": "checkin_models_printerconfiguration",
-      "confidence_score": 0.5
+      "target": "checkin_models_printerconfiguration"
     },
     {
       "relation": "calls",
@@ -12976,9 +12976,9 @@
       "source_file": "anchorpoint\\checkin\\forms.py",
       "source_location": "L93",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "checkin_forms_rationale_93",
-      "target": "checkin_forms_familymemberselectform_get_selected",
-      "confidence_score": 1.0
+      "target": "checkin_forms_familymemberselectform_get_selected"
     },
     {
       "relation": "uses",
@@ -12986,9 +12986,9 @@
       "source_file": "anchorpoint\\checkin\\forms.py",
       "source_location": "L4",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "checkin_forms_quickregistrationform",
-      "target": "checkin_models_checkinconfiguration",
-      "confidence_score": 0.5
+      "target": "checkin_models_checkinconfiguration"
     },
     {
       "relation": "uses",
@@ -12996,9 +12996,9 @@
       "source_file": "anchorpoint\\checkin\\forms.py",
       "source_location": "L4",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "checkin_forms_quickregistrationform",
-      "target": "checkin_models_checkinsession",
-      "confidence_score": 0.5
+      "target": "checkin_models_checkinsession"
     },
     {
       "relation": "uses",
@@ -13006,9 +13006,9 @@
       "source_file": "anchorpoint\\checkin\\forms.py",
       "source_location": "L4",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "checkin_forms_quickregistrationform",
-      "target": "checkin_models_checkinwindow",
-      "confidence_score": 0.5
+      "target": "checkin_models_checkinwindow"
     },
     {
       "relation": "uses",
@@ -13016,9 +13016,9 @@
       "source_file": "anchorpoint\\checkin\\forms.py",
       "source_location": "L4",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "checkin_forms_quickregistrationform",
-      "target": "checkin_models_room",
-      "confidence_score": 0.5
+      "target": "checkin_models_room"
     },
     {
       "relation": "uses",
@@ -13026,9 +13026,9 @@
       "source_file": "anchorpoint\\checkin\\forms.py",
       "source_location": "L4",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "checkin_forms_quickregistrationform",
-      "target": "checkin_models_printerconfiguration",
-      "confidence_score": 0.5
+      "target": "checkin_models_printerconfiguration"
     },
     {
       "relation": "calls",
@@ -13047,9 +13047,9 @@
       "source_file": "anchorpoint\\checkin\\forms.py",
       "source_location": "L4",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "checkin_forms_quickregistrationchildform",
-      "target": "checkin_models_checkinconfiguration",
-      "confidence_score": 0.5
+      "target": "checkin_models_checkinconfiguration"
     },
     {
       "relation": "uses",
@@ -13057,9 +13057,9 @@
       "source_file": "anchorpoint\\checkin\\forms.py",
       "source_location": "L4",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "checkin_forms_quickregistrationchildform",
-      "target": "checkin_models_checkinsession",
-      "confidence_score": 0.5
+      "target": "checkin_models_checkinsession"
     },
     {
       "relation": "uses",
@@ -13067,9 +13067,9 @@
       "source_file": "anchorpoint\\checkin\\forms.py",
       "source_location": "L4",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "checkin_forms_quickregistrationchildform",
-      "target": "checkin_models_checkinwindow",
-      "confidence_score": 0.5
+      "target": "checkin_models_checkinwindow"
     },
     {
       "relation": "uses",
@@ -13077,9 +13077,9 @@
       "source_file": "anchorpoint\\checkin\\forms.py",
       "source_location": "L4",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "checkin_forms_quickregistrationchildform",
-      "target": "checkin_models_room",
-      "confidence_score": 0.5
+      "target": "checkin_models_room"
     },
     {
       "relation": "uses",
@@ -13087,9 +13087,9 @@
       "source_file": "anchorpoint\\checkin\\forms.py",
       "source_location": "L4",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "checkin_forms_quickregistrationchildform",
-      "target": "checkin_models_printerconfiguration",
-      "confidence_score": 0.5
+      "target": "checkin_models_printerconfiguration"
     },
     {
       "relation": "calls",
@@ -13108,9 +13108,9 @@
       "source_file": "anchorpoint\\checkin\\forms.py",
       "source_location": "L4",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "checkin_forms_checkinsessionform",
-      "target": "checkin_models_checkinconfiguration",
-      "confidence_score": 0.5
+      "target": "checkin_models_checkinconfiguration"
     },
     {
       "relation": "uses",
@@ -13128,9 +13128,9 @@
       "source_file": "anchorpoint\\checkin\\forms.py",
       "source_location": "L4",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "checkin_forms_checkinsessionform",
-      "target": "checkin_models_checkinwindow",
-      "confidence_score": 0.5
+      "target": "checkin_models_checkinwindow"
     },
     {
       "relation": "uses",
@@ -13210,9 +13210,9 @@
       "source_file": "anchorpoint\\checkin\\forms.py",
       "source_location": "L4",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "checkin_forms_roomform",
-      "target": "checkin_models_checkinconfiguration",
-      "confidence_score": 0.5
+      "target": "checkin_models_checkinconfiguration"
     },
     {
       "relation": "uses",
@@ -13230,9 +13230,9 @@
       "source_file": "anchorpoint\\checkin\\forms.py",
       "source_location": "L4",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "checkin_forms_roomform",
-      "target": "checkin_models_checkinwindow",
-      "confidence_score": 0.5
+      "target": "checkin_models_checkinwindow"
     },
     {
       "relation": "uses",
@@ -13312,9 +13312,9 @@
       "source_file": "anchorpoint\\checkin\\forms.py",
       "source_location": "L4",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "checkin_forms_printerconfigform",
-      "target": "checkin_models_checkinconfiguration",
-      "confidence_score": 0.5
+      "target": "checkin_models_checkinconfiguration"
     },
     {
       "relation": "uses",
@@ -13332,9 +13332,9 @@
       "source_file": "anchorpoint\\checkin\\forms.py",
       "source_location": "L4",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "checkin_forms_printerconfigform",
-      "target": "checkin_models_checkinwindow",
-      "confidence_score": 0.5
+      "target": "checkin_models_checkinwindow"
     },
     {
       "relation": "uses",
@@ -13424,9 +13424,9 @@
       "source_file": "anchorpoint\\checkin\\forms.py",
       "source_location": "L4",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "checkin_forms_securitycodelookupform",
-      "target": "checkin_models_checkinconfiguration",
-      "confidence_score": 0.5
+      "target": "checkin_models_checkinconfiguration"
     },
     {
       "relation": "uses",
@@ -13444,9 +13444,9 @@
       "source_file": "anchorpoint\\checkin\\forms.py",
       "source_location": "L4",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "checkin_forms_securitycodelookupform",
-      "target": "checkin_models_checkinwindow",
-      "confidence_score": 0.5
+      "target": "checkin_models_checkinwindow"
     },
     {
       "relation": "uses",
@@ -13525,9 +13525,9 @@
       "source_file": "anchorpoint\\checkin\\models.py",
       "source_location": "L24",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "anchorpoint_checkin_models_py",
-      "target": "checkin_models_checkinconfiguration",
-      "confidence_score": 1.0
+      "target": "checkin_models_checkinconfiguration"
     },
     {
       "relation": "contains",
@@ -13545,9 +13545,9 @@
       "source_file": "anchorpoint\\checkin\\models.py",
       "source_location": "L92",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "anchorpoint_checkin_models_py",
-      "target": "checkin_models_checkinwindow",
-      "confidence_score": 1.0
+      "target": "checkin_models_checkinwindow"
     },
     {
       "relation": "contains",
@@ -13555,9 +13555,9 @@
       "source_file": "anchorpoint\\checkin\\models.py",
       "source_location": "L162",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "anchorpoint_checkin_models_py",
-      "target": "checkin_models_display_label",
-      "confidence_score": 1.0
+      "target": "checkin_models_display_label"
     },
     {
       "relation": "contains",
@@ -13657,9 +13657,9 @@
       "source_file": "anchorpoint\\checkin\\models.py",
       "source_location": "L20",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "checkin_models_rationale_20",
-      "target": "checkin_models_generate_security_code",
-      "confidence_score": 1.0
+      "target": "checkin_models_generate_security_code"
     },
     {
       "relation": "calls",
@@ -13709,9 +13709,9 @@
       "source_file": "anchorpoint\\checkin\\models.py",
       "source_location": "L54",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "checkin_models_checkinconfiguration",
-      "target": "checkin_models_checkinconfiguration_str",
-      "confidence_score": 1.0
+      "target": "checkin_models_checkinconfiguration_str"
     },
     {
       "relation": "method",
@@ -13719,9 +13719,9 @@
       "source_file": "anchorpoint\\checkin\\models.py",
       "source_location": "L57",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "checkin_models_checkinconfiguration",
-      "target": "checkin_models_checkinconfiguration_active_windows",
-      "confidence_score": 1.0
+      "target": "checkin_models_checkinconfiguration_active_windows"
     },
     {
       "relation": "method",
@@ -13729,9 +13729,9 @@
       "source_file": "anchorpoint\\checkin\\models.py",
       "source_location": "L60",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "checkin_models_checkinconfiguration",
-      "target": "checkin_models_checkinconfiguration_open_windows",
-      "confidence_score": 1.0
+      "target": "checkin_models_checkinconfiguration_open_windows"
     },
     {
       "relation": "method",
@@ -13739,9 +13739,9 @@
       "source_file": "anchorpoint\\checkin\\models.py",
       "source_location": "L64",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "checkin_models_checkinconfiguration",
-      "target": "checkin_models_checkinconfiguration_is_open",
-      "confidence_score": 1.0
+      "target": "checkin_models_checkinconfiguration_is_open"
     },
     {
       "relation": "method",
@@ -13749,9 +13749,9 @@
       "source_file": "anchorpoint\\checkin\\models.py",
       "source_location": "L67",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "checkin_models_checkinconfiguration",
-      "target": "checkin_models_checkinconfiguration_schedule_summary",
-      "confidence_score": 1.0
+      "target": "checkin_models_checkinconfiguration_schedule_summary"
     },
     {
       "relation": "method",
@@ -13759,9 +13759,9 @@
       "source_file": "anchorpoint\\checkin\\models.py",
       "source_location": "L82",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "checkin_models_checkinconfiguration",
-      "target": "checkin_models_checkinconfiguration_has_filters",
-      "confidence_score": 1.0
+      "target": "checkin_models_checkinconfiguration_has_filters"
     },
     {
       "relation": "rationale_for",
@@ -13769,9 +13769,9 @@
       "source_file": "anchorpoint\\checkin\\models.py",
       "source_location": "L25",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "checkin_models_rationale_25",
-      "target": "checkin_models_checkinconfiguration",
-      "confidence_score": 1.0
+      "target": "checkin_models_checkinconfiguration"
     },
     {
       "relation": "uses",
@@ -13779,9 +13779,9 @@
       "source_file": "anchorpoint\\checkin\\models.py",
       "source_location": "L9",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "checkin_models_checkinconfiguration",
-      "target": "people_models_person",
-      "confidence_score": 0.5
+      "target": "people_models_person"
     },
     {
       "relation": "uses",
@@ -13789,9 +13789,9 @@
       "source_file": "anchorpoint\\checkin\\tests\\test_eligibility.py",
       "source_location": "L5",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "tests_test_eligibility_eligibilitytests",
-      "target": "checkin_models_checkinconfiguration",
-      "confidence_score": 0.5
+      "target": "checkin_models_checkinconfiguration"
     },
     {
       "relation": "uses",
@@ -13799,9 +13799,9 @@
       "source_file": "anchorpoint\\checkin\\tests\\test_kiosk_views.py",
       "source_location": "L7",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "tests_test_kiosk_views_kioskflowtests",
-      "target": "checkin_models_checkinconfiguration",
-      "confidence_score": 0.5
+      "target": "checkin_models_checkinconfiguration"
     },
     {
       "relation": "uses",
@@ -13809,9 +13809,9 @@
       "source_file": "anchorpoint\\checkin\\tests\\test_kiosk_views.py",
       "source_location": "L7",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "tests_test_kiosk_views_quickregistrationviewtests",
-      "target": "checkin_models_checkinconfiguration",
-      "confidence_score": 0.5
+      "target": "checkin_models_checkinconfiguration"
     },
     {
       "relation": "uses",
@@ -13819,9 +13819,9 @@
       "source_file": "anchorpoint\\checkin\\tests\\test_session_manager.py",
       "source_location": "L6",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "tests_test_session_manager_sessionmanagertests",
-      "target": "checkin_models_checkinconfiguration",
-      "confidence_score": 0.5
+      "target": "checkin_models_checkinconfiguration"
     },
     {
       "relation": "calls",
@@ -13861,9 +13861,9 @@
       "source_file": "anchorpoint\\checkin\\models.py",
       "source_location": "L62",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "checkin_models_checkinconfiguration_open_windows",
-      "target": "checkin_models_checkinconfiguration_active_windows",
-      "confidence_score": 1.0
+      "target": "checkin_models_checkinconfiguration_active_windows"
     },
     {
       "relation": "calls",
@@ -13872,9 +13872,9 @@
       "source_file": "anchorpoint\\checkin\\models.py",
       "source_location": "L68",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "checkin_models_checkinconfiguration_schedule_summary",
-      "target": "checkin_models_checkinconfiguration_active_windows",
-      "confidence_score": 1.0
+      "target": "checkin_models_checkinconfiguration_active_windows"
     },
     {
       "relation": "calls",
@@ -13883,9 +13883,9 @@
       "source_file": "anchorpoint\\checkin\\models.py",
       "source_location": "L62",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "checkin_models_checkinconfiguration_open_windows",
-      "target": "checkin_models_checkinwindow_is_checkin_open",
-      "confidence_score": 1.0
+      "target": "checkin_models_checkinwindow_is_checkin_open"
     },
     {
       "relation": "calls",
@@ -13894,9 +13894,9 @@
       "source_file": "anchorpoint\\checkin\\models.py",
       "source_location": "L65",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "checkin_models_checkinconfiguration_is_open",
-      "target": "checkin_models_checkinconfiguration_open_windows",
-      "confidence_score": 1.0
+      "target": "checkin_models_checkinconfiguration_open_windows"
     },
     {
       "relation": "method",
@@ -13904,9 +13904,9 @@
       "source_file": "anchorpoint\\checkin\\models.py",
       "source_location": "L132",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "checkin_models_checkinwindow",
-      "target": "checkin_models_checkinwindow_str",
-      "confidence_score": 1.0
+      "target": "checkin_models_checkinwindow_str"
     },
     {
       "relation": "method",
@@ -13914,9 +13914,9 @@
       "source_file": "anchorpoint\\checkin\\models.py",
       "source_location": "L138",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "checkin_models_checkinwindow",
-      "target": "checkin_models_checkinwindow_clean",
-      "confidence_score": 1.0
+      "target": "checkin_models_checkinwindow_clean"
     },
     {
       "relation": "method",
@@ -13924,9 +13924,9 @@
       "source_file": "anchorpoint\\checkin\\models.py",
       "source_location": "L150",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "checkin_models_checkinwindow",
-      "target": "checkin_models_checkinwindow_is_checkin_open",
-      "confidence_score": 1.0
+      "target": "checkin_models_checkinwindow_is_checkin_open"
     },
     {
       "relation": "rationale_for",
@@ -13934,9 +13934,9 @@
       "source_file": "anchorpoint\\checkin\\models.py",
       "source_location": "L93",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "checkin_models_rationale_93",
-      "target": "checkin_models_checkinwindow",
-      "confidence_score": 1.0
+      "target": "checkin_models_checkinwindow"
     },
     {
       "relation": "uses",
@@ -13944,9 +13944,9 @@
       "source_file": "anchorpoint\\checkin\\models.py",
       "source_location": "L9",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "checkin_models_checkinwindow",
-      "target": "people_models_person",
-      "confidence_score": 0.5
+      "target": "people_models_person"
     },
     {
       "relation": "uses",
@@ -13954,9 +13954,9 @@
       "source_file": "anchorpoint\\checkin\\tests\\test_kiosk_views.py",
       "source_location": "L7",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "tests_test_kiosk_views_kioskflowtests",
-      "target": "checkin_models_checkinwindow",
-      "confidence_score": 0.5
+      "target": "checkin_models_checkinwindow"
     },
     {
       "relation": "uses",
@@ -13964,9 +13964,9 @@
       "source_file": "anchorpoint\\checkin\\tests\\test_kiosk_views.py",
       "source_location": "L7",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "tests_test_kiosk_views_quickregistrationviewtests",
-      "target": "checkin_models_checkinwindow",
-      "confidence_score": 0.5
+      "target": "checkin_models_checkinwindow"
     },
     {
       "relation": "uses",
@@ -13974,9 +13974,9 @@
       "source_file": "anchorpoint\\checkin\\tests\\test_session_manager.py",
       "source_location": "L6",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "tests_test_session_manager_sessionmanagertests",
-      "target": "checkin_models_checkinwindow",
-      "confidence_score": 0.5
+      "target": "checkin_models_checkinwindow"
     },
     {
       "relation": "method",
@@ -13994,9 +13994,9 @@
       "source_file": "anchorpoint\\checkin\\models.py",
       "source_location": "L172",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "checkin_models_rationale_172",
-      "target": "checkin_models_room",
-      "confidence_score": 1.0
+      "target": "checkin_models_room"
     },
     {
       "relation": "uses",
@@ -14014,9 +14014,9 @@
       "source_file": "anchorpoint\\checkin\\tests\\test_kiosk_views.py",
       "source_location": "L7",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "tests_test_kiosk_views_kioskflowtests",
-      "target": "checkin_models_room",
-      "confidence_score": 0.5
+      "target": "checkin_models_room"
     },
     {
       "relation": "uses",
@@ -14024,9 +14024,9 @@
       "source_file": "anchorpoint\\checkin\\tests\\test_kiosk_views.py",
       "source_location": "L7",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "tests_test_kiosk_views_quickregistrationviewtests",
-      "target": "checkin_models_room",
-      "confidence_score": 0.5
+      "target": "checkin_models_room"
     },
     {
       "relation": "uses",
@@ -14034,9 +14034,9 @@
       "source_file": "anchorpoint\\checkin\\tests\\test_session_manager.py",
       "source_location": "L6",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "tests_test_session_manager_sessionmanagertests",
-      "target": "checkin_models_room",
-      "confidence_score": 0.5
+      "target": "checkin_models_room"
     },
     {
       "relation": "uses",
@@ -14134,9 +14134,9 @@
       "source_file": "anchorpoint\\checkin\\models.py",
       "source_location": "L188",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "checkin_models_rationale_188",
-      "target": "checkin_models_checkinsession",
-      "confidence_score": 1.0
+      "target": "checkin_models_checkinsession"
     },
     {
       "relation": "uses",
@@ -14154,9 +14154,9 @@
       "source_file": "anchorpoint\\checkin\\tests\\test_kiosk_views.py",
       "source_location": "L7",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "tests_test_kiosk_views_kioskflowtests",
-      "target": "checkin_models_checkinsession",
-      "confidence_score": 0.5
+      "target": "checkin_models_checkinsession"
     },
     {
       "relation": "uses",
@@ -14164,9 +14164,9 @@
       "source_file": "anchorpoint\\checkin\\tests\\test_kiosk_views.py",
       "source_location": "L7",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "tests_test_kiosk_views_quickregistrationviewtests",
-      "target": "checkin_models_checkinsession",
-      "confidence_score": 0.5
+      "target": "checkin_models_checkinsession"
     },
     {
       "relation": "uses",
@@ -14174,9 +14174,9 @@
       "source_file": "anchorpoint\\checkin\\tests\\test_session_manager.py",
       "source_location": "L6",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "tests_test_session_manager_sessionmanagertests",
-      "target": "checkin_models_checkinsession",
-      "confidence_score": 0.5
+      "target": "checkin_models_checkinsession"
     },
     {
       "relation": "uses",
@@ -14274,9 +14274,9 @@
       "source_file": "anchorpoint\\checkin\\models.py",
       "source_location": "L245",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "checkin_models_rationale_245",
-      "target": "checkin_models_checkin",
-      "confidence_score": 1.0
+      "target": "checkin_models_checkin"
     },
     {
       "relation": "uses",
@@ -14294,9 +14294,9 @@
       "source_file": "anchorpoint\\checkin\\tests\\test_kiosk_views.py",
       "source_location": "L7",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "tests_test_kiosk_views_kioskflowtests",
-      "target": "checkin_models_checkin",
-      "confidence_score": 0.5
+      "target": "checkin_models_checkin"
     },
     {
       "relation": "uses",
@@ -14304,9 +14304,9 @@
       "source_file": "anchorpoint\\checkin\\tests\\test_kiosk_views.py",
       "source_location": "L7",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "tests_test_kiosk_views_quickregistrationviewtests",
-      "target": "checkin_models_checkin",
-      "confidence_score": 0.5
+      "target": "checkin_models_checkin"
     },
     {
       "relation": "uses",
@@ -14384,9 +14384,9 @@
       "source_file": "anchorpoint\\checkin\\models.py",
       "source_location": "L280",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "checkin_models_rationale_280",
-      "target": "checkin_models_checkin_checkout",
-      "confidence_score": 1.0
+      "target": "checkin_models_checkin_checkout"
     },
     {
       "relation": "calls",
@@ -14425,9 +14425,9 @@
       "source_file": "anchorpoint\\checkin\\models.py",
       "source_location": "L287",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "checkin_models_rationale_287",
-      "target": "checkin_models_printerconfiguration",
-      "confidence_score": 1.0
+      "target": "checkin_models_printerconfiguration"
     },
     {
       "relation": "uses",
@@ -14525,9 +14525,9 @@
       "source_file": "anchorpoint\\checkin\\models.py",
       "source_location": "L302",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "checkin_models_rationale_302",
-      "target": "checkin_models_labeltemplate",
-      "confidence_score": 1.0
+      "target": "checkin_models_labeltemplate"
     },
     {
       "relation": "uses",
@@ -14587,9 +14587,9 @@
       "source_file": "anchorpoint\\checkin\\views.py",
       "source_location": "L27",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "anchorpoint_checkin_views_py",
-      "target": "anchorpoint_checkin_services_eligibility_py",
-      "confidence_score": 1.0
+      "target": "anchorpoint_checkin_services_eligibility_py"
     },
     {
       "relation": "imports_from",
@@ -14598,9 +14598,9 @@
       "source_file": "anchorpoint\\checkin\\views.py",
       "source_location": "L28",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "anchorpoint_checkin_views_py",
-      "target": "anchorpoint_checkin_services_session_manager_py",
-      "confidence_score": 1.0
+      "target": "anchorpoint_checkin_services_session_manager_py"
     },
     {
       "relation": "imports_from",
@@ -14609,9 +14609,9 @@
       "source_file": "anchorpoint\\checkin\\views.py",
       "source_location": "L29",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "anchorpoint_checkin_views_py",
-      "target": "anchorpoint_checkin_services_quick_registration_py",
-      "confidence_score": 1.0
+      "target": "anchorpoint_checkin_services_quick_registration_py"
     },
     {
       "relation": "contains",
@@ -14619,9 +14619,9 @@
       "source_file": "anchorpoint\\checkin\\views.py",
       "source_location": "L41",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "anchorpoint_checkin_views_py",
-      "target": "checkin_views_ensure_kiosk",
-      "confidence_score": 1.0
+      "target": "checkin_views_ensure_kiosk"
     },
     {
       "relation": "contains",
@@ -14629,9 +14629,9 @@
       "source_file": "anchorpoint\\checkin\\views.py",
       "source_location": "L48",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "anchorpoint_checkin_views_py",
-      "target": "checkin_views_get_active_session",
-      "confidence_score": 1.0
+      "target": "checkin_views_get_active_session"
     },
     {
       "relation": "contains",
@@ -14639,9 +14639,9 @@
       "source_file": "anchorpoint\\checkin\\views.py",
       "source_location": "L56",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "anchorpoint_checkin_views_py",
-      "target": "checkin_views_next_upcoming_window",
-      "confidence_score": 1.0
+      "target": "checkin_views_next_upcoming_window"
     },
     {
       "relation": "contains",
@@ -14649,9 +14649,9 @@
       "source_file": "anchorpoint\\checkin\\views.py",
       "source_location": "L76",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "anchorpoint_checkin_views_py",
-      "target": "checkin_views_kiosk_unlock",
-      "confidence_score": 1.0
+      "target": "checkin_views_kiosk_unlock"
     },
     {
       "relation": "contains",
@@ -14669,9 +14669,9 @@
       "source_file": "anchorpoint\\checkin\\views.py",
       "source_location": "L153",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "anchorpoint_checkin_views_py",
-      "target": "checkin_views_kiosk_family_select",
-      "confidence_score": 1.0
+      "target": "checkin_views_kiosk_family_select"
     },
     {
       "relation": "contains",
@@ -14679,9 +14679,9 @@
       "source_file": "anchorpoint\\checkin\\views.py",
       "source_location": "L213",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "anchorpoint_checkin_views_py",
-      "target": "checkin_views_kiosk_confirmation",
-      "confidence_score": 1.0
+      "target": "checkin_views_kiosk_confirmation"
     },
     {
       "relation": "contains",
@@ -14689,9 +14689,9 @@
       "source_file": "anchorpoint\\checkin\\views.py",
       "source_location": "L232",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "anchorpoint_checkin_views_py",
-      "target": "checkin_views_kiosk_quick_register",
-      "confidence_score": 1.0
+      "target": "checkin_views_kiosk_quick_register"
     },
     {
       "relation": "contains",
@@ -14699,9 +14699,9 @@
       "source_file": "anchorpoint\\checkin\\views.py",
       "source_location": "L285",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "anchorpoint_checkin_views_py",
-      "target": "checkin_views_kiosk_select_config",
-      "confidence_score": 1.0
+      "target": "checkin_views_kiosk_select_config"
     },
     {
       "relation": "contains",
@@ -14709,9 +14709,9 @@
       "source_file": "anchorpoint\\checkin\\views.py",
       "source_location": "L303",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "anchorpoint_checkin_views_py",
-      "target": "checkin_views_kiosk_lock",
-      "confidence_score": 1.0
+      "target": "checkin_views_kiosk_lock"
     },
     {
       "relation": "contains",
@@ -14739,9 +14739,9 @@
       "source_file": "anchorpoint\\checkin\\views.py",
       "source_location": "L374",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "anchorpoint_checkin_views_py",
-      "target": "checkin_views_configuration_list",
-      "confidence_score": 1.0
+      "target": "checkin_views_configuration_list"
     },
     {
       "relation": "contains",
@@ -14749,9 +14749,9 @@
       "source_file": "anchorpoint\\checkin\\views.py",
       "source_location": "L380",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "anchorpoint_checkin_views_py",
-      "target": "checkin_views_configuration_create",
-      "confidence_score": 1.0
+      "target": "checkin_views_configuration_create"
     },
     {
       "relation": "contains",
@@ -14759,9 +14759,9 @@
       "source_file": "anchorpoint\\checkin\\views.py",
       "source_location": "L385",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "anchorpoint_checkin_views_py",
-      "target": "checkin_views_configuration_edit",
-      "confidence_score": 1.0
+      "target": "checkin_views_configuration_edit"
     },
     {
       "relation": "contains",
@@ -14769,9 +14769,9 @@
       "source_file": "anchorpoint\\checkin\\views.py",
       "source_location": "L391",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "anchorpoint_checkin_views_py",
-      "target": "checkin_views_configuration_delete",
-      "confidence_score": 1.0
+      "target": "checkin_views_configuration_delete"
     },
     {
       "relation": "contains",
@@ -14779,9 +14779,9 @@
       "source_file": "anchorpoint\\checkin\\views.py",
       "source_location": "L399",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "anchorpoint_checkin_views_py",
-      "target": "checkin_views_config_form",
-      "confidence_score": 1.0
+      "target": "checkin_views_config_form"
     },
     {
       "relation": "contains",
@@ -14960,9 +14960,9 @@
       "source_file": "anchorpoint\\checkin\\views.py",
       "source_location": "L89",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "checkin_views_kiosk_lookup",
-      "target": "checkin_views_ensure_kiosk",
-      "confidence_score": 1.0
+      "target": "checkin_views_ensure_kiosk"
     },
     {
       "relation": "calls",
@@ -14971,9 +14971,9 @@
       "source_file": "anchorpoint\\checkin\\views.py",
       "source_location": "L154",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "checkin_views_kiosk_family_select",
-      "target": "checkin_views_ensure_kiosk",
-      "confidence_score": 1.0
+      "target": "checkin_views_ensure_kiosk"
     },
     {
       "relation": "calls",
@@ -14982,9 +14982,9 @@
       "source_file": "anchorpoint\\checkin\\views.py",
       "source_location": "L214",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "checkin_views_kiosk_confirmation",
-      "target": "checkin_views_ensure_kiosk",
-      "confidence_score": 1.0
+      "target": "checkin_views_ensure_kiosk"
     },
     {
       "relation": "calls",
@@ -14993,9 +14993,9 @@
       "source_file": "anchorpoint\\checkin\\views.py",
       "source_location": "L233",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "checkin_views_kiosk_quick_register",
-      "target": "checkin_views_ensure_kiosk",
-      "confidence_score": 1.0
+      "target": "checkin_views_ensure_kiosk"
     },
     {
       "relation": "calls",
@@ -15004,9 +15004,9 @@
       "source_file": "anchorpoint\\checkin\\views.py",
       "source_location": "L286",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "checkin_views_kiosk_select_config",
-      "target": "checkin_views_ensure_kiosk",
-      "confidence_score": 1.0
+      "target": "checkin_views_ensure_kiosk"
     },
     {
       "relation": "rationale_for",
@@ -15014,9 +15014,9 @@
       "source_file": "anchorpoint\\checkin\\views.py",
       "source_location": "L42",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "checkin_views_rationale_42",
-      "target": "checkin_views_ensure_kiosk",
-      "confidence_score": 1.0
+      "target": "checkin_views_ensure_kiosk"
     },
     {
       "relation": "calls",
@@ -15025,9 +15025,9 @@
       "source_file": "anchorpoint\\checkin\\views.py",
       "source_location": "L121",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "checkin_views_kiosk_lookup",
-      "target": "checkin_views_get_active_session",
-      "confidence_score": 1.0
+      "target": "checkin_views_get_active_session"
     },
     {
       "relation": "calls",
@@ -15036,9 +15036,9 @@
       "source_file": "anchorpoint\\checkin\\views.py",
       "source_location": "L158",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "checkin_views_kiosk_family_select",
-      "target": "checkin_views_get_active_session",
-      "confidence_score": 1.0
+      "target": "checkin_views_get_active_session"
     },
     {
       "relation": "calls",
@@ -15047,9 +15047,9 @@
       "source_file": "anchorpoint\\checkin\\views.py",
       "source_location": "L222",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "checkin_views_kiosk_confirmation",
-      "target": "checkin_views_get_active_session",
-      "confidence_score": 1.0
+      "target": "checkin_views_get_active_session"
     },
     {
       "relation": "rationale_for",
@@ -15057,9 +15057,9 @@
       "source_file": "anchorpoint\\checkin\\views.py",
       "source_location": "L49",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "checkin_views_rationale_49",
-      "target": "checkin_views_get_active_session",
-      "confidence_score": 1.0
+      "target": "checkin_views_get_active_session"
     },
     {
       "relation": "calls",
@@ -15068,9 +15068,9 @@
       "source_file": "anchorpoint\\checkin\\views.py",
       "source_location": "L104",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "checkin_views_kiosk_lookup",
-      "target": "checkin_views_next_upcoming_window",
-      "confidence_score": 1.0
+      "target": "checkin_views_next_upcoming_window"
     },
     {
       "relation": "rationale_for",
@@ -15078,9 +15078,9 @@
       "source_file": "anchorpoint\\checkin\\views.py",
       "source_location": "L57",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "checkin_views_rationale_57",
-      "target": "checkin_views_next_upcoming_window",
-      "confidence_score": 1.0
+      "target": "checkin_views_next_upcoming_window"
     },
     {
       "relation": "calls",
@@ -15163,9 +15163,9 @@
       "source_file": "anchorpoint\\checkin\\views.py",
       "source_location": "L316",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "checkin_views_rationale_316",
-      "target": "checkin_views_checkout_lookup",
-      "confidence_score": 1.0
+      "target": "checkin_views_checkout_lookup"
     },
     {
       "relation": "contains",
@@ -15193,9 +15193,9 @@
       "source_file": "anchorpoint\\checkin\\views.py",
       "source_location": "L349",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "checkin_views_rationale_349",
-      "target": "checkin_views_checkout_confirm",
-      "confidence_score": 1.0
+      "target": "checkin_views_checkout_confirm"
     },
     {
       "relation": "contains",
@@ -15224,9 +15224,9 @@
       "source_file": "anchorpoint\\checkin\\views.py",
       "source_location": "L381",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "checkin_views_configuration_create",
-      "target": "checkin_views_config_form",
-      "confidence_score": 1.0
+      "target": "checkin_views_config_form"
     },
     {
       "relation": "calls",
@@ -15235,9 +15235,9 @@
       "source_file": "anchorpoint\\checkin\\views.py",
       "source_location": "L387",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "checkin_views_configuration_edit",
-      "target": "checkin_views_config_form",
-      "confidence_score": 1.0
+      "target": "checkin_views_config_form"
     },
     {
       "relation": "rationale_for",
@@ -15245,9 +15245,9 @@
       "source_file": "anchorpoint\\checkin\\views.py",
       "source_location": "L425",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "checkin_views_rationale_425",
-      "target": "checkin_views_dashboard",
-      "confidence_score": 1.0
+      "target": "checkin_views_dashboard"
     },
     {
       "relation": "contains",
@@ -15275,9 +15275,9 @@
       "source_file": "anchorpoint\\checkin\\views.py",
       "source_location": "L441",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "checkin_views_rationale_441",
-      "target": "checkin_views_session_detail",
-      "confidence_score": 1.0
+      "target": "checkin_views_session_detail"
     },
     {
       "relation": "contains",
@@ -15305,9 +15305,9 @@
       "source_file": "anchorpoint\\checkin\\views.py",
       "source_location": "L469",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "checkin_views_rationale_469",
-      "target": "checkin_views_session_list",
-      "confidence_score": 1.0
+      "target": "checkin_views_session_list"
     },
     {
       "relation": "contains",
@@ -15335,9 +15335,9 @@
       "source_file": "anchorpoint\\checkin\\views.py",
       "source_location": "L483",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "checkin_views_rationale_483",
-      "target": "checkin_views_session_create",
-      "confidence_score": 1.0
+      "target": "checkin_views_session_create"
     },
     {
       "relation": "contains",
@@ -15365,9 +15365,9 @@
       "source_file": "anchorpoint\\checkin\\views.py",
       "source_location": "L508",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "checkin_views_rationale_508",
-      "target": "checkin_views_session_edit",
-      "confidence_score": 1.0
+      "target": "checkin_views_session_edit"
     },
     {
       "relation": "contains",
@@ -15425,9 +15425,9 @@
       "source_file": "anchorpoint\\checkin\\views.py",
       "source_location": "L594",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "checkin_views_rationale_594",
-      "target": "checkin_views_printer_list",
-      "confidence_score": 1.0
+      "target": "checkin_views_printer_list"
     },
     {
       "relation": "contains",
@@ -15455,9 +15455,9 @@
       "source_file": "anchorpoint\\checkin\\views.py",
       "source_location": "L608",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "checkin_views_rationale_608",
-      "target": "checkin_views_printer_create",
-      "confidence_score": 1.0
+      "target": "checkin_views_printer_create"
     },
     {
       "relation": "contains",
@@ -15485,9 +15485,9 @@
       "source_file": "anchorpoint\\checkin\\views.py",
       "source_location": "L630",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "checkin_views_rationale_630",
-      "target": "checkin_views_printer_edit",
-      "confidence_score": 1.0
+      "target": "checkin_views_printer_edit"
     },
     {
       "relation": "contains",
@@ -15515,9 +15515,9 @@
       "source_file": "anchorpoint\\checkin\\views.py",
       "source_location": "L656",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "checkin_views_rationale_656",
-      "target": "checkin_views_printer_test",
-      "confidence_score": 1.0
+      "target": "checkin_views_printer_test"
     },
     {
       "relation": "calls",
@@ -15556,9 +15556,9 @@
       "source_file": "anchorpoint\\checkin\\views.py",
       "source_location": "L677",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "checkin_views_rationale_677",
-      "target": "checkin_views_api_session_stats",
-      "confidence_score": 1.0
+      "target": "checkin_views_api_session_stats"
     },
     {
       "relation": "contains",
@@ -15746,9 +15746,9 @@
       "source_file": "anchorpoint\\checkin\\migrations\\0002_migrate_config_simplify_room.py",
       "source_location": "L6",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "anchorpoint_checkin_migrations_0002_migrate_config_simplify_room_py",
-      "target": "migrations_0002_migrate_config_simplify_room_migration",
-      "confidence_score": 1.0
+      "target": "migrations_0002_migrate_config_simplify_room_migration"
     },
     {
       "relation": "contains",
@@ -15756,9 +15756,9 @@
       "source_file": "anchorpoint\\checkin\\migrations\\0003_remove_attendance_tables.py",
       "source_location": "L6",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "anchorpoint_checkin_migrations_0003_remove_attendance_tables_py",
-      "target": "migrations_0003_remove_attendance_tables_migration",
-      "confidence_score": 1.0
+      "target": "migrations_0003_remove_attendance_tables_migration"
     },
     {
       "relation": "contains",
@@ -15766,9 +15766,9 @@
       "source_file": "anchorpoint\\checkin\\services\\eligibility.py",
       "source_location": "L11",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "anchorpoint_checkin_services_eligibility_py",
-      "target": "services_eligibility_grade_index",
-      "confidence_score": 1.0
+      "target": "services_eligibility_grade_index"
     },
     {
       "relation": "contains",
@@ -15776,9 +15776,9 @@
       "source_file": "anchorpoint\\checkin\\services\\eligibility.py",
       "source_location": "L19",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "anchorpoint_checkin_services_eligibility_py",
-      "target": "services_eligibility_is_person_eligible",
-      "confidence_score": 1.0
+      "target": "services_eligibility_is_person_eligible"
     },
     {
       "relation": "contains",
@@ -15786,9 +15786,9 @@
       "source_file": "anchorpoint\\checkin\\services\\eligibility.py",
       "source_location": "L53",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "anchorpoint_checkin_services_eligibility_py",
-      "target": "services_eligibility_get_eligible_members",
-      "confidence_score": 1.0
+      "target": "services_eligibility_get_eligible_members"
     },
     {
       "relation": "calls",
@@ -15797,9 +15797,9 @@
       "source_file": "anchorpoint\\checkin\\services\\eligibility.py",
       "source_location": "L40",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_eligibility_is_person_eligible",
-      "target": "services_eligibility_grade_index",
-      "confidence_score": 1.0
+      "target": "services_eligibility_grade_index"
     },
     {
       "relation": "rationale_for",
@@ -15807,9 +15807,9 @@
       "source_file": "anchorpoint\\checkin\\services\\eligibility.py",
       "source_location": "L12",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_eligibility_rationale_12",
-      "target": "services_eligibility_grade_index",
-      "confidence_score": 1.0
+      "target": "services_eligibility_grade_index"
     },
     {
       "relation": "calls",
@@ -15818,9 +15818,9 @@
       "source_file": "anchorpoint\\checkin\\services\\eligibility.py",
       "source_location": "L58",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_eligibility_get_eligible_members",
-      "target": "services_eligibility_is_person_eligible",
-      "confidence_score": 1.0
+      "target": "services_eligibility_is_person_eligible"
     },
     {
       "relation": "rationale_for",
@@ -15828,9 +15828,9 @@
       "source_file": "anchorpoint\\checkin\\services\\eligibility.py",
       "source_location": "L20",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_eligibility_rationale_20",
-      "target": "services_eligibility_is_person_eligible",
-      "confidence_score": 1.0
+      "target": "services_eligibility_is_person_eligible"
     },
     {
       "relation": "calls",
@@ -15959,9 +15959,9 @@
       "source_file": "anchorpoint\\checkin\\services\\eligibility.py",
       "source_location": "L54",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_eligibility_rationale_54",
-      "target": "services_eligibility_get_eligible_members",
-      "confidence_score": 1.0
+      "target": "services_eligibility_get_eligible_members"
     },
     {
       "relation": "contains",
@@ -16102,9 +16102,9 @@
       "source_file": "anchorpoint\\checkin\\services\\print_service.py",
       "source_location": "L30",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_print_service_rationale_30",
-      "target": "services_print_service_printservice",
-      "confidence_score": 1.0
+      "target": "services_print_service_printservice"
     },
     {
       "relation": "calls",
@@ -16243,9 +16243,9 @@
       "source_file": "anchorpoint\\checkin\\services\\quick_registration.py",
       "source_location": "L8",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "anchorpoint_checkin_services_quick_registration_py",
-      "target": "services_quick_registration_register_new_family",
-      "confidence_score": 1.0
+      "target": "services_quick_registration_register_new_family"
     },
     {
       "relation": "rationale_for",
@@ -16253,9 +16253,9 @@
       "source_file": "anchorpoint\\checkin\\services\\quick_registration.py",
       "source_location": "L16",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_quick_registration_rationale_16",
-      "target": "services_quick_registration_register_new_family",
-      "confidence_score": 1.0
+      "target": "services_quick_registration_register_new_family"
     },
     {
       "relation": "calls",
@@ -16318,9 +16318,9 @@
       "source_file": "anchorpoint\\checkin\\services\\session_manager.py",
       "source_location": "L6",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "anchorpoint_checkin_services_session_manager_py",
-      "target": "services_session_manager_get_or_create_session",
-      "confidence_score": 1.0
+      "target": "services_session_manager_get_or_create_session"
     },
     {
       "relation": "rationale_for",
@@ -16328,9 +16328,9 @@
       "source_file": "anchorpoint\\checkin\\services\\session_manager.py",
       "source_location": "L7",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_session_manager_rationale_7",
-      "target": "services_session_manager_get_or_create_session",
-      "confidence_score": 1.0
+      "target": "services_session_manager_get_or_create_session"
     },
     {
       "relation": "calls",
@@ -17108,9 +17108,9 @@
       "source_file": "anchorpoint\\checkin\\tests\\test_eligibility.py",
       "source_location": "L11",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "anchorpoint_checkin_tests_test_eligibility_py",
-      "target": "tests_test_eligibility_eligibilitytests",
-      "confidence_score": 1.0
+      "target": "tests_test_eligibility_eligibilitytests"
     },
     {
       "relation": "inherits",
@@ -17118,9 +17118,9 @@
       "source_file": "anchorpoint\\checkin\\tests\\test_eligibility.py",
       "source_location": "L11",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_eligibility_eligibilitytests",
-      "target": "testcase",
-      "confidence_score": 1.0
+      "target": "testcase"
     },
     {
       "relation": "method",
@@ -17128,9 +17128,9 @@
       "source_file": "anchorpoint\\checkin\\tests\\test_eligibility.py",
       "source_location": "L12",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_eligibility_eligibilitytests",
-      "target": "tests_test_eligibility_eligibilitytests_setup",
-      "confidence_score": 1.0
+      "target": "tests_test_eligibility_eligibilitytests_setup"
     },
     {
       "relation": "method",
@@ -17138,9 +17138,9 @@
       "source_file": "anchorpoint\\checkin\\tests\\test_eligibility.py",
       "source_location": "L15",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_eligibility_eligibilitytests",
-      "target": "tests_test_eligibility_eligibilitytests_test_no_filters_everyone_eligible",
-      "confidence_score": 1.0
+      "target": "tests_test_eligibility_eligibilitytests_test_no_filters_everyone_eligible"
     },
     {
       "relation": "method",
@@ -17148,9 +17148,9 @@
       "source_file": "anchorpoint\\checkin\\tests\\test_eligibility.py",
       "source_location": "L19",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_eligibility_eligibilitytests",
-      "target": "tests_test_eligibility_eligibilitytests_test_age_filter_match",
-      "confidence_score": 1.0
+      "target": "tests_test_eligibility_eligibilitytests_test_age_filter_match"
     },
     {
       "relation": "method",
@@ -17158,9 +17158,9 @@
       "source_file": "anchorpoint\\checkin\\tests\\test_eligibility.py",
       "source_location": "L29",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_eligibility_eligibilitytests",
-      "target": "tests_test_eligibility_eligibilitytests_test_age_filter_no_match",
-      "confidence_score": 1.0
+      "target": "tests_test_eligibility_eligibilitytests_test_age_filter_no_match"
     },
     {
       "relation": "method",
@@ -17168,9 +17168,9 @@
       "source_file": "anchorpoint\\checkin\\tests\\test_eligibility.py",
       "source_location": "L39",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_eligibility_eligibilitytests",
-      "target": "tests_test_eligibility_eligibilitytests_test_grade_filter_match",
-      "confidence_score": 1.0
+      "target": "tests_test_eligibility_eligibilitytests_test_grade_filter_match"
     },
     {
       "relation": "method",
@@ -17178,9 +17178,9 @@
       "source_file": "anchorpoint\\checkin\\tests\\test_eligibility.py",
       "source_location": "L48",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_eligibility_eligibilitytests",
-      "target": "tests_test_eligibility_eligibilitytests_test_grade_filter_no_match",
-      "confidence_score": 1.0
+      "target": "tests_test_eligibility_eligibilitytests_test_grade_filter_no_match"
     },
     {
       "relation": "method",
@@ -17188,9 +17188,9 @@
       "source_file": "anchorpoint\\checkin\\tests\\test_eligibility.py",
       "source_location": "L57",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_eligibility_eligibilitytests",
-      "target": "tests_test_eligibility_eligibilitytests_test_group_filter_match",
-      "confidence_score": 1.0
+      "target": "tests_test_eligibility_eligibilitytests_test_group_filter_match"
     },
     {
       "relation": "method",
@@ -17198,9 +17198,9 @@
       "source_file": "anchorpoint\\checkin\\tests\\test_eligibility.py",
       "source_location": "L64",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_eligibility_eligibilitytests",
-      "target": "tests_test_eligibility_eligibilitytests_test_group_filter_no_match",
-      "confidence_score": 1.0
+      "target": "tests_test_eligibility_eligibilitytests_test_group_filter_no_match"
     },
     {
       "relation": "method",
@@ -17208,9 +17208,9 @@
       "source_file": "anchorpoint\\checkin\\tests\\test_eligibility.py",
       "source_location": "L70",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_eligibility_eligibilitytests",
-      "target": "tests_test_eligibility_eligibilitytests_test_or_logic_age_miss_grade_hit",
-      "confidence_score": 1.0
+      "target": "tests_test_eligibility_eligibilitytests_test_or_logic_age_miss_grade_hit"
     },
     {
       "relation": "method",
@@ -17218,9 +17218,9 @@
       "source_file": "anchorpoint\\checkin\\tests\\test_eligibility.py",
       "source_location": "L84",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_eligibility_eligibilitytests",
-      "target": "tests_test_eligibility_eligibilitytests_test_or_logic_group_hit_age_miss",
-      "confidence_score": 1.0
+      "target": "tests_test_eligibility_eligibilitytests_test_or_logic_group_hit_age_miss"
     },
     {
       "relation": "method",
@@ -17228,9 +17228,9 @@
       "source_file": "anchorpoint\\checkin\\tests\\test_eligibility.py",
       "source_location": "L97",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_eligibility_eligibilitytests",
-      "target": "tests_test_eligibility_eligibilitytests_test_person_without_birthdate_skips_age_check",
-      "confidence_score": 1.0
+      "target": "tests_test_eligibility_eligibilitytests_test_person_without_birthdate_skips_age_check"
     },
     {
       "relation": "method",
@@ -17238,9 +17238,9 @@
       "source_file": "anchorpoint\\checkin\\tests\\test_eligibility.py",
       "source_location": "L104",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_eligibility_eligibilitytests",
-      "target": "tests_test_eligibility_eligibilitytests_test_person_without_grade_skips_grade_check",
-      "confidence_score": 1.0
+      "target": "tests_test_eligibility_eligibilitytests_test_person_without_grade_skips_grade_check"
     },
     {
       "relation": "uses",
@@ -17248,9 +17248,9 @@
       "source_file": "anchorpoint\\checkin\\tests\\test_eligibility.py",
       "source_location": "L7",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "tests_test_eligibility_eligibilitytests",
-      "target": "groups_models_group",
-      "confidence_score": 0.5
+      "target": "groups_models_group"
     },
     {
       "relation": "uses",
@@ -17258,9 +17258,9 @@
       "source_file": "anchorpoint\\checkin\\tests\\test_eligibility.py",
       "source_location": "L7",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "tests_test_eligibility_eligibilitytests",
-      "target": "groups_models_groupmembership",
-      "confidence_score": 0.5
+      "target": "groups_models_groupmembership"
     },
     {
       "relation": "uses",
@@ -17268,9 +17268,9 @@
       "source_file": "anchorpoint\\checkin\\tests\\test_eligibility.py",
       "source_location": "L8",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "tests_test_eligibility_eligibilitytests",
-      "target": "people_models_person",
-      "confidence_score": 0.5
+      "target": "people_models_person"
     },
     {
       "relation": "inherits",
@@ -17278,9 +17278,9 @@
       "source_file": "anchorpoint\\checkin\\tests\\test_kiosk_views.py",
       "source_location": "L15",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_kiosk_views_kioskflowtests",
-      "target": "testcase",
-      "confidence_score": 1.0
+      "target": "testcase"
     },
     {
       "relation": "inherits",
@@ -17288,9 +17288,9 @@
       "source_file": "anchorpoint\\checkin\\tests\\test_kiosk_views.py",
       "source_location": "L134",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_kiosk_views_quickregistrationviewtests",
-      "target": "testcase",
-      "confidence_score": 1.0
+      "target": "testcase"
     },
     {
       "relation": "inherits",
@@ -17298,9 +17298,9 @@
       "source_file": "anchorpoint\\checkin\\tests\\test_quick_registration.py",
       "source_location": "L10",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_quick_registration_quickregistrationtests",
-      "target": "testcase",
-      "confidence_score": 1.0
+      "target": "testcase"
     },
     {
       "relation": "inherits",
@@ -17308,9 +17308,9 @@
       "source_file": "anchorpoint\\checkin\\tests\\test_session_manager.py",
       "source_location": "L10",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_session_manager_sessionmanagertests",
-      "target": "testcase",
-      "confidence_score": 1.0
+      "target": "testcase"
     },
     {
       "relation": "inherits",
@@ -17348,9 +17348,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L124",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "core_tests_checkinadminrequiredtests",
-      "target": "testcase",
-      "confidence_score": 1.0
+      "target": "testcase"
     },
     {
       "relation": "inherits",
@@ -17478,9 +17478,9 @@
       "source_file": "anchorpoint\\people\\tests_custody.py",
       "source_location": "L8",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "people_tests_custody_personcustodyfieldtests",
-      "target": "testcase",
-      "confidence_score": 1.0
+      "target": "testcase"
     },
     {
       "relation": "inherits",
@@ -17518,9 +17518,9 @@
       "source_file": "anchorpoint\\checkin\\tests\\test_kiosk_views.py",
       "source_location": "L15",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "anchorpoint_checkin_tests_test_kiosk_views_py",
-      "target": "tests_test_kiosk_views_kioskflowtests",
-      "confidence_score": 1.0
+      "target": "tests_test_kiosk_views_kioskflowtests"
     },
     {
       "relation": "contains",
@@ -17528,9 +17528,9 @@
       "source_file": "anchorpoint\\checkin\\tests\\test_kiosk_views.py",
       "source_location": "L134",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "anchorpoint_checkin_tests_test_kiosk_views_py",
-      "target": "tests_test_kiosk_views_quickregistrationviewtests",
-      "confidence_score": 1.0
+      "target": "tests_test_kiosk_views_quickregistrationviewtests"
     },
     {
       "relation": "method",
@@ -17538,9 +17538,9 @@
       "source_file": "anchorpoint\\checkin\\tests\\test_kiosk_views.py",
       "source_location": "L16",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_kiosk_views_kioskflowtests",
-      "target": "tests_test_kiosk_views_kioskflowtests_setup",
-      "confidence_score": 1.0
+      "target": "tests_test_kiosk_views_kioskflowtests_setup"
     },
     {
       "relation": "method",
@@ -17548,9 +17548,9 @@
       "source_file": "anchorpoint\\checkin\\tests\\test_kiosk_views.py",
       "source_location": "L61",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_kiosk_views_kioskflowtests",
-      "target": "tests_test_kiosk_views_kioskflowtests_unlock",
-      "confidence_score": 1.0
+      "target": "tests_test_kiosk_views_kioskflowtests_unlock"
     },
     {
       "relation": "method",
@@ -17558,9 +17558,9 @@
       "source_file": "anchorpoint\\checkin\\tests\\test_kiosk_views.py",
       "source_location": "L66",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_kiosk_views_kioskflowtests",
-      "target": "tests_test_kiosk_views_kioskflowtests_test_unlock_with_correct_pin",
-      "confidence_score": 1.0
+      "target": "tests_test_kiosk_views_kioskflowtests_test_unlock_with_correct_pin"
     },
     {
       "relation": "method",
@@ -17568,9 +17568,9 @@
       "source_file": "anchorpoint\\checkin\\tests\\test_kiosk_views.py",
       "source_location": "L72",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_kiosk_views_kioskflowtests",
-      "target": "tests_test_kiosk_views_kioskflowtests_test_unlock_with_wrong_pin",
-      "confidence_score": 1.0
+      "target": "tests_test_kiosk_views_kioskflowtests_test_unlock_with_wrong_pin"
     },
     {
       "relation": "method",
@@ -17578,9 +17578,9 @@
       "source_file": "anchorpoint\\checkin\\tests\\test_kiosk_views.py",
       "source_location": "L79",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_kiosk_views_kioskflowtests",
-      "target": "tests_test_kiosk_views_kioskflowtests_test_lookup_requires_pin",
-      "confidence_score": 1.0
+      "target": "tests_test_kiosk_views_kioskflowtests_test_lookup_requires_pin"
     },
     {
       "relation": "method",
@@ -17588,9 +17588,9 @@
       "source_file": "anchorpoint\\checkin\\tests\\test_kiosk_views.py",
       "source_location": "L83",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_kiosk_views_kioskflowtests",
-      "target": "tests_test_kiosk_views_kioskflowtests_test_lookup_finds_family_by_name",
-      "confidence_score": 1.0
+      "target": "tests_test_kiosk_views_kioskflowtests_test_lookup_finds_family_by_name"
     },
     {
       "relation": "method",
@@ -17598,9 +17598,9 @@
       "source_file": "anchorpoint\\checkin\\tests\\test_kiosk_views.py",
       "source_location": "L90",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_kiosk_views_kioskflowtests",
-      "target": "tests_test_kiosk_views_kioskflowtests_test_family_select_shows_eligible_child",
-      "confidence_score": 1.0
+      "target": "tests_test_kiosk_views_kioskflowtests_test_family_select_shows_eligible_child"
     },
     {
       "relation": "method",
@@ -17608,9 +17608,9 @@
       "source_file": "anchorpoint\\checkin\\tests\\test_kiosk_views.py",
       "source_location": "L99",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_kiosk_views_kioskflowtests",
-      "target": "tests_test_kiosk_views_kioskflowtests_test_checkin_creates_records",
-      "confidence_score": 1.0
+      "target": "tests_test_kiosk_views_kioskflowtests_test_checkin_creates_records"
     },
     {
       "relation": "method",
@@ -17618,9 +17618,9 @@
       "source_file": "anchorpoint\\checkin\\tests\\test_kiosk_views.py",
       "source_location": "L112",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_kiosk_views_kioskflowtests",
-      "target": "tests_test_kiosk_views_kioskflowtests_test_checkin_security_code_is_4_chars",
-      "confidence_score": 1.0
+      "target": "tests_test_kiosk_views_kioskflowtests_test_checkin_security_code_is_4_chars"
     },
     {
       "relation": "method",
@@ -17628,9 +17628,9 @@
       "source_file": "anchorpoint\\checkin\\tests\\test_kiosk_views.py",
       "source_location": "L125",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_kiosk_views_kioskflowtests",
-      "target": "tests_test_kiosk_views_kioskflowtests_test_family_select_without_session_redirects_to_lookup",
-      "confidence_score": 1.0
+      "target": "tests_test_kiosk_views_kioskflowtests_test_family_select_without_session_redirects_to_lookup"
     },
     {
       "relation": "uses",
@@ -17638,9 +17638,9 @@
       "source_file": "anchorpoint\\checkin\\tests\\test_kiosk_views.py",
       "source_location": "L10",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "tests_test_kiosk_views_kioskflowtests",
-      "target": "core_models_organizationsettings",
-      "confidence_score": 0.5
+      "target": "core_models_organizationsettings"
     },
     {
       "relation": "uses",
@@ -17648,9 +17648,9 @@
       "source_file": "anchorpoint\\checkin\\tests\\test_kiosk_views.py",
       "source_location": "L177",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "tests_test_kiosk_views_kioskflowtests",
-      "target": "households_models_household",
-      "confidence_score": 0.5
+      "target": "households_models_household"
     },
     {
       "relation": "uses",
@@ -17658,9 +17658,9 @@
       "source_file": "anchorpoint\\checkin\\tests\\test_kiosk_views.py",
       "source_location": "L11",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "tests_test_kiosk_views_kioskflowtests",
-      "target": "households_models_householdmember",
-      "confidence_score": 0.5
+      "target": "households_models_householdmember"
     },
     {
       "relation": "uses",
@@ -17668,9 +17668,9 @@
       "source_file": "anchorpoint\\checkin\\tests\\test_kiosk_views.py",
       "source_location": "L12",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "tests_test_kiosk_views_kioskflowtests",
-      "target": "people_models_person",
-      "confidence_score": 0.5
+      "target": "people_models_person"
     },
     {
       "relation": "calls",
@@ -17679,9 +17679,9 @@
       "source_file": "anchorpoint\\checkin\\tests\\test_kiosk_views.py",
       "source_location": "L84",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_kiosk_views_kioskflowtests_test_lookup_finds_family_by_name",
-      "target": "tests_test_kiosk_views_quickregistrationviewtests_unlock",
-      "confidence_score": 1.0
+      "target": "tests_test_kiosk_views_quickregistrationviewtests_unlock"
     },
     {
       "relation": "calls",
@@ -17690,9 +17690,9 @@
       "source_file": "anchorpoint\\checkin\\tests\\test_kiosk_views.py",
       "source_location": "L91",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_kiosk_views_kioskflowtests_test_family_select_shows_eligible_child",
-      "target": "tests_test_kiosk_views_quickregistrationviewtests_unlock",
-      "confidence_score": 1.0
+      "target": "tests_test_kiosk_views_quickregistrationviewtests_unlock"
     },
     {
       "relation": "calls",
@@ -17701,9 +17701,9 @@
       "source_file": "anchorpoint\\checkin\\tests\\test_kiosk_views.py",
       "source_location": "L100",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_kiosk_views_kioskflowtests_test_checkin_creates_records",
-      "target": "tests_test_kiosk_views_quickregistrationviewtests_unlock",
-      "confidence_score": 1.0
+      "target": "tests_test_kiosk_views_quickregistrationviewtests_unlock"
     },
     {
       "relation": "calls",
@@ -17712,9 +17712,9 @@
       "source_file": "anchorpoint\\checkin\\tests\\test_kiosk_views.py",
       "source_location": "L113",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_kiosk_views_kioskflowtests_test_checkin_security_code_is_4_chars",
-      "target": "tests_test_kiosk_views_quickregistrationviewtests_unlock",
-      "confidence_score": 1.0
+      "target": "tests_test_kiosk_views_quickregistrationviewtests_unlock"
     },
     {
       "relation": "calls",
@@ -17723,9 +17723,9 @@
       "source_file": "anchorpoint\\checkin\\tests\\test_kiosk_views.py",
       "source_location": "L126",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_kiosk_views_kioskflowtests_test_family_select_without_session_redirects_to_lookup",
-      "target": "tests_test_kiosk_views_quickregistrationviewtests_unlock",
-      "confidence_score": 1.0
+      "target": "tests_test_kiosk_views_quickregistrationviewtests_unlock"
     },
     {
       "relation": "method",
@@ -17733,9 +17733,9 @@
       "source_file": "anchorpoint\\checkin\\tests\\test_kiosk_views.py",
       "source_location": "L135",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_kiosk_views_quickregistrationviewtests",
-      "target": "tests_test_kiosk_views_quickregistrationviewtests_setup",
-      "confidence_score": 1.0
+      "target": "tests_test_kiosk_views_quickregistrationviewtests_setup"
     },
     {
       "relation": "method",
@@ -17743,9 +17743,9 @@
       "source_file": "anchorpoint\\checkin\\tests\\test_kiosk_views.py",
       "source_location": "L153",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_kiosk_views_quickregistrationviewtests",
-      "target": "tests_test_kiosk_views_quickregistrationviewtests_unlock",
-      "confidence_score": 1.0
+      "target": "tests_test_kiosk_views_quickregistrationviewtests_unlock"
     },
     {
       "relation": "method",
@@ -17753,9 +17753,9 @@
       "source_file": "anchorpoint\\checkin\\tests\\test_kiosk_views.py",
       "source_location": "L158",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_kiosk_views_quickregistrationviewtests",
-      "target": "tests_test_kiosk_views_quickregistrationviewtests_test_quick_register_creates_family",
-      "confidence_score": 1.0
+      "target": "tests_test_kiosk_views_quickregistrationviewtests_test_quick_register_creates_family"
     },
     {
       "relation": "uses",
@@ -17763,9 +17763,9 @@
       "source_file": "anchorpoint\\checkin\\tests\\test_kiosk_views.py",
       "source_location": "L10",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "tests_test_kiosk_views_quickregistrationviewtests",
-      "target": "core_models_organizationsettings",
-      "confidence_score": 0.5
+      "target": "core_models_organizationsettings"
     },
     {
       "relation": "uses",
@@ -17773,9 +17773,9 @@
       "source_file": "anchorpoint\\checkin\\tests\\test_kiosk_views.py",
       "source_location": "L177",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "tests_test_kiosk_views_quickregistrationviewtests",
-      "target": "households_models_household",
-      "confidence_score": 0.5
+      "target": "households_models_household"
     },
     {
       "relation": "uses",
@@ -17783,9 +17783,9 @@
       "source_file": "anchorpoint\\checkin\\tests\\test_kiosk_views.py",
       "source_location": "L11",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "tests_test_kiosk_views_quickregistrationviewtests",
-      "target": "households_models_householdmember",
-      "confidence_score": 0.5
+      "target": "households_models_householdmember"
     },
     {
       "relation": "uses",
@@ -17793,9 +17793,9 @@
       "source_file": "anchorpoint\\checkin\\tests\\test_kiosk_views.py",
       "source_location": "L12",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "tests_test_kiosk_views_quickregistrationviewtests",
-      "target": "people_models_person",
-      "confidence_score": 0.5
+      "target": "people_models_person"
     },
     {
       "relation": "calls",
@@ -17804,9 +17804,9 @@
       "source_file": "anchorpoint\\checkin\\tests\\test_kiosk_views.py",
       "source_location": "L159",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_kiosk_views_quickregistrationviewtests_test_quick_register_creates_family",
-      "target": "tests_test_kiosk_views_quickregistrationviewtests_unlock",
-      "confidence_score": 1.0
+      "target": "tests_test_kiosk_views_quickregistrationviewtests_unlock"
     },
     {
       "relation": "contains",
@@ -17814,9 +17814,9 @@
       "source_file": "anchorpoint\\checkin\\tests\\test_quick_registration.py",
       "source_location": "L10",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "anchorpoint_checkin_tests_test_quick_registration_py",
-      "target": "tests_test_quick_registration_quickregistrationtests",
-      "confidence_score": 1.0
+      "target": "tests_test_quick_registration_quickregistrationtests"
     },
     {
       "relation": "method",
@@ -17824,9 +17824,9 @@
       "source_file": "anchorpoint\\checkin\\tests\\test_quick_registration.py",
       "source_location": "L11",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_quick_registration_quickregistrationtests",
-      "target": "tests_test_quick_registration_quickregistrationtests_test_creates_parent_and_child",
-      "confidence_score": 1.0
+      "target": "tests_test_quick_registration_quickregistrationtests_test_creates_parent_and_child"
     },
     {
       "relation": "method",
@@ -17834,9 +17834,9 @@
       "source_file": "anchorpoint\\checkin\\tests\\test_quick_registration.py",
       "source_location": "L34",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_quick_registration_quickregistrationtests",
-      "target": "tests_test_quick_registration_quickregistrationtests_test_parent_fields_populated",
-      "confidence_score": 1.0
+      "target": "tests_test_quick_registration_quickregistrationtests_test_parent_fields_populated"
     },
     {
       "relation": "method",
@@ -17844,9 +17844,9 @@
       "source_file": "anchorpoint\\checkin\\tests\\test_quick_registration.py",
       "source_location": "L53",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_quick_registration_quickregistrationtests",
-      "target": "tests_test_quick_registration_quickregistrationtests_test_child_fields_populated",
-      "confidence_score": 1.0
+      "target": "tests_test_quick_registration_quickregistrationtests_test_child_fields_populated"
     },
     {
       "relation": "method",
@@ -17854,9 +17854,9 @@
       "source_file": "anchorpoint\\checkin\\tests\\test_quick_registration.py",
       "source_location": "L75",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_quick_registration_quickregistrationtests",
-      "target": "tests_test_quick_registration_quickregistrationtests_test_household_created_with_members",
-      "confidence_score": 1.0
+      "target": "tests_test_quick_registration_quickregistrationtests_test_household_created_with_members"
     },
     {
       "relation": "method",
@@ -17864,9 +17864,9 @@
       "source_file": "anchorpoint\\checkin\\tests\\test_quick_registration.py",
       "source_location": "L90",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_quick_registration_quickregistrationtests",
-      "target": "tests_test_quick_registration_quickregistrationtests_test_multiple_children",
-      "confidence_score": 1.0
+      "target": "tests_test_quick_registration_quickregistrationtests_test_multiple_children"
     },
     {
       "relation": "uses",
@@ -17874,9 +17874,9 @@
       "source_file": "anchorpoint\\checkin\\tests\\test_quick_registration.py",
       "source_location": "L6",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "tests_test_quick_registration_quickregistrationtests",
-      "target": "households_models_household",
-      "confidence_score": 0.5
+      "target": "households_models_household"
     },
     {
       "relation": "uses",
@@ -17884,9 +17884,9 @@
       "source_file": "anchorpoint\\checkin\\tests\\test_quick_registration.py",
       "source_location": "L6",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "tests_test_quick_registration_quickregistrationtests",
-      "target": "households_models_householdmember",
-      "confidence_score": 0.5
+      "target": "households_models_householdmember"
     },
     {
       "relation": "uses",
@@ -17894,9 +17894,9 @@
       "source_file": "anchorpoint\\checkin\\tests\\test_quick_registration.py",
       "source_location": "L7",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "tests_test_quick_registration_quickregistrationtests",
-      "target": "people_models_person",
-      "confidence_score": 0.5
+      "target": "people_models_person"
     },
     {
       "relation": "contains",
@@ -17904,9 +17904,9 @@
       "source_file": "anchorpoint\\checkin\\tests\\test_session_manager.py",
       "source_location": "L10",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "anchorpoint_checkin_tests_test_session_manager_py",
-      "target": "tests_test_session_manager_sessionmanagertests",
-      "confidence_score": 1.0
+      "target": "tests_test_session_manager_sessionmanagertests"
     },
     {
       "relation": "method",
@@ -17914,9 +17914,9 @@
       "source_file": "anchorpoint\\checkin\\tests\\test_session_manager.py",
       "source_location": "L11",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_session_manager_sessionmanagertests",
-      "target": "tests_test_session_manager_sessionmanagertests_setup",
-      "confidence_score": 1.0
+      "target": "tests_test_session_manager_sessionmanagertests_setup"
     },
     {
       "relation": "method",
@@ -17924,9 +17924,9 @@
       "source_file": "anchorpoint\\checkin\\tests\\test_session_manager.py",
       "source_location": "L28",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_session_manager_sessionmanagertests",
-      "target": "tests_test_session_manager_sessionmanagertests_test_creates_session_when_none_exists",
-      "confidence_score": 1.0
+      "target": "tests_test_session_manager_sessionmanagertests_test_creates_session_when_none_exists"
     },
     {
       "relation": "method",
@@ -17934,9 +17934,9 @@
       "source_file": "anchorpoint\\checkin\\tests\\test_session_manager.py",
       "source_location": "L36",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_session_manager_sessionmanagertests",
-      "target": "tests_test_session_manager_sessionmanagertests_test_returns_existing_session",
-      "confidence_score": 1.0
+      "target": "tests_test_session_manager_sessionmanagertests_test_returns_existing_session"
     },
     {
       "relation": "method",
@@ -17944,9 +17944,9 @@
       "source_file": "anchorpoint\\checkin\\tests\\test_session_manager.py",
       "source_location": "L41",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_session_manager_sessionmanagertests",
-      "target": "tests_test_session_manager_sessionmanagertests_test_session_copies_times_from_window",
-      "confidence_score": 1.0
+      "target": "tests_test_session_manager_sessionmanagertests_test_session_copies_times_from_window"
     },
     {
       "relation": "method",
@@ -17954,9 +17954,9 @@
       "source_file": "anchorpoint\\checkin\\tests\\test_session_manager.py",
       "source_location": "L48",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_session_manager_sessionmanagertests",
-      "target": "tests_test_session_manager_sessionmanagertests_test_session_name_from_config",
-      "confidence_score": 1.0
+      "target": "tests_test_session_manager_sessionmanagertests_test_session_name_from_config"
     },
     {
       "relation": "imports_from",
@@ -18847,9 +18847,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L6",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "core_tests_checkinadminrequiredtests",
-      "target": "core_forms_organizationsettingsform",
-      "confidence_score": 0.5
+      "target": "core_forms_organizationsettingsform"
     },
     {
       "relation": "uses",
@@ -19041,9 +19041,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L7",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "core_tests_checkinadminrequiredtests",
-      "target": "core_models_userprofile",
-      "confidence_score": 0.5
+      "target": "core_models_userprofile"
     },
     {
       "relation": "uses",
@@ -19381,9 +19381,9 @@
       "source_file": "anchorpoint\\core\\permissions.py",
       "source_location": "L43",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "anchorpoint_core_permissions_py",
-      "target": "core_permissions_is_checkin_admin",
-      "confidence_score": 1.0
+      "target": "core_permissions_is_checkin_admin"
     },
     {
       "relation": "contains",
@@ -19431,9 +19431,9 @@
       "source_file": "anchorpoint\\core\\permissions.py",
       "source_location": "L131",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "anchorpoint_core_permissions_py",
-      "target": "core_permissions_checkin_admin_required",
-      "confidence_score": 1.0
+      "target": "core_permissions_checkin_admin_required"
     },
     {
       "relation": "rationale_for",
@@ -19485,9 +19485,9 @@
       "source_file": "anchorpoint\\core\\permissions.py",
       "source_location": "L49",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "core_permissions_is_checkin_admin",
-      "target": "core_permissions_get_user_profile",
-      "confidence_score": 1.0
+      "target": "core_permissions_get_user_profile"
     },
     {
       "relation": "calls",
@@ -19566,9 +19566,9 @@
       "source_file": "anchorpoint\\core\\permissions.py",
       "source_location": "L44",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "core_permissions_rationale_44",
-      "target": "core_permissions_is_checkin_admin",
-      "confidence_score": 1.0
+      "target": "core_permissions_is_checkin_admin"
     },
     {
       "relation": "calls",
@@ -19631,9 +19631,9 @@
       "source_file": "anchorpoint\\core\\permissions.py",
       "source_location": "L56",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "core_permissions_rationale_56",
-      "target": "core_permissions_has_communications_access",
-      "confidence_score": 1.0
+      "target": "core_permissions_has_communications_access"
     },
     {
       "relation": "contains",
@@ -19661,9 +19661,9 @@
       "source_file": "anchorpoint\\core\\permissions.py",
       "source_location": "L66",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "core_permissions_rationale_66",
-      "target": "core_permissions_admin_required",
-      "confidence_score": 1.0
+      "target": "core_permissions_admin_required"
     },
     {
       "relation": "contains",
@@ -19691,9 +19691,9 @@
       "source_file": "anchorpoint\\core\\permissions.py",
       "source_location": "L88",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "core_permissions_rationale_88",
-      "target": "core_permissions_staff_required",
-      "confidence_score": 1.0
+      "target": "core_permissions_staff_required"
     },
     {
       "relation": "contains",
@@ -19721,9 +19721,9 @@
       "source_file": "anchorpoint\\core\\permissions.py",
       "source_location": "L110",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "core_permissions_rationale_110",
-      "target": "core_permissions_communications_required",
-      "confidence_score": 1.0
+      "target": "core_permissions_communications_required"
     },
     {
       "relation": "contains",
@@ -19751,9 +19751,9 @@
       "source_file": "anchorpoint\\core\\permissions.py",
       "source_location": "L132",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "core_permissions_rationale_132",
-      "target": "core_permissions_checkin_admin_required",
-      "confidence_score": 1.0
+      "target": "core_permissions_checkin_admin_required"
     },
     {
       "relation": "rationale_for",
@@ -19801,9 +19801,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L124",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "anchorpoint_core_tests_py",
-      "target": "core_tests_checkinadminrequiredtests",
-      "confidence_score": 1.0
+      "target": "core_tests_checkinadminrequiredtests"
     },
     {
       "relation": "contains",
@@ -20001,9 +20001,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L125",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "core_tests_checkinadminrequiredtests",
-      "target": "core_tests_checkinadminrequiredtests_setup",
-      "confidence_score": 1.0
+      "target": "core_tests_checkinadminrequiredtests_setup"
     },
     {
       "relation": "method",
@@ -20011,9 +20011,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L143",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "core_tests_checkinadminrequiredtests",
-      "target": "core_tests_checkinadminrequiredtests_test_admin_allowed",
-      "confidence_score": 1.0
+      "target": "core_tests_checkinadminrequiredtests_test_admin_allowed"
     },
     {
       "relation": "method",
@@ -20021,9 +20021,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L147",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "core_tests_checkinadminrequiredtests",
-      "target": "core_tests_checkinadminrequiredtests_test_staff_allowed",
-      "confidence_score": 1.0
+      "target": "core_tests_checkinadminrequiredtests_test_staff_allowed"
     },
     {
       "relation": "method",
@@ -20031,9 +20031,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L151",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "core_tests_checkinadminrequiredtests",
-      "target": "core_tests_checkinadminrequiredtests_test_volunteer_admin_allowed",
-      "confidence_score": 1.0
+      "target": "core_tests_checkinadminrequiredtests_test_volunteer_admin_allowed"
     },
     {
       "relation": "method",
@@ -20041,9 +20041,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L155",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "core_tests_checkinadminrequiredtests",
-      "target": "core_tests_checkinadminrequiredtests_test_volunteer_denied",
-      "confidence_score": 1.0
+      "target": "core_tests_checkinadminrequiredtests_test_volunteer_denied"
     },
     {
       "relation": "method",
@@ -20051,9 +20051,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L159",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "core_tests_checkinadminrequiredtests",
-      "target": "core_tests_checkinadminrequiredtests_test_unauthenticated_denied",
-      "confidence_score": 1.0
+      "target": "core_tests_checkinadminrequiredtests_test_unauthenticated_denied"
     },
     {
       "relation": "uses",
@@ -20061,9 +20061,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L111",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "core_tests_checkinadminrequiredtests",
-      "target": "events_models_event",
-      "confidence_score": 0.5
+      "target": "events_models_event"
     },
     {
       "relation": "uses",
@@ -20071,9 +20071,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L111",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "core_tests_checkinadminrequiredtests",
-      "target": "events_models_eventregistration",
-      "confidence_score": 0.5
+      "target": "events_models_eventregistration"
     },
     {
       "relation": "method",
@@ -27919,9 +27919,9 @@
       "source_file": "anchorpoint\\people\\tests_custody.py",
       "source_location": "L5",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "people_tests_custody_personcustodyfieldtests",
-      "target": "people_models_person",
-      "confidence_score": 0.5
+      "target": "people_models_person"
     },
     {
       "relation": "uses",
@@ -28089,9 +28089,9 @@
       "source_file": "anchorpoint\\people\\tests_custody.py",
       "source_location": "L8",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "anchorpoint_people_tests_custody_py",
-      "target": "people_tests_custody_personcustodyfieldtests",
-      "confidence_score": 1.0
+      "target": "people_tests_custody_personcustodyfieldtests"
     },
     {
       "relation": "method",
@@ -28099,9 +28099,9 @@
       "source_file": "anchorpoint\\people\\tests_custody.py",
       "source_location": "L9",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "people_tests_custody_personcustodyfieldtests",
-      "target": "people_tests_custody_personcustodyfieldtests_test_custody_flag_defaults_false",
-      "confidence_score": 1.0
+      "target": "people_tests_custody_personcustodyfieldtests_test_custody_flag_defaults_false"
     },
     {
       "relation": "method",
@@ -28109,9 +28109,9 @@
       "source_file": "anchorpoint\\people\\tests_custody.py",
       "source_location": "L13",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "people_tests_custody_personcustodyfieldtests",
-      "target": "people_tests_custody_personcustodyfieldtests_test_custody_fields_save_and_retrieve",
-      "confidence_score": 1.0
+      "target": "people_tests_custody_personcustodyfieldtests_test_custody_fields_save_and_retrieve"
     },
     {
       "relation": "method",
@@ -28119,9 +28119,9 @@
       "source_file": "anchorpoint\\people\\tests_custody.py",
       "source_location": "L27",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "people_tests_custody_personcustodyfieldtests",
-      "target": "people_tests_custody_personcustodyfieldtests_test_custody_fields_blank_by_default",
-      "confidence_score": 1.0
+      "target": "people_tests_custody_personcustodyfieldtests_test_custody_fields_blank_by_default"
     },
     {
       "relation": "imports_from",
@@ -28481,9 +28481,9 @@
       "source_file": "anchorpoint\\people\\migrations\\0006_add_custody_fields.py",
       "source_location": "L6",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "anchorpoint_people_migrations_0006_add_custody_fields_py",
-      "target": "migrations_0006_add_custody_fields_migration",
-      "confidence_score": 1.0
+      "target": "migrations_0006_add_custody_fields_migration"
     },
     {
       "relation": "contains",
