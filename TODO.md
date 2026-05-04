@@ -2,7 +2,7 @@
 
 ## Enhancements to Add
 
-- [ ] Google Authentication
+- [ ] Google Authentication (SSO)
 - [ ] Embed code generator for event info
 - [ ] Add live results to people search
 - [ ] Review design: modernize to be visually appealing but not overwhelming
@@ -21,11 +21,15 @@
 
 - [x] UI Enhancements
 -- [x] Add Favicon
-
+-- [ ] Create Group Form -> Group Status: change status checkbox to dropdown
+-- [ ] Phone Blasts: show stats (answered, no answer, etc)
+-- [ ] Phone Blasts: show live progress? 
 
 ## Bugs to Squash
 
 - [ ] Mobile navigation menu doesn't scroll on mobile
+- [ ] Groups list page doesn't allow you to view details of a group
+- [ ] Groups: Unclear how to manage group users
 
 ## In Progress
 
