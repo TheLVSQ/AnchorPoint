@@ -1,21 +1,30 @@
 from django.urls import path
+
 from . import views
 
 app_name = "checkin"
 
 urlpatterns = [
-    # Kiosk views (public-facing)
-    path("kiosk/", views.kiosk_home, name="kiosk_home"),
-    path("kiosk/<int:session_id>/lookup/", views.kiosk_lookup, name="kiosk_lookup"),
-    path("kiosk/<int:session_id>/select/", views.kiosk_select, name="kiosk_select"),
-    path("kiosk/<int:session_id>/rooms/", views.kiosk_rooms, name="kiosk_rooms"),
-    path("kiosk/<int:session_id>/complete/", views.kiosk_complete, name="kiosk_complete"),
+    # Kiosk (public, PIN-gated)
+    path("kiosk/", views.kiosk_lookup, name="kiosk_lookup"),
+    path("kiosk/unlock/", views.kiosk_unlock, name="kiosk_unlock"),
+    path("kiosk/lock/", views.kiosk_lock, name="kiosk_lock"),
+    path("kiosk/select-config/", views.kiosk_select_config, name="kiosk_select_config"),
+    path("kiosk/family/<int:household_id>/", views.kiosk_family_select, name="kiosk_family_select"),
+    path("kiosk/confirmation/", views.kiosk_confirmation, name="kiosk_confirmation"),
+    path("kiosk/register/", views.kiosk_quick_register, name="kiosk_quick_register"),
 
-    # Checkout views (volunteer-facing)
+    # Checkout (login required)
     path("checkout/<int:session_id>/", views.checkout_lookup, name="checkout_lookup"),
     path("checkout/<int:session_id>/confirm/", views.checkout_confirm, name="checkout_confirm"),
 
-    # Dashboard and admin views (staff-facing)
+    # Configuration admin (checkin_admin_required)
+    path("configurations/", views.configuration_list, name="configuration_list"),
+    path("configurations/new/", views.configuration_create, name="configuration_create"),
+    path("configurations/<int:pk>/", views.configuration_edit, name="configuration_edit"),
+    path("configurations/<int:pk>/delete/", views.configuration_delete, name="configuration_delete"),
+
+    # Dashboard and admin (staff_required)
     path("", views.dashboard, name="dashboard"),
     path("sessions/", views.session_list, name="session_list"),
     path("sessions/new/", views.session_create, name="session_create"),
@@ -33,6 +42,6 @@ urlpatterns = [
     path("printers/<int:printer_id>/edit/", views.printer_edit, name="printer_edit"),
     path("printers/<int:printer_id>/test/", views.printer_test, name="printer_test"),
 
-    # API endpoints
+    # API
     path("api/sessions/<int:session_id>/stats/", views.api_session_stats, name="api_session_stats"),
 ]

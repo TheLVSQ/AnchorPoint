@@ -1,0 +1,15 @@
+{% extends "checkin/kiosk/base.html" %}
+{% block title %}Check-In Closed{% endblock %}
+{% block content %}
+<div class="kiosk-card" style="text-align:center;padding:48px 32px;">
+  <div style="font-size:48px;margin-bottom:16px;">🕐</div>
+  <div class="kiosk-title">Check-In is Not Open</div>
+  <div class="kiosk-subtitle" style="margin-top:8px;">
+    {% if next_window %}
+      Next check-in opens {{ next_window.display_label }}
+    {% else %}
+      Please check back later or ask a staff member for assistance.
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

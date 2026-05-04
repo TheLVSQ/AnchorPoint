@@ -1,252 +1,309 @@
 import json
+import re
 from django.shortcuts import render, redirect, get_object_or_404
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponseForbidden
 from django.views.decorators.http import require_http_methods, require_POST
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.utils import timezone
 from django.db.models import Q
 
+from core.models import OrganizationSettings
+from core.permissions import checkin_admin_required, staff_required
+from households.models import Household
 from people.models import Person, normalize_phone
-from households.models import HouseholdMember
-from core.permissions import staff_required
 
-from .models import (
-    Room,
-    CheckInSession,
-    CheckIn,
-    PrinterConfiguration,
-    generate_security_code,
-)
 from .forms import (
-    PhoneLookupForm,
-    CheckInSessionForm,
-    RoomForm,
-    PrinterConfigForm,
-    SecurityCodeLookupForm,
+    CheckInConfigurationForm, CheckInWindowFormSet, CheckInSessionForm,
+    FamilyMemberSelectForm, KioskLookupForm, KioskPinForm,
+    QuickRegistrationForm, QuickRegistrationChildForm,
+    RoomForm, PrinterConfigForm, SecurityCodeLookupForm,
+)
+from .models import (
+    CheckIn, CheckInConfiguration, CheckInSession, CheckInWindow,
+    Room, PrinterConfiguration, generate_security_code,
 )
 from .services import PrintService
+from .services.eligibility import get_eligible_members
+from .services.session_manager import get_or_create_session
+from .services.quick_registration import register_new_family
+
+
+KIOSK_SESSION_KEY = "kiosk_authenticated"
+KIOSK_SESSION_ID_KEY = "kiosk_session_id"
 
 
 # =============================================================================
-# KIOSK VIEWS (Public-facing, no login required)
+# KIOSK HELPER FUNCTIONS
 # =============================================================================
 
 
-def kiosk_home(request):
-    """Kiosk home screen - entry point for check-in."""
-    # Get active sessions
-    today = timezone.localdate()
-    sessions = CheckInSession.objects.filter(
-        date=today,
-        is_active=True,
-    ).order_by("start_time")
+def _ensure_kiosk(request):
+    """Redirect to unlock if kiosk not authenticated."""
+    if not request.session.get(KIOSK_SESSION_KEY):
+        return redirect("checkin:kiosk_unlock")
+    return None
 
-    return render(
-        request,
-        "checkin/kiosk/home.html",
-        {
-            "sessions": sessions,
-        },
+
+def _get_active_session(request):
+    """Get the active CheckInSession from the kiosk session."""
+    session_id = request.session.get(KIOSK_SESSION_ID_KEY)
+    if session_id:
+        return CheckInSession.objects.filter(pk=session_id, is_active=True).first()
+    return None
+
+
+def _next_upcoming_window():
+    """Find the next check-in window that will open."""
+    now = timezone.localtime()
+    windows = CheckInWindow.objects.filter(
+        is_active=True, configuration__is_active=True
     )
+    for w in windows:
+        if w.schedule_type == CheckInWindow.TYPE_SPECIFIC_DATE:
+            if w.specific_date and w.specific_date >= now.date():
+                return w
+        else:
+            return w
+    return None
 
 
-def kiosk_lookup(request, session_id):
-    """Phone number lookup screen."""
-    session = get_object_or_404(CheckInSession, pk=session_id, is_active=True)
+# =============================================================================
+# KIOSK VIEWS (Public-facing, PIN-gated)
+# =============================================================================
 
+
+def kiosk_unlock(request):
+    org = OrganizationSettings.load()
     if request.method == "POST":
-        form = PhoneLookupForm(request.POST)
+        form = KioskPinForm(request.POST, expected_pin=org.kiosk_pin)
         if form.is_valid():
-            phone = form.cleaned_data["phone"]
-            normalized = normalize_phone(phone)
-
-            # Find people by phone number
-            people = Person.objects.filter(
-                Q(normalized_phone=normalized) | Q(phone__icontains=phone[-7:])
-            ).distinct()
-
-            if people.exists():
-                # Also get household members
-                person_ids = set(people.values_list("id", flat=True))
-
-                # Find all people in the same households
-                for person in people:
-                    memberships = HouseholdMember.objects.filter(person=person)
-                    for membership in memberships:
-                        household_members = HouseholdMember.objects.filter(
-                            household=membership.household
-                        ).values_list("person_id", flat=True)
-                        person_ids.update(household_members)
-
-                # Store in session for next step
-                request.session["checkin_person_ids"] = list(person_ids)
-                request.session["checkin_session_id"] = session_id
-
-                return redirect("checkin:kiosk_select", session_id=session_id)
-            else:
-                form.add_error("phone", "No family found with this phone number.")
+            request.session[KIOSK_SESSION_KEY] = True
+            return redirect("checkin:kiosk_lookup")
     else:
-        form = PhoneLookupForm()
-
-    return render(
-        request,
-        "checkin/kiosk/lookup.html",
-        {
-            "session": session,
-            "form": form,
-        },
-    )
+        form = KioskPinForm()
+    return render(request, "checkin/kiosk/unlock.html", {"form": form, "org": org})
 
 
-def kiosk_select(request, session_id):
-    """Select family members to check in."""
-    session = get_object_or_404(CheckInSession, pk=session_id, is_active=True)
+def kiosk_lookup(request):
+    redir = _ensure_kiosk(request)
+    if redir:
+        return redir
 
-    person_ids = request.session.get("checkin_person_ids", [])
-    if not person_ids:
-        return redirect("checkin:kiosk_lookup", session_id=session_id)
+    org = OrganizationSettings.load()
 
-    people = Person.objects.filter(id__in=person_ids).order_by("birthdate")
+    # Find open configurations
+    now = timezone.localtime()
+    open_configs = []
+    for config in CheckInConfiguration.objects.filter(is_active=True):
+        windows = config.open_windows(now)
+        if windows:
+            open_configs.append((config, windows[0]))
 
-    # Check who's already checked in
-    already_checked_in = CheckIn.objects.filter(
-        session=session, person_id__in=person_ids
-    ).values_list("person_id", flat=True)
+    if not open_configs:
+        next_window = _next_upcoming_window()
+        return render(request, "checkin/kiosk/no_sessions.html", {
+            "org": org, "next_window": next_window,
+        })
+
+    if len(open_configs) == 1:
+        config, window = open_configs[0]
+        session = get_or_create_session(config, window)
+        request.session[KIOSK_SESSION_ID_KEY] = session.pk
+    elif len(open_configs) > 1:
+        # Multiple configs open — if none selected yet, show picker
+        if not request.session.get(KIOSK_SESSION_ID_KEY):
+            return render(request, "checkin/kiosk/config_picker.html", {
+                "open_configs": open_configs,
+                "org": org,
+            })
+
+    session = _get_active_session(request)
+    if not session:
+        return redirect("checkin:kiosk_unlock")
+
+    households = []
+    query = ""
+    if request.method == "GET" and "query" in request.GET:
+        form = KioskLookupForm(request.GET)
+        if form.is_valid():
+            query = form.cleaned_data["query"]
+            digits = normalize_phone(query)
+            if len(digits) >= 7:
+                households = Household.objects.filter(
+                    members__normalized_phone__endswith=digits[-10:]
+                ).distinct()
+            else:
+                households = (
+                    Household.objects.filter(name__icontains=query)
+                    | Household.objects.filter(members__last_name__icontains=query)
+                ).distinct()
+    else:
+        form = KioskLookupForm()
+
+    return render(request, "checkin/kiosk/lookup_new.html", {
+        "form": form,
+        "households": households,
+        "query": query,
+        "session": session,
+        "org": org,
+    })
+
+
+def kiosk_family_select(request, household_id):
+    redir = _ensure_kiosk(request)
+    if redir:
+        return redir
+
+    session = _get_active_session(request)
+    if not session or not session.configuration:
+        return redirect("checkin:kiosk_lookup")
+
+    household = get_object_or_404(Household, pk=household_id)
+    config = session.configuration
+    members_with_eligibility = get_eligible_members(household, config)
+    rooms = list(session.rooms.all())
 
     if request.method == "POST":
-        selected_ids = request.POST.getlist("person_ids")
-        if selected_ids:
-            request.session["checkin_selected_ids"] = selected_ids
-            return redirect("checkin:kiosk_rooms", session_id=session_id)
+        form = FamilyMemberSelectForm(
+            request.POST,
+            members_with_eligibility=members_with_eligibility,
+            rooms=rooms,
+        )
+        if form.is_valid():
+            selected = form.get_selected()
+            if not selected:
+                form.add_error(None, "Please select at least one person.")
+            else:
+                security_code = generate_security_code()
+                checkin_ids = []
+                for person_id, room_id in selected:
+                    person = Person.objects.get(pk=person_id)
+                    room = Room.objects.get(pk=room_id) if room_id else None
+                    checkin, created = CheckIn.objects.get_or_create(
+                        session=session,
+                        person=person,
+                        defaults={
+                            "room": room,
+                            "security_code": security_code,
+                        },
+                    )
+                    if created:
+                        checkin_ids.append(checkin.pk)
 
-    return render(
-        request,
-        "checkin/kiosk/select.html",
-        {
-            "session": session,
-            "people": people,
-            "already_checked_in": list(already_checked_in),
-        },
-    )
+                request.session["kiosk_checkin_ids"] = checkin_ids
+                request.session["kiosk_security_code"] = security_code
+                return redirect("checkin:kiosk_confirmation")
+    else:
+        form = FamilyMemberSelectForm(
+            members_with_eligibility=members_with_eligibility,
+            rooms=rooms,
+        )
+
+    return render(request, "checkin/kiosk/family_select.html", {
+        "household": household,
+        "form": form,
+        "members_with_eligibility": members_with_eligibility,
+        "rooms": rooms,
+        "session": session,
+        "config": config,
+    })
 
 
-def kiosk_rooms(request, session_id):
-    """Select rooms for each person."""
-    session = get_object_or_404(CheckInSession, pk=session_id, is_active=True)
+def kiosk_confirmation(request):
+    redir = _ensure_kiosk(request)
+    if redir:
+        return redir
 
-    selected_ids = request.session.get("checkin_selected_ids", [])
-    if not selected_ids:
-        return redirect("checkin:kiosk_select", session_id=session_id)
+    checkin_ids = request.session.pop("kiosk_checkin_ids", [])
+    security_code = request.session.pop("kiosk_security_code", "")
+    checkins = CheckIn.objects.filter(pk__in=checkin_ids).select_related("person", "room")
+    org = OrganizationSettings.load()
+    session = _get_active_session(request)
 
-    people = Person.objects.filter(id__in=selected_ids)
-    rooms = session.rooms.filter(is_active=True).order_by("sort_order", "name")
+    return render(request, "checkin/kiosk/confirmation.html", {
+        "checkins": checkins,
+        "security_code": security_code,
+        "session": session,
+        "org": org,
+    })
 
-    # Auto-assign rooms based on age/grade
-    auto_assignments = {}
-    for person in people:
-        age = person.age
-        grade = person.grade
 
-        for room in rooms:
-            # Check age range
-            if room.min_age and age and age < room.min_age:
-                continue
-            if room.max_age and age and age > room.max_age:
-                continue
+def kiosk_quick_register(request):
+    redir = _ensure_kiosk(request)
+    if redir:
+        return redir
 
-            # Check grade range (simplified - could be enhanced)
-            if room.min_grade and grade and grade < room.min_grade:
-                continue
-            if room.max_grade and grade and grade > room.max_grade:
-                continue
-
-            # This room is a match
-            auto_assignments[person.id] = room.id
-            break
+    org = OrganizationSettings.load()
 
     if request.method == "POST":
-        # Process room assignments and create check-ins
-        room_assignments = {}
-        for person in people:
-            room_id = request.POST.get(f"room_{person.id}")
-            if room_id:
-                room_assignments[person.id] = int(room_id)
+        parent_form = QuickRegistrationForm(request.POST)
+        child_count = int(request.POST.get("child_count", "1"))
+        child_forms = []
+        children_valid = True
+        for i in range(child_count):
+            prefix = f"child_{i}"
+            cf = QuickRegistrationChildForm(request.POST, prefix=prefix)
+            child_forms.append(cf)
+            if not cf.is_valid():
+                children_valid = False
 
-        # Generate a single security code for the family
-        security_code = generate_security_code()
+        if parent_form.is_valid() and children_valid:
+            children_data = []
+            for cf in child_forms:
+                child_data = {
+                    "first_name": cf.cleaned_data["first_name"],
+                    "last_name": cf.cleaned_data.get("last_name") or parent_form.cleaned_data["parent_last_name"],
+                    "birthdate": cf.cleaned_data["birthdate"],
+                    "allergies": cf.cleaned_data.get("allergies", ""),
+                    "custody_flag": cf.cleaned_data.get("custody_flag", False),
+                    "custody_notes": cf.cleaned_data.get("custody_notes", ""),
+                    "unauthorized_pickup": cf.cleaned_data.get("unauthorized_pickup", ""),
+                }
+                children_data.append(child_data)
 
-        # Create check-ins
-        checkins = []
-        for person in people:
-            room_id = room_assignments.get(person.id)
-            room = Room.objects.get(pk=room_id) if room_id else None
-
-            checkin = CheckIn.objects.create(
-                session=session,
-                person=person,
-                room=room,
-                security_code=security_code,
-                notes=person.allergies or "",
+            result = register_new_family(
+                parent_first=parent_form.cleaned_data["parent_first_name"],
+                parent_last=parent_form.cleaned_data["parent_last_name"],
+                parent_phone=parent_form.cleaned_data["parent_phone"],
+                parent_email=parent_form.cleaned_data.get("parent_email", ""),
+                phone_opt_in=parent_form.cleaned_data.get("phone_opt_in", False),
+                children=children_data,
             )
-            checkins.append(checkin)
+            return redirect("checkin:kiosk_family_select", household_id=result["household"].pk)
+    else:
+        parent_form = QuickRegistrationForm()
+        child_forms = [QuickRegistrationChildForm(prefix="child_0")]
 
-        # Store for confirmation screen
-        request.session["checkin_completed_ids"] = [c.id for c in checkins]
-        request.session["checkin_security_code"] = security_code
-
-        return redirect("checkin:kiosk_complete", session_id=session_id)
-
-    return render(
-        request,
-        "checkin/kiosk/rooms.html",
-        {
-            "session": session,
-            "people": people,
-            "rooms": rooms,
-            "auto_assignments": auto_assignments,
-        },
-    )
+    return render(request, "checkin/kiosk/quick_register.html", {
+        "parent_form": parent_form,
+        "child_forms": child_forms,
+        "org": org,
+    })
 
 
-def kiosk_complete(request, session_id):
-    """Check-in complete - show security code and print labels."""
-    session = get_object_or_404(CheckInSession, pk=session_id)
+def kiosk_select_config(request):
+    redir = _ensure_kiosk(request)
+    if redir:
+        return redir
+    if request.method == "POST":
+        config_pk = request.POST.get("config_pk")
+        window_pk = request.POST.get("window_pk")
+        if config_pk and window_pk:
+            try:
+                config = CheckInConfiguration.objects.get(pk=config_pk, is_active=True)
+                window = CheckInWindow.objects.get(pk=window_pk, configuration=config, is_active=True)
+                session = get_or_create_session(config, window)
+                request.session[KIOSK_SESSION_ID_KEY] = session.pk
+            except (CheckInConfiguration.DoesNotExist, CheckInWindow.DoesNotExist):
+                pass
+    return redirect("checkin:kiosk_lookup")
 
-    checkin_ids = request.session.get("checkin_completed_ids", [])
-    security_code = request.session.get("checkin_security_code", "")
 
-    if not checkin_ids:
-        return redirect("checkin:kiosk_home")
-
-    checkins = CheckIn.objects.filter(id__in=checkin_ids).select_related(
-        "person", "room"
-    )
-
-    # Attempt to print labels
-    print_success = False
-    try:
-        print_service = PrintService()
-        if print_service.is_printer_available():
-            results = print_service.print_checkin_labels(list(checkins))
-            print_success = all(results["child"]) and results["parent"]
-    except Exception:
-        pass  # Printing is optional
-
-    # Clear session data
-    for key in ["checkin_person_ids", "checkin_selected_ids", "checkin_completed_ids", "checkin_security_code"]:
-        request.session.pop(key, None)
-
-    return render(
-        request,
-        "checkin/kiosk/complete.html",
-        {
-            "session": session,
-            "checkins": checkins,
-            "security_code": security_code,
-            "print_success": print_success,
-        },
-    )
+def kiosk_lock(request):
+    request.session.pop(KIOSK_SESSION_KEY, None)
+    request.session.pop(KIOSK_SESSION_ID_KEY, None)
+    return redirect("checkin:kiosk_unlock")
 
 
 # =============================================================================
@@ -309,6 +366,56 @@ def checkout_confirm(request, session_id):
 
 
 # =============================================================================
+# CONFIGURATION ADMIN VIEWS (checkin_admin_required)
+# =============================================================================
+
+
+@checkin_admin_required
+def configuration_list(request):
+    configs = CheckInConfiguration.objects.prefetch_related("windows", "rooms", "groups")
+    return render(request, "checkin/config_list.html", {"configurations": configs})
+
+
+@checkin_admin_required
+def configuration_create(request):
+    return _config_form(request, instance=None)
+
+
+@checkin_admin_required
+def configuration_edit(request, pk):
+    config = get_object_or_404(CheckInConfiguration, pk=pk)
+    return _config_form(request, instance=config)
+
+
+@checkin_admin_required
+def configuration_delete(request, pk):
+    config = get_object_or_404(CheckInConfiguration, pk=pk)
+    if request.method == "POST":
+        config.delete()
+        return redirect("checkin:configuration_list")
+    return render(request, "checkin/config_confirm_delete.html", {"config": config})
+
+
+def _config_form(request, instance):
+    if request.method == "POST":
+        form = CheckInConfigurationForm(request.POST, instance=instance)
+        formset = CheckInWindowFormSet(request.POST, instance=instance or CheckInConfiguration())
+        if form.is_valid() and formset.is_valid():
+            config = form.save()
+            formset.instance = config
+            formset.save()
+            return redirect("checkin:configuration_list")
+    else:
+        form = CheckInConfigurationForm(instance=instance)
+        formset = CheckInWindowFormSet(instance=instance or CheckInConfiguration())
+    return render(request, "checkin/config_form.html", {
+        "form": form,
+        "formset": formset,
+        "editing": instance is not None,
+    })
+
+
+# =============================================================================
 # ADMIN/DASHBOARD VIEWS (Staff-facing)
 # =============================================================================
 
@@ -317,7 +424,7 @@ def checkout_confirm(request, session_id):
 def dashboard(request):
     """Check-in dashboard showing current sessions."""
     today = timezone.localdate()
-    sessions = CheckInSession.objects.filter(date=today).order_by("start_time")
+    sessions = CheckInSession.objects.filter(date=today).order_by("checkin_opens")
 
     return render(
         request,
@@ -360,7 +467,7 @@ def session_detail(request, session_id):
 @staff_required
 def session_list(request):
     """List all check-in sessions."""
-    sessions = CheckInSession.objects.all().order_by("-date", "-start_time")
+    sessions = CheckInSession.objects.all().order_by("-date", "-checkin_opens")
 
     return render(
         request,
