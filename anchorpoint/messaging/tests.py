@@ -199,3 +199,113 @@ class MessagingDeliveryTests(TestCase):
             "https://example.com/media/message.mp3",
             status_callback_url="https://example.com/communications/phone-blast/webhook/call-status/",
         )
+
+
+class PhoneCallWebhookTests(TestCase):
+    def setUp(self):
+        self.settings_obj = OrganizationSettings.load()
+        self.settings_obj.twilio_account_sid = "AC123"
+        self.settings_obj.twilio_auth_token = "test_auth_token"
+        self.settings_obj.twilio_phone_number = "+15551234567"
+        self.settings_obj.save()
+        self.user = get_user_model().objects.create_user(
+            username="webhookuser", password="pw"
+        )
+        self.person = Person.objects.create(
+            first_name="Jane", last_name="Doe", phone="+15559876543"
+        )
+        audio = SimpleUploadedFile("blast.mp3", b"audio")
+        self.blast = PhoneBlast.objects.create(
+            created_by=self.user,
+            title="Test Blast",
+            audio_file=audio,
+            status=PhoneBlast.Status.PROCESSING,
+        )
+        self.call = PhoneCall.objects.create(
+            blast=self.blast,
+            person=self.person,
+            phone_number=self.person.phone,
+            call_sid="CA_TEST_001",
+            status=PhoneCall.Status.PENDING,
+        )
+        self.webhook_url = reverse("messaging:phone_call_status_webhook")
+
+    def _make_signature(self, url, params):
+        sorted_params = "".join(f"{k}{v}" for k, v in sorted(params.items()))
+        s = url + sorted_params
+        mac = hmac.new(
+            self.settings_obj.twilio_auth_token.encode("utf-8"),
+            s.encode("utf-8"),
+            hashlib.sha1,
+        )
+        return base64.b64encode(mac.digest()).decode()
+
+    def _post_webhook(self, params, sign=True):
+        url = "http://testserver" + self.webhook_url
+        sig = self._make_signature(url, params) if sign else "invalidsignature"
+        return self.client.post(
+            self.webhook_url,
+            data=params,
+            HTTP_X_TWILIO_SIGNATURE=sig,
+        )
+
+    def test_completed_call_marks_completed(self):
+        params = {"CallSid": "CA_TEST_001", "CallStatus": "completed"}
+        response = self._post_webhook(params)
+        self.assertEqual(response.status_code, 200)
+        self.call.refresh_from_db()
+        self.assertEqual(self.call.status, PhoneCall.Status.COMPLETED)
+
+    def test_no_answer_marks_no_answer(self):
+        params = {"CallSid": "CA_TEST_001", "CallStatus": "no-answer"}
+        response = self._post_webhook(params)
+        self.assertEqual(response.status_code, 200)
+        self.call.refresh_from_db()
+        self.assertEqual(self.call.status, PhoneCall.Status.NO_ANSWER)
+
+    def test_busy_marks_failed(self):
+        params = {"CallSid": "CA_TEST_001", "CallStatus": "busy"}
+        response = self._post_webhook(params)
+        self.assertEqual(response.status_code, 200)
+        self.call.refresh_from_db()
+        self.assertEqual(self.call.status, PhoneCall.Status.FAILED)
+
+    def test_failed_marks_failed(self):
+        params = {"CallSid": "CA_TEST_001", "CallStatus": "failed"}
+        response = self._post_webhook(params)
+        self.assertEqual(response.status_code, 200)
+        self.call.refresh_from_db()
+        self.assertEqual(self.call.status, PhoneCall.Status.FAILED)
+
+    def test_blast_marked_complete_when_last_call_settles(self):
+        params = {"CallSid": "CA_TEST_001", "CallStatus": "completed"}
+        self._post_webhook(params)
+        self.blast.refresh_from_db()
+        self.assertEqual(self.blast.status, PhoneBlast.Status.COMPLETED)
+        self.assertIsNotNone(self.blast.completed_at)
+
+    def test_blast_stays_processing_while_calls_pending(self):
+        # Add a second pending call
+        PhoneCall.objects.create(
+            blast=self.blast,
+            person=self.person,
+            phone_number="+15550001111",
+            call_sid="CA_TEST_002",
+            status=PhoneCall.Status.PENDING,
+        )
+        params = {"CallSid": "CA_TEST_001", "CallStatus": "completed"}
+        self._post_webhook(params)
+        self.blast.refresh_from_db()
+        self.assertEqual(self.blast.status, PhoneBlast.Status.PROCESSING)
+
+    def test_invalid_signature_returns_403(self):
+        params = {"CallSid": "CA_TEST_001", "CallStatus": "completed"}
+        response = self._post_webhook(params, sign=False)
+        self.assertEqual(response.status_code, 403)
+        self.call.refresh_from_db()
+        self.assertEqual(self.call.status, PhoneCall.Status.PENDING)
+
+    def test_unknown_call_sid_returns_404(self):
+        params = {"CallSid": "CA_UNKNOWN", "CallStatus": "completed"}
+        response = self._post_webhook(params)
+        self.assertEqual(response.status_code, 404)
