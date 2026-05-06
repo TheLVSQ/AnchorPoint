@@ -309,3 +309,127 @@ class PhoneCallWebhookTests(TestCase):
         params = {"CallSid": "CA_UNKNOWN", "CallStatus": "completed"}
         response = self._post_webhook(params)
         self.assertEqual(response.status_code, 404)
+
+
+class PhoneBlastDetailViewTests(TestCase):
+    def setUp(self):
+        self.temp_media = tempfile.mkdtemp()
+        self.addCleanup(lambda: shutil.rmtree(self.temp_media, ignore_errors=True))
+        media_override = override_settings(MEDIA_ROOT=self.temp_media)
+        media_override.enable()
+        self.addCleanup(media_override.disable)
+
+        self.user = get_user_model().objects.create_user(
+            username="staffuser", password="pw"
+        )
+        self.user.profile.can_manage_communications = True
+        self.user.profile.save()
+        self.client.force_login(self.user)
+
+        self.person = Person.objects.create(
+            first_name="Test", last_name="Person", phone="+15551112222"
+        )
+        audio = SimpleUploadedFile("blast.mp3", b"audio")
+        self.blast = PhoneBlast.objects.create(
+            created_by=self.user,
+            title="Sunday Announcement",
+            audio_file=audio,
+            status=PhoneBlast.Status.COMPLETED,
+        )
+        PhoneCall.objects.create(
+            blast=self.blast, person=self.person,
+            phone_number=self.person.phone,
+            call_sid="CA001", status=PhoneCall.Status.COMPLETED,
+        )
+        PhoneCall.objects.create(
+            blast=self.blast, person=self.person,
+            phone_number="+15550000001",
+            call_sid="CA002", status=PhoneCall.Status.NO_ANSWER,
+        )
+
+    def test_detail_page_returns_200(self):
+        response = self.client.get(
+            reverse("messaging:phone_blast_detail", args=[self.blast.pk])
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Sunday Announcement")
+
+    def test_stats_partial_returns_counts(self):
+        response = self.client.get(
+            reverse("messaging:phone_blast_stats", args=[self.blast.pk])
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "1")  # 1 answered, 1 no answer
+
+    def test_stats_partial_includes_polling_when_processing(self):
+        self.blast.status = PhoneBlast.Status.PROCESSING
+        self.blast.save()
+        response = self.client.get(
+            reverse("messaging:phone_blast_stats", args=[self.blast.pk])
+        )
+        self.assertContains(response, "every 5s")
+
+    def test_stats_partial_omits_polling_when_complete(self):
+        response = self.client.get(
+            reverse("messaging:phone_blast_stats", args=[self.blast.pk])
+        )
+        self.assertNotContains(response, "every 5s")
+
+
+class MessagingHomeViewTests(TestCase):
+    def setUp(self):
+        self.temp_media = tempfile.mkdtemp()
+        self.addCleanup(lambda: shutil.rmtree(self.temp_media, ignore_errors=True))
+        media_override = override_settings(MEDIA_ROOT=self.temp_media)
+        media_override.enable()
+        self.addCleanup(media_override.disable)
+
+        self.user = get_user_model().objects.create_user(
+            username="staffuser2", password="pw"
+        )
+        self.user.profile.can_manage_communications = True
+        self.user.profile.save()
+        self.client.force_login(self.user)
+
+    def test_home_shows_blast_stats_summary(self):
+        person = Person.objects.create(
+            first_name="A", last_name="B", phone="+15550001111"
+        )
+        audio = SimpleUploadedFile("blast.mp3", b"audio")
+        blast = PhoneBlast.objects.create(
+            created_by=self.user,
+            title="Test Blast",
+            audio_file=audio,
+            status=PhoneBlast.Status.COMPLETED,
+        )
+        PhoneCall.objects.create(
+            blast=blast, person=person,
+            phone_number=person.phone,
+            call_sid="CA01", status=PhoneCall.Status.COMPLETED,
+        )
+        PhoneCall.objects.create(
+            blast=blast, person=person,
+            phone_number="+15550002222",
+            call_sid="CA02", status=PhoneCall.Status.NO_ANSWER,
+        )
+        response = self.client.get(reverse("messaging:home"))
+        self.assertContains(response, "1 answered")
+        self.assertContains(response, "1 no answer")
+
+    def test_home_shows_sending_label_when_processing(self):
+        audio = SimpleUploadedFile("blast.mp3", b"audio")
+        blast = PhoneBlast.objects.create(
+            created_by=self.user,
+            title="In Progress",
+            audio_file=audio,
+            status=PhoneBlast.Status.PROCESSING,
+        )
+        PhoneCall.objects.create(
+            blast=blast, person=Person.objects.create(
+                first_name="X", last_name="Y", phone="+15550003333"
+            ),
+            phone_number="+15550003333",
+            status=PhoneCall.Status.PENDING,
+        )
+        response = self.client.get(reverse("messaging:home"))
+        self.assertContains(response, "Sending")
