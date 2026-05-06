@@ -34,6 +34,7 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("login/", core_views.login_view, name="login"),
     path("logout/", core_views.logout_view, name="logout"),
+    path("auth/google/", core_views.google_auth_callback, name="google_auth"),
     path("", core_views.dashboard, name="dashboard"),
     path("profile/", core_views.profile, name="profile"),
     path("permissions/roles/", core_views.manage_roles, name="manage_roles"),
