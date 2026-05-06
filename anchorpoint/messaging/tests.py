@@ -1,11 +1,16 @@
-from datetime import datetime, time, timedelta, timezone as dt_timezone
+import base64
+import hashlib
+import hmac
 import shutil
 import tempfile
+from datetime import datetime, time, timedelta, timezone as dt_timezone
 from unittest.mock import patch
+from urllib.parse import urlencode
 
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, override_settings
+from django.urls import reverse
 
 from core.models import OrganizationSettings
 from groups.models import Group, GroupMembership
@@ -162,6 +167,35 @@ class MessagingDeliveryTests(TestCase):
         self.assertEqual(success, 1)
         self.assertEqual(failure, 0)
         call = blast.calls.first()
-        self.assertEqual(call.status, PhoneCall.Status.COMPLETED)
+        self.assertEqual(call.status, PhoneCall.Status.PENDING)  # stays PENDING until webhook
         self.assertEqual(call.call_sid, "CA123")
         self.assertEqual(self.person.communication_logs.count(), 1)
+        blast.refresh_from_db()
+        self.assertEqual(blast.status, PhoneBlast.Status.PROCESSING)
+
+    def test_deliver_phone_blast_passes_status_callback(self):
+        """deliver_phone_blast passes the StatusCallback URL to initiate_call."""
+        audio = SimpleUploadedFile("message.mp3", b"audio-bytes")
+        blast = PhoneBlast.objects.create(
+            created_by=self.user,
+            title="Callback Test",
+            audio_file=audio,
+        )
+        PhoneCall.objects.create(
+            blast=blast,
+            person=self.person,
+            phone_number=self.person.phone,
+        )
+        with patch(
+            "messaging.services.TwilioService.initiate_call", return_value="CA999"
+        ) as mock_call:
+            deliver_phone_blast(
+                blast,
+                settings_obj=self.settings_obj,
+                base_url="https://example.com",
+            )
+        mock_call.assert_called_once_with(
+            self.person.phone,
+            "https://example.com/media/message.mp3",
+            status_callback_url="https://example.com/communications/phone-blast/webhook/call-status/",
+        )
