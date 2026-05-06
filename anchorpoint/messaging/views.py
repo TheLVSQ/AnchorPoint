@@ -34,17 +34,29 @@ def _twilio_ready(settings_obj: OrganizationSettings) -> bool:
 
 @communications_required
 def communications_home(request):
-
-    sms_messages = SmsMessage.objects.select_related("created_by").order_by("-created_at")[
-        :5
-    ]
-    phone_blasts = PhoneBlast.objects.select_related("created_by").order_by("-created_at")[
-        :5
-    ]
+    sms_messages = SmsMessage.objects.select_related("created_by").order_by("-created_at")[:5]
+    phone_blasts = PhoneBlast.objects.select_related("created_by").order_by("-created_at")[:5]
     settings_obj = OrganizationSettings.load()
+
+    # Annotate blasts with call outcome counts for the summary line
+    blast_stats_map = {}
+    for blast in phone_blasts:
+        counts = {
+            row["status"]: row["count"]
+            for row in blast.calls.values("status").annotate(count=Count("id"))
+        }
+        blast_stats_map[blast.pk] = {
+            "answered": counts.get(PhoneCall.Status.COMPLETED, 0),
+            "no_answer": counts.get(PhoneCall.Status.NO_ANSWER, 0),
+            "failed": counts.get(PhoneCall.Status.FAILED, 0),
+            "pending": counts.get(PhoneCall.Status.PENDING, 0),
+        }
+
+    phone_blasts_with_stats = [(b, blast_stats_map[b.pk]) for b in phone_blasts]
+
     context = {
         "sms_messages": sms_messages,
-        "phone_blasts": phone_blasts,
+        "phone_blasts_with_stats": phone_blasts_with_stats,
         "twilio_ready": _twilio_ready(settings_obj),
     }
     return render(request, "messaging/home.html", context)
