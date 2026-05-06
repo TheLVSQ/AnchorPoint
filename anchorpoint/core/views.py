@@ -1,8 +1,12 @@
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import authenticate, get_user_model, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import update_session_auth_hash
 from django.shortcuts import get_object_or_404, redirect, render
+from django.views.decorators.csrf import csrf_exempt
+from google.oauth2 import id_token
+from google.auth.transport import requests as google_requests
 from people.models import Person
 
 from events.forms import ReleaseDocumentForm
@@ -22,24 +26,75 @@ from .permissions import admin_required
 
 
 def login_view(request):
+    if request.user.is_authenticated:
+        return redirect("dashboard")
+
     if request.method == "POST":
         username = request.POST.get("username")
         password = request.POST.get("password")
-
         user = authenticate(request, username=username, password=password)
-
         if user is not None:
             login(request, user)
             return redirect("dashboard")
         else:
             messages.error(request, "Invalid username or password.")
 
-    return render(request, "core/login.html")
+    return render(request, "core/login.html", {
+        "google_client_id": settings.GOOGLE_CLIENT_ID,
+    })
 
 
 def logout_view(request):
     logout(request)
     return redirect("login")
+
+
+@csrf_exempt
+def google_auth_callback(request):
+    """
+    Receives the signed JWT from Google Identity Services and logs the user in.
+    CSRF is intentionally exempt — the JWT cryptographic signature is the security mechanism.
+    Restricted to @bolivar.church emails that match an existing AnchorPoint user.
+    """
+    if request.method != "POST":
+        return redirect("login")
+
+    credential = request.POST.get("credential", "")
+    client_id = settings.GOOGLE_CLIENT_ID
+
+    if not credential or not client_id:
+        messages.error(request, "Google sign-in is not available.")
+        return redirect("login")
+
+    try:
+        idinfo = id_token.verify_oauth2_token(
+            credential,
+            google_requests.Request(),
+            client_id,
+        )
+    except ValueError:
+        messages.error(request, "Google sign-in failed. Please try again.")
+        return redirect("login")
+
+    email = idinfo.get("email", "").lower()
+
+    if not email.endswith("@bolivar.church"):
+        messages.error(request, "Only @bolivar.church accounts may sign in with Google.")
+        return redirect("login")
+
+    UserModel = get_user_model()
+    try:
+        user = UserModel.objects.get(email__iexact=email)
+    except UserModel.DoesNotExist:
+        messages.error(
+            request,
+            "No AnchorPoint account found for this Google account. "
+            "Contact your administrator.",
+        )
+        return redirect("login")
+
+    login(request, user, backend="django.contrib.auth.backends.ModelBackend")
+    return redirect("dashboard")
 
 
 User = get_user_model()

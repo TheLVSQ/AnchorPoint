@@ -10,6 +10,7 @@ sqlparse==0.5.3
 tzdata==2025.2
 whitenoise==6.8.2
 google-auth==2.40.1
+requests==2.33.1
 
 # Optional: Install these for thermal printer support
 # python-escpos      # ESC/POS printers (generic thermal)
