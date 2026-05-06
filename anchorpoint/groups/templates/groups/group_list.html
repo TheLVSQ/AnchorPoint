@@ -54,14 +54,19 @@
         {% for group in groups %}
             <div class="list-item">
                 <div>
-                    <strong>{{ group.name }}</strong>
+                    <strong>
+                        <a href="{% url 'groups:detail' group.pk %}" class="ghost-link">{{ group.name }}</a>
+                    </strong>
                     <span>
                         {{ group.get_category_display }}
                         {% if group.location %} - {{ group.location }}{% endif %}
                         {% if group.meeting_schedule %} - {{ group.meeting_schedule }}{% endif %}
                     </span>
                 </div>
-                <span class="detail-pill">{% if group.is_active %}Active{% else %}Archived{% endif %}</span>
+                <div style="display:flex;align-items:center;gap:0.75rem;">
+                    <span class="detail-pill">{% if group.is_active %}Active{% else %}Archived{% endif %}</span>
+                    <a href="{% url 'groups:detail' group.pk %}" class="ghost-link">View &rarr;</a>
+                </div>
             </div>
         {% empty %}
             <p class="empty-state">No groups yet. Tap "Create Group" to get started.</p>

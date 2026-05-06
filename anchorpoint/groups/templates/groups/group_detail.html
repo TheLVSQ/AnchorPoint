@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block content %}
+
+<a class="ghost-link" href="{% url 'groups:list' %}">&larr; Back to Groups</a>
+
+<div class="page-header">
+    <h1>{{ group.name }}</h1>
+    <p class="page-subtitle">
+        <span class="chip">{{ group.get_category_display }}</span>
+        {% if group.is_active %}
+            <span class="chip" style="background:#dcfce7;color:#166534;">Active</span>
+        {% else %}
+            <span class="chip">Archived</span>
+        {% endif %}
+    </p>
+</div>
+
+<div class="hero-actions" style="margin-bottom:2rem;">
+    <a href="{% url 'groups:edit' group.pk %}" class="btn ghost">Edit Group</a>
+    <a href="{% url 'groups:delete' group.pk %}" class="btn ghost" style="color:#dc2626;">Delete</a>
+</div>
+
+{% if group.description or group.location or group.meeting_schedule or group.capacity %}
+<div class="detail-card" style="margin-bottom:2rem;">
+    {% if group.description %}
+        <p style="margin-bottom:1rem;">{{ group.description }}</p>
+    {% endif %}
+    <ul class="detail-list">
+        {% if group.location %}
+            <li><span>Location</span><strong>{{ group.location }}</strong></li>
+        {% endif %}
+        {% if group.meeting_schedule %}
+            <li><span>Schedule</span><strong>{{ group.meeting_schedule }}</strong></li>
+        {% endif %}
+        {% if group.capacity %}
+            <li><span>Capacity</span><strong>{{ group.capacity }}</strong></li>
+        {% endif %}
+    </ul>
+</div>
+{% endif %}
+
+<section class="detail-card">
+    <h2>Members</h2>
+    {% include "groups/group_member_list.html" %}
+
+    <div style="margin-top:1.5rem;">
+        <h3 style="margin-bottom:0.5rem;">Add Members</h3>
+        <input type="text"
+               name="q"
+               placeholder="Search by name..."
+               autocomplete="off"
+               hx-get="{% url 'groups:member_search' group.pk %}"
+               hx-trigger="keyup changed delay:300ms"
+               hx-target="#member-search-results"
+               style="width:100%;max-width:400px;">
+        <div id="member-search-results"
+             style="max-width:400px;border:1px solid var(--gray-200);border-radius:6px;margin-top:0.25rem;"></div>
+    </div>
+</section>
+
+{% endblock %}
