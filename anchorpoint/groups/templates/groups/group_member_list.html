@@ -1,0 +1,26 @@
+<div id="member-list">
+    <div class="list-card__body">
+        {% for membership in memberships %}
+            <div class="list-item">
+                <div>
+                    <strong>
+                        <a href="{% url 'people_detail' membership.person.pk %}" class="ghost-link">
+                            {{ membership.person.first_name }} {{ membership.person.last_name }}
+                        </a>
+                    </strong>
+                    <span class="chip" style="margin-left:0.5rem;">{{ membership.get_role_display }}</span>
+                </div>
+                <form method="post"
+                      action="{% url 'groups:member_remove' group.pk membership.pk %}"
+                      hx-post="{% url 'groups:member_remove' group.pk membership.pk %}"
+                      hx-target="#member-list"
+                      hx-swap="outerHTML">
+                    {% csrf_token %}
+                    <button type="submit" class="btn ghost" style="color:#dc2626;padding:0.25rem 0.75rem;">Remove</button>
+                </form>
+            </div>
+        {% empty %}
+            <p class="empty-state">No members yet. Search below to add people.</p>
+        {% endfor %}
+    </div>
+</div>
