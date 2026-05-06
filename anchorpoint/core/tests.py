@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 from django.contrib.auth import get_user_model
 from django.core import mail
 from django.test import TestCase, override_settings
@@ -182,3 +184,90 @@ class WelcomeEmailSignalTest(TestCase):
         user.first_name = "Updated"
         user.save()
         self.assertEqual(len(mail.outbox), 0)
+
+
+@override_settings(GOOGLE_CLIENT_ID="test-client-id-123")
+class GoogleAuthCallbackTests(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(
+            username="jsmith",
+            email="jsmith@bolivar.church",
+            password="unused",
+        )
+        self.url = reverse("google_auth")
+
+    def _post(self, credential="fake-jwt"):
+        return self.client.post(self.url, {"credential": credential})
+
+    def _mock_verify(self, email="jsmith@bolivar.church"):
+        """Return a patch context that makes verify_oauth2_token return a valid payload."""
+        return patch(
+            "core.views.id_token.verify_oauth2_token",
+            return_value={"email": email, "email_verified": True},
+        )
+
+    def test_valid_credential_logs_in_and_redirects(self):
+        with self._mock_verify():
+            response = self._post()
+        self.assertRedirects(response, reverse("dashboard"))
+        response2 = self.client.get(reverse("dashboard"))
+        self.assertEqual(response2.status_code, 200)
+
+    def test_wrong_domain_rejected(self):
+        with self._mock_verify(email="hacker@gmail.com"):
+            response = self._post()
+        self.assertRedirects(response, reverse("login"))
+        self.assertFalse(self.client.session.get("_auth_user_id"))
+
+    def test_no_matching_user_rejected(self):
+        with self._mock_verify(email="unknown@bolivar.church"):
+            response = self._post()
+        self.assertRedirects(response, reverse("login"))
+        self.assertFalse(self.client.session.get("_auth_user_id"))
+
+    def test_invalid_jwt_rejected(self):
+        with patch(
+            "core.views.id_token.verify_oauth2_token",
+            side_effect=ValueError("bad token"),
+        ):
+            response = self._post()
+        self.assertRedirects(response, reverse("login"))
+        self.assertFalse(self.client.session.get("_auth_user_id"))
+
+    def test_missing_credential_rejected(self):
+        response = self.client.post(self.url, {})
+        self.assertRedirects(response, reverse("login"))
+
+    def test_get_request_redirects_to_login(self):
+        response = self.client.get(self.url)
+        self.assertRedirects(response, reverse("login"))
+
+    def test_unconfigured_client_id_rejected(self):
+        with override_settings(GOOGLE_CLIENT_ID=""):
+            response = self._post()
+        self.assertRedirects(response, reverse("login"))
+
+    def test_email_match_is_case_insensitive(self):
+        with self._mock_verify(email="JSMITH@BOLIVAR.CHURCH"):
+            response = self._post()
+        self.assertRedirects(response, reverse("dashboard"))
+
+
+class LoginPageTests(TestCase):
+    @override_settings(GOOGLE_CLIENT_ID="test-client-id-123")
+    def test_login_page_shows_google_button_when_configured(self):
+        response = self.client.get(reverse("login"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "g_id_signin")
+        self.assertContains(response, "test-client-id-123")
+
+    @override_settings(GOOGLE_CLIENT_ID="")
+    def test_login_page_hides_google_button_when_not_configured(self):
+        response = self.client.get(reverse("login"))
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, "g_id_signin")
+
+    def test_login_page_always_shows_password_form(self):
+        response = self.client.get(reverse("login"))
+        self.assertContains(response, 'name="username"')
+        self.assertContains(response, 'name="password"')
