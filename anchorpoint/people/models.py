@@ -45,7 +45,7 @@ class Person(models.Model):
 
     first_name = models.CharField(max_length=150)
     last_name = models.CharField(max_length=150)
-    email = models.EmailField(blank=True, null=True)
+    email = models.EmailField(blank=True, null=True, db_index=True)
     phone = models.CharField(max_length=50, blank=True, null=True)
     normalized_phone = models.CharField(
         max_length=20,

@@ -424,7 +424,12 @@ def _config_form(request, instance):
 def dashboard(request):
     """Check-in dashboard showing current sessions."""
     today = timezone.localdate()
-    sessions = CheckInSession.objects.filter(date=today).order_by("checkin_opens")
+    sessions = (
+        CheckInSession.objects
+        .filter(date=today)
+        .prefetch_related("checkins")
+        .order_by("checkin_opens")
+    )
 
     return render(
         request,
@@ -467,7 +472,12 @@ def session_detail(request, session_id):
 @staff_required
 def session_list(request):
     """List all check-in sessions."""
-    sessions = CheckInSession.objects.all().order_by("-date", "-checkin_opens")
+    sessions = (
+        CheckInSession.objects
+        .all()
+        .prefetch_related("checkins")
+        .order_by("-date", "-checkin_opens")
+    )
 
     return render(
         request,
