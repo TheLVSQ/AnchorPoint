@@ -32,7 +32,7 @@ class TwilioRequestError(Exception):
 
 def is_within_blackout_window(
     settings_obj: OrganizationSettings, moment
-) -> bool:  # pragma: no cover - exercised via form tests
+) -> bool:
     if not settings_obj.sms_blackout_start or not settings_obj.sms_blackout_end:
         return False
     start = settings_obj.sms_blackout_start

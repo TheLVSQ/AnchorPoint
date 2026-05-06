@@ -18,7 +18,14 @@ from people.models import Person
 
 from .forms import PhoneBlastForm, SmsMessageForm
 from .models import PhoneBlast, PhoneCall, SmsMessage, SmsRecipient
-from .services import deliver_phone_blast, deliver_sms_message
+from .services import (
+    TwilioConfigurationError,
+    TwilioRequestError,
+    TwilioService,
+    deliver_phone_blast,
+    deliver_sms_message,
+    is_within_blackout_window,
+)
 
 
 class SmsMessageFormTests(TestCase):
@@ -433,3 +440,271 @@ class MessagingHomeViewTests(TestCase):
         )
         response = self.client.get(reverse("messaging:home"))
         self.assertContains(response, "Sending")
+
+
+# ---------------------------------------------------------------------------
+# Blackout window unit tests
+# ---------------------------------------------------------------------------
+
+@override_settings(TIME_ZONE="UTC")
+class BlackoutWindowTests(TestCase):
+    def setUp(self):
+        self.settings_obj = OrganizationSettings.load()
+
+    def _moment(self, hour, minute=0):
+        """UTC-aware datetime at the given hour/minute."""
+        from django.utils import timezone as tz
+        return tz.now().replace(hour=hour, minute=minute, second=0, microsecond=0)
+
+    def test_no_blackout_configured_returns_false(self):
+        self.settings_obj.sms_blackout_start = None
+        self.settings_obj.sms_blackout_end = None
+        self.settings_obj.save()
+        self.assertFalse(is_within_blackout_window(self.settings_obj, self._moment(10)))
+
+    def test_start_equals_end_returns_false(self):
+        self.settings_obj.sms_blackout_start = time(22, 0)
+        self.settings_obj.sms_blackout_end = time(22, 0)
+        self.settings_obj.save()
+        self.assertFalse(is_within_blackout_window(self.settings_obj, self._moment(22)))
+
+    def test_inside_normal_window(self):
+        self.settings_obj.sms_blackout_start = time(22, 0)
+        self.settings_obj.sms_blackout_end = time(23, 0)
+        self.settings_obj.save()
+        self.assertTrue(is_within_blackout_window(self.settings_obj, self._moment(22, 30)))
+
+    def test_outside_normal_window(self):
+        self.settings_obj.sms_blackout_start = time(22, 0)
+        self.settings_obj.sms_blackout_end = time(23, 0)
+        self.settings_obj.save()
+        self.assertFalse(is_within_blackout_window(self.settings_obj, self._moment(10)))
+
+    def test_at_window_start_is_inside(self):
+        self.settings_obj.sms_blackout_start = time(22, 0)
+        self.settings_obj.sms_blackout_end = time(23, 0)
+        self.settings_obj.save()
+        self.assertTrue(is_within_blackout_window(self.settings_obj, self._moment(22, 0)))
+
+    def test_at_window_end_is_outside(self):
+        # End is exclusive
+        self.settings_obj.sms_blackout_start = time(22, 0)
+        self.settings_obj.sms_blackout_end = time(23, 0)
+        self.settings_obj.save()
+        self.assertFalse(is_within_blackout_window(self.settings_obj, self._moment(23, 0)))
+
+    def test_inside_overnight_window_after_midnight(self):
+        # 22:00 → 08:00; checking at 03:00
+        self.settings_obj.sms_blackout_start = time(22, 0)
+        self.settings_obj.sms_blackout_end = time(8, 0)
+        self.settings_obj.save()
+        self.assertTrue(is_within_blackout_window(self.settings_obj, self._moment(3)))
+
+    def test_inside_overnight_window_before_midnight(self):
+        # 22:00 → 08:00; checking at 23:00
+        self.settings_obj.sms_blackout_start = time(22, 0)
+        self.settings_obj.sms_blackout_end = time(8, 0)
+        self.settings_obj.save()
+        self.assertTrue(is_within_blackout_window(self.settings_obj, self._moment(23)))
+
+    def test_outside_overnight_window(self):
+        # 22:00 → 08:00; checking at 12:00
+        self.settings_obj.sms_blackout_start = time(22, 0)
+        self.settings_obj.sms_blackout_end = time(8, 0)
+        self.settings_obj.save()
+        self.assertFalse(is_within_blackout_window(self.settings_obj, self._moment(12)))
+
+
+# ---------------------------------------------------------------------------
+# TwilioService initialisation
+# ---------------------------------------------------------------------------
+
+class TwilioServiceInitTests(TestCase):
+    def _settings(self, sid="AC123", token="token", phone="+15551234567"):
+        s = OrganizationSettings.load()
+        s.twilio_account_sid = sid
+        s.twilio_auth_token = token
+        s.twilio_phone_number = phone
+        s.save()
+        return s
+
+    def test_raises_when_sid_missing(self):
+        with self.assertRaises(TwilioConfigurationError):
+            TwilioService(self._settings(sid=""))
+
+    def test_raises_when_token_missing(self):
+        with self.assertRaises(TwilioConfigurationError):
+            TwilioService(self._settings(token=""))
+
+    def test_raises_when_phone_missing(self):
+        with self.assertRaises(TwilioConfigurationError):
+            TwilioService(self._settings(phone=""))
+
+    def test_no_error_when_all_configured(self):
+        service = TwilioService(self._settings())
+        self.assertEqual(service.account_sid, "AC123")
+        self.assertEqual(service.from_number, "+15551234567")
+
+
+# ---------------------------------------------------------------------------
+# deliver_sms_message — failure and skip paths
+# ---------------------------------------------------------------------------
+
+class SmsDeliveryEdgeCaseTests(TestCase):
+    def setUp(self):
+        self.temp_media = tempfile.mkdtemp()
+        self.addCleanup(lambda: shutil.rmtree(self.temp_media, ignore_errors=True))
+        media_override = override_settings(MEDIA_ROOT=self.temp_media)
+        media_override.enable()
+        self.addCleanup(media_override.disable)
+        self.settings_obj = OrganizationSettings.load()
+        self.settings_obj.twilio_account_sid = "AC123"
+        self.settings_obj.twilio_auth_token = "token"
+        self.settings_obj.twilio_phone_number = "+15551234567"
+        self.settings_obj.save()
+        self.user = get_user_model().objects.create_user(username="smsedge", password="pw")
+        self.person = Person.objects.create(
+            first_name="Edge", last_name="Case", phone="+15559990000", phone_opt_in=True
+        )
+
+    def _make_message(self):
+        msg = SmsMessage.objects.create(
+            created_by=self.user,
+            body="Hello",
+            target_type=SmsMessage.TargetType.PERSON,
+        )
+        SmsRecipient.objects.create(
+            message=msg, person=self.person, phone_number=self.person.phone
+        )
+        return msg
+
+    def test_twilio_error_marks_recipient_failed(self):
+        msg = self._make_message()
+        with patch(
+            "messaging.services.TwilioService.send_sms",
+            side_effect=TwilioRequestError("connection refused"),
+        ):
+            success, failure = deliver_sms_message(msg, settings_obj=self.settings_obj)
+        self.assertEqual(success, 0)
+        self.assertEqual(failure, 1)
+        recipient = msg.recipients.first()
+        self.assertEqual(recipient.status, SmsRecipient.Status.FAILED)
+        self.assertIn("connection refused", recipient.error_message)
+
+    def test_all_failed_marks_message_failed(self):
+        msg = self._make_message()
+        with patch(
+            "messaging.services.TwilioService.send_sms",
+            side_effect=TwilioRequestError("fail"),
+        ):
+            deliver_sms_message(msg, settings_obj=self.settings_obj)
+        msg.refresh_from_db()
+        self.assertEqual(msg.status, SmsMessage.Status.FAILED)
+
+    def test_non_pending_recipient_is_skipped(self):
+        msg = self._make_message()
+        recipient = msg.recipients.first()
+        recipient.status = SmsRecipient.Status.SENT
+        recipient.save()
+        with patch("messaging.services.TwilioService.send_sms", return_value="SM999") as mock_send:
+            deliver_sms_message(msg, settings_obj=self.settings_obj)
+        mock_send.assert_not_called()
+
+    def test_failed_recipient_does_not_create_communication_log(self):
+        msg = self._make_message()
+        with patch(
+            "messaging.services.TwilioService.send_sms",
+            side_effect=TwilioRequestError("fail"),
+        ):
+            deliver_sms_message(msg, settings_obj=self.settings_obj)
+        self.assertEqual(self.person.communication_logs.count(), 0)
+
+
+# ---------------------------------------------------------------------------
+# deliver_phone_blast — failure, skip, and URL fallback paths
+# ---------------------------------------------------------------------------
+
+class PhoneBlastDeliveryEdgeCaseTests(TestCase):
+    def setUp(self):
+        self.temp_media = tempfile.mkdtemp()
+        self.addCleanup(lambda: shutil.rmtree(self.temp_media, ignore_errors=True))
+        media_override = override_settings(MEDIA_ROOT=self.temp_media)
+        media_override.enable()
+        self.addCleanup(media_override.disable)
+        self.settings_obj = OrganizationSettings.load()
+        self.settings_obj.twilio_account_sid = "AC123"
+        self.settings_obj.twilio_auth_token = "token"
+        self.settings_obj.twilio_phone_number = "+15551234567"
+        self.settings_obj.save()
+        self.user = get_user_model().objects.create_user(username="blstedge", password="pw")
+        self.person = Person.objects.create(
+            first_name="Blast", last_name="Edge", phone="+15558880000", phone_opt_in=True
+        )
+
+    def _make_blast(self):
+        audio = SimpleUploadedFile("msg.mp3", b"audio")
+        blast = PhoneBlast.objects.create(
+            created_by=self.user, title="Edge Blast", audio_file=audio
+        )
+        call = PhoneCall.objects.create(
+            blast=blast, person=self.person, phone_number=self.person.phone
+        )
+        return blast, call
+
+    def test_no_audio_file_raises(self):
+        blast = PhoneBlast.objects.create(created_by=self.user, title="No Audio")
+        with self.assertRaises(TwilioRequestError):
+            deliver_phone_blast(blast, settings_obj=self.settings_obj)
+
+    def test_twilio_error_marks_call_failed(self):
+        blast, call = self._make_blast()
+        with patch(
+            "messaging.services.TwilioService.initiate_call",
+            side_effect=TwilioRequestError("timeout"),
+        ):
+            success, failure = deliver_phone_blast(blast, settings_obj=self.settings_obj)
+        self.assertEqual(success, 0)
+        self.assertEqual(failure, 1)
+        call.refresh_from_db()
+        self.assertEqual(call.status, PhoneCall.Status.FAILED)
+        self.assertIn("timeout", call.error_message)
+
+    def test_all_calls_failed_marks_blast_failed(self):
+        blast, _ = self._make_blast()
+        with patch(
+            "messaging.services.TwilioService.initiate_call",
+            side_effect=TwilioRequestError("fail"),
+        ):
+            deliver_phone_blast(blast, settings_obj=self.settings_obj)
+        blast.refresh_from_db()
+        self.assertEqual(blast.status, PhoneBlast.Status.FAILED)
+
+    def test_non_pending_call_is_skipped(self):
+        blast, call = self._make_blast()
+        call.status = PhoneCall.Status.COMPLETED
+        call.save()
+        with patch(
+            "messaging.services.TwilioService.initiate_call", return_value="CA999"
+        ) as mock_call:
+            deliver_phone_blast(blast, settings_obj=self.settings_obj)
+        mock_call.assert_not_called()
+
+    def test_audio_url_falls_back_to_website_setting(self):
+        self.settings_obj.website = "https://church.example.com"
+        self.settings_obj.save()
+        blast, _ = self._make_blast()
+        with patch(
+            "messaging.services.TwilioService.initiate_call", return_value="CA123"
+        ) as mock_call:
+            deliver_phone_blast(blast, settings_obj=self.settings_obj)
+        called_url = mock_call.call_args[0][1]
+        self.assertTrue(called_url.startswith("https://church.example.com"))
+
+    def test_failed_call_does_not_create_communication_log(self):
+        blast, _ = self._make_blast()
+        with patch(
+            "messaging.services.TwilioService.initiate_call",
+            side_effect=TwilioRequestError("fail"),
+        ):
+            deliver_phone_blast(blast, settings_obj=self.settings_obj)
+        self.assertEqual(self.person.communication_logs.count(), 0)
