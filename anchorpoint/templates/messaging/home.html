@@ -67,13 +67,27 @@
             <h2>Latest recordings</h2>
         </div>
     </div>
-    {% if phone_blasts %}
+    {% if phone_blasts_with_stats %}
         <div class="list-card__body">
-            {% for blast in phone_blasts %}
+            {% for blast, stats in phone_blasts_with_stats %}
                 <div class="list-item">
                     <div>
-                        <strong>{{ blast.title }}</strong>
-                        <span>Status: {{ blast.get_status_display }}{% if blast.scheduled_for %} · Scheduled {{ blast.scheduled_for|date:"M j, g:ia" }}{% endif %}</span>
+                        <strong>
+                            <a href="{% url 'messaging:phone_blast_detail' blast.pk %}" class="ghost-link">
+                                {{ blast.title }}
+                            </a>
+                        </strong>
+                        <span>
+                            {% if blast.status == "processing" %}
+                                Sending&hellip;{% if stats.pending %} ({{ stats.pending }} pending){% endif %}
+                            {% elif blast.status == "completed" %}
+                                {{ stats.answered }} answered{% if stats.no_answer %} &middot; {{ stats.no_answer }} no answer{% endif %}{% if stats.failed %} &middot; {{ stats.failed }} failed{% endif %}
+                            {% elif blast.status == "scheduled" %}
+                                Scheduled {{ blast.scheduled_for|date:"M j, g:ia" }}
+                            {% else %}
+                                {{ blast.get_status_display }}
+                            {% endif %}
+                        </span>
                     </div>
                     <div class="muted-text">
                         {{ blast.created_by.get_full_name|default:blast.created_by.username }}
