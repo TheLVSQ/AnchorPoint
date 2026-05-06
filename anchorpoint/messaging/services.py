@@ -71,13 +71,17 @@ class TwilioService:
         )
         return response.get("sid", "")
 
-    def initiate_call(self, to_number: str, audio_url: str) -> str:
+    def initiate_call(self, to_number: str, audio_url: str, status_callback_url: str = None) -> str:
         twiml = f"<Response><Play>{audio_url}</Play></Response>"
         payload = {
             "To": to_number,
             "From": self.from_number,
             "Twiml": twiml,
         }
+        if status_callback_url:
+            payload["StatusCallback"] = status_callback_url
+            payload["StatusCallbackMethod"] = "POST"
+            payload["StatusCallbackEvent"] = "completed"
         response = self._post(
             self.CALLS_ENDPOINT.format(sid=self.account_sid),
             data=payload,
@@ -209,13 +213,18 @@ def deliver_phone_blast(
             "Set a base_url or configure Organization Settings > Website.",
             blast.pk,
         )
+    callback_url = (
+        f"{base_url.rstrip('/')}/communications/phone-blast/webhook/call-status/"
+        if base_url
+        else None
+    )
     success_count = 0
     failure_count = 0
     for call in blast.calls.select_related("person"):
         if call.status != PhoneCall.Status.PENDING:
             continue
         try:
-            sid = service.initiate_call(call.phone_number, audio_url)
+            sid = service.initiate_call(call.phone_number, audio_url, status_callback_url=callback_url)
         except (TwilioConfigurationError, TwilioRequestError) as exc:
             call.status = PhoneCall.Status.FAILED
             call.error_message = str(exc)
@@ -224,18 +233,10 @@ def deliver_phone_blast(
             failure_count += 1
             continue
 
-        call.status = PhoneCall.Status.COMPLETED
+        call.status = PhoneCall.Status.PENDING  # stays PENDING until webhook fires
         call.call_sid = sid
         call.started_at = timezone.now()
-        call.completed_at = timezone.now()
-        call.save(
-            update_fields=[
-                "status",
-                "call_sid",
-                "started_at",
-                "completed_at",
-            ]
-        )
+        call.save(update_fields=["status", "call_sid", "started_at"])
         success_count += 1
 
         if call.person:
@@ -243,7 +244,7 @@ def deliver_phone_blast(
                 person=call.person,
                 communication_type=CommunicationLog.CommunicationType.PHONE,
                 summary=f"Phone blast '{blast.title}'",
-                detail="Automated call delivered via Twilio.",
+                detail="Automated call initiated via Twilio.",
                 metadata={
                     "phone_number": call.phone_number,
                     "twilio_sid": sid,
@@ -252,9 +253,10 @@ def deliver_phone_blast(
                 phone_blast=blast,
             )
 
-    blast.completed_at = timezone.now() if success_count else None
     blast.status = (
-        PhoneBlast.Status.COMPLETED if success_count else PhoneBlast.Status.FAILED
+        PhoneBlast.Status.PROCESSING if success_count else PhoneBlast.Status.FAILED
     )
+    if not success_count:
+        blast.completed_at = timezone.now()
     blast.save(update_fields=["status", "completed_at"])
     return success_count, failure_count
