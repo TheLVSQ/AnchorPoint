@@ -981,9 +981,9 @@
     <!-- NAVBAR -->
     <nav class="navbar">
         <a class="brand" href="{% url 'dashboard' %}">
-            <div class="brand-mark">
+            <div class="brand-mark" {% if organization_settings.logo %}style="background:transparent;"{% endif %}>
                 {% if organization_settings.logo %}
-                    <img src="{{ organization_settings.logo.url }}" alt="{{ organization_settings.name|default:'Organization logo' }}" style="width:100%;height:100%;object-fit:cover;">
+                    <img src="{{ organization_settings.logo.url }}" alt="{{ organization_settings.name|default:'Organization logo' }}" style="width:100%;height:100%;object-fit:contain;">
                 {% else %}
                     AP
                 {% endif %}
