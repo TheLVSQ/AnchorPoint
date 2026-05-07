@@ -1,5 +1,6 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
 from django.db import IntegrityError
 from django.db.models import Q
 from django.http import JsonResponse
@@ -18,16 +19,22 @@ from .forms import PersonForm
 
 @staff_required
 def people_list(request):
-    query = request.GET.get("q")
+    query = request.GET.get("q", "").strip()
 
     if query:
-        people = Person.objects.filter(
-            first_name__icontains=query
-        ) | Person.objects.filter(last_name__icontains=query)
+        people = (
+            Person.objects.filter(
+                Q(first_name__icontains=query) | Q(last_name__icontains=query)
+            ).order_by("last_name", "first_name")
+        )
     else:
         people = Person.objects.all().order_by("last_name", "first_name")
 
-    return render(request, "people/people_list.html", {"people": people})
+    page_obj = Paginator(people, 25).get_page(request.GET.get("page"))
+    return render(request, "people/people_list.html", {
+        "page_obj": page_obj,
+        "query": query,
+    })
 
 
 @staff_required
