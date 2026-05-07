@@ -1,4 +1,5 @@
 from django.contrib import messages
+from django.core.paginator import Paginator
 from django.db.models import Count, Q
 from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -33,8 +34,10 @@ def group_list(request):
 
     active_category_count = sum(1 for item in category_summary if item["count"] > 0)
 
+    page_obj = Paginator(groups.order_by("name"), 25).get_page(request.GET.get("page"))
+
     context = {
-        "groups": groups,
+        "page_obj": page_obj,
         "group_count": groups.count(),
         "category_summary": category_summary,
         "active_category_count": active_category_count,

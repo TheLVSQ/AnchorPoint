@@ -51,7 +51,7 @@
         <a class="ghost-link" href="{% url 'groups:create' %}">New group -></a>
     </div>
     <div class="list-card__body">
-        {% for group in groups %}
+        {% for group in page_obj %}
             <div class="list-item">
                 <div>
                     <strong>
@@ -72,5 +72,6 @@
             <p class="empty-state">No groups yet. Tap "Create Group" to get started.</p>
         {% endfor %}
     </div>
+    {% include "partials/pagination.html" %}
 </section>
 {% endblock %}
