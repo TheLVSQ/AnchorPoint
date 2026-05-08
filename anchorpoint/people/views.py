@@ -178,3 +178,21 @@ def people_lookup(request):
                 }
             )
     return JsonResponse({"results": results})
+
+
+@staff_required
+def people_search(request):
+    """HTMX endpoint: returns the people results partial for live search."""
+    query = request.GET.get("q", "").strip()
+    if query:
+        people = Person.objects.filter(
+            Q(first_name__icontains=query) | Q(last_name__icontains=query)
+        ).order_by("last_name", "first_name")
+    else:
+        people = Person.objects.all().order_by("last_name", "first_name")
+
+    page_obj = Paginator(people, 25).get_page(request.GET.get("page"))
+    return render(request, "people/partials/people_results.html", {
+        "page_obj": page_obj,
+        "query": query,
+    })
