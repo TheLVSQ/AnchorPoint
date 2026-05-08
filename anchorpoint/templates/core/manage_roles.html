@@ -35,7 +35,8 @@
                         </td>
                         <td>{{ user.email|default:"—" }}</td>
                         <td>
-                            <form method="post" class="role-form">
+                            <form method="post" class="role-form"
+                                  onsubmit="return confirm('Update role for {{ user.get_full_name|default:user.username }}?')">
                                 {% csrf_token %}
                                 <input type="hidden" name="user_id" value="{{ user.id }}">
                                 <select name="role">

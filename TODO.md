@@ -9,24 +9,24 @@
 
 - [ ] Email: Add ability to send emails (transactional + blast)
 
-- [ ] Check-in
+## Check-in
 -- [ ] Printer connection/setup
 -- [ ] Create Room flow > Age/Grade Auto-Assignment
 --- [ ] Change Min/Max to a dropdown with values for K-12
 --- [ ] Make the 'Active' checkbox for the room availability next to the word 'Active' and make it hard to miss
 
-- [ ] User Permissions
+## User Permissions
 -- [ ] Change page to show only one save button, not one save per person
 -- [ ] Update page to be something other than all users view.
 
-- [x] UI Enhancements
+## UI Enhancements
 -- [x] Add Favicon
 -- [ ] Overall UI Review and refresh
--- [ ] Create Group Form -> Group Status: change status checkbox to dropdown
+-- [x] Create Group Form -> Group Status: change status checkbox to dropdown
 -- [x] Phone Blasts: show stats (answered, no answer, etc)
 -- [x] Phone Blasts: show live progress
 -- [ ] Add Person menu:
---- [ ] Make "Status" a dropdown with pre-populated choices instead of a free-form text box.
+--- [x] Make "Status" a dropdown with pre-populated choices instead of a free-form text box.
 --- [ ] Phone number entry box could use some formatting (dynamic or other)
 --- [ ] Email entry box should check for email in correct format, error if not
 -- [x] Add User Page:
@@ -34,10 +34,10 @@
 --- [x] Login should be user's email address, email address should not be optional
 --- [ ] State selection for address should be a pre-populated dropdown of states to ensure consistency
 --- [x] If a Person exists for a new User, merge or allow the Person/User records to coexist
---- [ ] When updating a user's Role, clicking the save should have a confirmation alert
+--- [x] When updating a user's Role, clicking the save should have a confirmation alert
 
 
-- Security
+## Security
 -- [ ] Overall security review before making repo public
 
 ## Bugs to Squash
