@@ -16,7 +16,7 @@
 --- [ ] Make the 'Active' checkbox for the room availability next to the word 'Active' and make it hard to miss
 
 ## User Permissions
--- [ ] Change page to show only one save button, not one save per person
+-- [x] Change page to show only one save button, not one save per person
 -- [ ] Update page to be something other than all users view.
 
 ## UI Enhancements
@@ -32,7 +32,7 @@
 -- [x] Add User Page:
 --- [x] Check to see if info matches a current person record as it is being entered
 --- [x] Login should be user's email address, email address should not be optional
---- [ ] State selection for address should be a pre-populated dropdown of states to ensure consistency
+--- [x] State selection for address should be a pre-populated dropdown of states to ensure consistency
 --- [x] If a Person exists for a new User, merge or allow the Person/User records to coexist
 --- [x] When updating a user's Role, clicking the save should have a confirmation alert
 
