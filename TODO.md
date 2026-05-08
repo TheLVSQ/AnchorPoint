@@ -2,7 +2,7 @@
 
 ## Enhancements to Add
 
-- [ ] Google Authentication (SSO)
+- [x] Google Authentication (SSO)
 - [ ] Embed code generator for event info
 - [ ] Add live results to people search
 - [ ] Review design: modernize to be visually appealing but not overwhelming
@@ -23,7 +23,15 @@
 -- [x] Add Favicon
 -- [ ] Create Group Form -> Group Status: change status checkbox to dropdown
 -- [ ] Phone Blasts: show stats (answered, no answer, etc)
--- [ ] Phone Blasts: show live progress? 
+-- [ ] Phone Blasts: show live progress?
+-- [ ] Add Person menu: 
+--- [ ] Make "Status" a dropdown with pre-populated choices instead of a free-form text box.
+--- [ ] Phone number entry box could use some formatting (dynamic or other)
+--- [ ] Email entry box should check for email in correct format, error if not
+-- [ ] Add User Page:
+--- [ ] Check to see if info matches a current person record as it is being entered
+--- [ ] Login should be user's email address, email address should not be optional
+--- [ ] If a Person exists for a new User, merge or allow the Person/User records to coexist
 
 ## Bugs to Squash
 
