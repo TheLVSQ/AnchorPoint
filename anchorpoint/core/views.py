@@ -182,21 +182,24 @@ def manage_roles(request):
     )
 
     if request.method == "POST":
-        form = RoleAssignmentForm(request.POST)
-        if form.is_valid():
-            target_user = get_object_or_404(User, pk=form.cleaned_data["user_id"])
-            profile, _ = UserProfile.objects.get_or_create(user=target_user)
-            profile.role = form.cleaned_data["role"]
-            profile.can_manage_communications = form.cleaned_data[
-                "can_manage_communications"
-            ]
+        valid_roles = {r for r, _ in UserProfile.Role.choices}
+        updated = 0
+        for user in users:
+            role_key = f"role_{user.pk}"
+            comms_key = f"comms_{user.pk}"
+            if role_key not in request.POST:
+                continue
+            role = request.POST[role_key]
+            if role not in valid_roles:
+                continue
+            comms = request.POST.get(comms_key) == "on"
+            profile, _ = UserProfile.objects.get_or_create(user=user)
+            profile.role = role
+            profile.can_manage_communications = comms
             profile.save(update_fields=["role", "can_manage_communications"])
-            display_name = target_user.get_full_name() or target_user.username
-            messages.success(request, f"{display_name} role updated.")
-            return redirect("manage_roles")
-        messages.error(
-            request, "There was a problem updating that role. Please try again."
-        )
+            updated += 1
+        messages.success(request, f"Roles updated for {updated} user{'s' if updated != 1 else ''}.")
+        return redirect("manage_roles")
 
     context = {
         "users": users,

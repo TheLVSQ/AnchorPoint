@@ -6,7 +6,7 @@
         <span class="chip">Permissions</span>
         <h1>Manage Team Roles</h1>
         <p class="page-subtitle">
-            Assign roles so each teammate has the right level of access. Admins can configure detailed permissions later.
+            Assign roles so each teammate has the right level of access.
         </p>
     </div>
 
@@ -16,66 +16,57 @@
         {% endfor %}
     {% endif %}
 
-    <div class="permissions-card">
-        <table class="permissions-table">
-            <thead>
-                <tr>
-                    <th scope="col">User</th>
-                    <th scope="col">Email</th>
-                    <th scope="col">Assigned Role</th>
-                    <th scope="col">Communications</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for user in users %}
+    <form method="post" onsubmit="return confirm('Save role changes for all users?')">
+        {% csrf_token %}
+
+        <div class="permissions-card">
+            <table class="permissions-table">
+                <thead>
                     <tr>
-                        <td>
-                            <strong>{{ user.get_full_name|default:user.username }}</strong>
-                            <div class="muted-text">@{{ user.username }}</div>
-                        </td>
-                        <td>{{ user.email|default:"—" }}</td>
-                        <td>
-                            <form method="post" class="role-form"
-                                  onsubmit="return confirm('Update role for {{ user.get_full_name|default:user.username }}?')">
-                                {% csrf_token %}
-                                <input type="hidden" name="user_id" value="{{ user.id }}">
-                                <select name="role">
+                        <th scope="col">User</th>
+                        <th scope="col">Email</th>
+                        <th scope="col">Role</th>
+                        <th scope="col">Communications</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                        <tr>
+                            <td>
+                                <strong>{{ user.get_full_name|default:user.username }}</strong>
+                                <div class="muted-text">{{ user.email|default:"—" }}</div>
+                            </td>
+                            <td>
+                                <select name="role_{{ user.pk }}">
                                     {% for value, label in role_choices %}
                                         <option value="{{ value }}" {% if user.profile.role == value %}selected{% endif %}>
                                             {{ label }}
                                         </option>
                                     {% endfor %}
                                 </select>
-                                <input type="hidden" name="can_manage_communications" value="{% if user.profile.can_manage_communications %}on{% else %}off{% endif %}">
-                                <button type="submit">Update</button>
-                            </form>
-                        </td>
-                        <td>
-                            <form method="post" class="role-form role-form--flag">
-                                {% csrf_token %}
-                                <input type="hidden" name="user_id" value="{{ user.id }}">
-                                <input type="hidden" name="role" value="{{ user.profile.role }}">
+                            </td>
+                            <td>
                                 <label class="toggle">
-                                    <input
-                                        type="checkbox"
-                                        name="can_manage_communications"
-                                        value="true"
-                                        {% if user.profile.can_manage_communications %}checked{% endif %}
-                                    >
-                                    <span>Can send SMS & calls</span>
+                                    <input type="checkbox"
+                                           name="comms_{{ user.pk }}"
+                                           {% if user.profile.can_manage_communications %}checked{% endif %}>
+                                    <span>Can send SMS &amp; calls</span>
                                 </label>
-                                <button type="submit">Save</button>
-                            </form>
-                        </td>
-                    </tr>
-                {% empty %}
-                    <tr>
-                        <td colspan="4">Invite teammates to AnchorPoint to start assigning roles.</td>
-                    </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="4">No users found.</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="hero-actions" style="margin-top:1.5rem;">
+            <button type="submit" class="btn">Save All Changes</button>
+        </div>
+    </form>
 </section>
 
 <style>
@@ -91,6 +82,7 @@
         padding: 0.85rem 0.5rem;
         border-bottom: 1px solid rgba(226, 232, 240, 0.8);
         text-align: left;
+        vertical-align: middle;
     }
     .permissions-table th {
         font-size: 0.85rem;
@@ -101,23 +93,10 @@
     .permissions-table tr:last-child td {
         border-bottom: none;
     }
-    .role-form {
-        display: flex;
-        gap: 0.5rem;
-        align-items: center;
-        flex-wrap: wrap;
-    }
-    .role-form select {
+    .permissions-table select {
         padding: 0.5rem 0.75rem;
         border-radius: 999px;
         border: 1px solid var(--border);
-    }
-    .role-form button {
-        padding: 0.45rem 1rem;
-        font-size: 0.85rem;
-    }
-    .role-form--flag {
-        justify-content: space-between;
     }
     .toggle {
         display: inline-flex;
