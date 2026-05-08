@@ -232,6 +232,11 @@
             flex-direction: column;
             padding: 1.5rem;
             overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        body.nav-open {
+            overflow: hidden;
         }
 
         .nav-drawer.open {
@@ -1085,6 +1090,7 @@
             function openDrawer() {
                 drawer.classList.add("open");
                 overlay.classList.add("active");
+                document.body.classList.add("nav-open");
                 drawer.setAttribute("aria-hidden", "false");
                 toggle.setAttribute("aria-expanded", "true");
             }
@@ -1092,6 +1098,7 @@
             function closeDrawer() {
                 drawer.classList.remove("open");
                 overlay.classList.remove("active");
+                document.body.classList.remove("nav-open");
                 drawer.setAttribute("aria-hidden", "true");
                 toggle.setAttribute("aria-expanded", "false");
             }
