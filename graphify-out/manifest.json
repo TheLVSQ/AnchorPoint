@@ -8,12 +8,12 @@
     "hash": "03073d5dd8b5fe2ca0ef15b0514e72f2"
   },
   "C:\\Users\\Luke\\Desktop\\AnchorPoint\\anchorpoint\\anchorpoint\\settings.py": {
-    "mtime": 1777858494.4493027,
-    "hash": "2286c000d88ae2d734e96e8be7d75e3f"
+    "mtime": 1778066124.370463,
+    "hash": "5b7dad0ab5260cd9a8651728cb667b5c"
   },
   "C:\\Users\\Luke\\Desktop\\AnchorPoint\\anchorpoint\\anchorpoint\\urls.py": {
-    "mtime": 1777858494.450304,
-    "hash": "d0a794ee8ca275c18025af567c5da59d"
+    "mtime": 1778200458.3840904,
+    "hash": "8d2bf09d2b14fc5f9db1da074ea78303"
   },
   "C:\\Users\\Luke\\Desktop\\AnchorPoint\\anchorpoint\\anchorpoint\\wsgi.py": {
     "mtime": 1763868028.257739,
@@ -44,8 +44,8 @@
     "hash": "847b1e6598d0a94786ec0f7ace4c9d23"
   },
   "C:\\Users\\Luke\\Desktop\\AnchorPoint\\anchorpoint\\checkin\\views.py": {
-    "mtime": 1777858494.4872177,
-    "hash": "a2ef7c1efd34f17b0c811fb762b83001"
+    "mtime": 1778068883.945164,
+    "hash": "ddce5eeccda88981485bc52f3614c425"
   },
   "C:\\Users\\Luke\\Desktop\\AnchorPoint\\anchorpoint\\checkin\\__init__.py": {
     "mtime": 1771506732.917735,
@@ -148,24 +148,24 @@
     "hash": "d315358155e97365ea7c4c3ccf8579e8"
   },
   "C:\\Users\\Luke\\Desktop\\AnchorPoint\\anchorpoint\\core\\forms.py": {
-    "mtime": 1776769862.0898845,
-    "hash": "763639212b0b446e724bab0b503008b1"
+    "mtime": 1778200458.3860934,
+    "hash": "daa44f2fb3e52fe37874b13fbc1014a5"
   },
   "C:\\Users\\Luke\\Desktop\\AnchorPoint\\anchorpoint\\core\\models.py": {
-    "mtime": 1776697493.9441476,
-    "hash": "7f09377c352a977a0babd988edfcb56e"
+    "mtime": 1778200458.3870914,
+    "hash": "f65295e00897b9093970b8ccc672d9ce"
   },
   "C:\\Users\\Luke\\Desktop\\AnchorPoint\\anchorpoint\\core\\permissions.py": {
     "mtime": 1777858494.488217,
     "hash": "1ee6165fbc38378bac1cb68e228f3512"
   },
   "C:\\Users\\Luke\\Desktop\\AnchorPoint\\anchorpoint\\core\\tests.py": {
-    "mtime": 1777858494.4902167,
-    "hash": "f61d24238f16403e79b17bfb0f1d90de"
+    "mtime": 1778200458.3910923,
+    "hash": "76eee726829850753610f77a1adfd952"
   },
   "C:\\Users\\Luke\\Desktop\\AnchorPoint\\anchorpoint\\core\\views.py": {
-    "mtime": 1772206657.821554,
-    "hash": "83ed2f56fb35d033d83889bdb95be024"
+    "mtime": 1778200458.3920958,
+    "hash": "14a38fc5a5f528cfe324e7fe8eada5e7"
   },
   "C:\\Users\\Luke\\Desktop\\AnchorPoint\\anchorpoint\\core\\__init__.py": {
     "mtime": 1763869892.988664,
@@ -210,6 +210,10 @@
   "C:\\Users\\Luke\\Desktop\\AnchorPoint\\anchorpoint\\core\\migrations\\0007_organizationsettings_kiosk_pin.py": {
     "mtime": 1767614233.0746036,
     "hash": "6619f3f498f76ffd0484932f5bf22db5"
+  },
+  "C:\\Users\\Luke\\Desktop\\AnchorPoint\\anchorpoint\\core\\migrations\\0008_userprofile_person_link.py": {
+    "mtime": 1778200458.3860934,
+    "hash": "8591cdb3e1a684cc30b0d7be527f3ab3"
   },
   "C:\\Users\\Luke\\Desktop\\AnchorPoint\\anchorpoint\\core\\migrations\\__init__.py": {
     "mtime": 1763869892.9896648,
@@ -296,16 +300,16 @@
     "hash": "970f0752e65061ebdf256f1a930ef80a"
   },
   "C:\\Users\\Luke\\Desktop\\AnchorPoint\\anchorpoint\\groups\\tests.py": {
-    "mtime": 1763872716.2148786,
-    "hash": "e08f0582500f6562bf0a931ef9503b39"
+    "mtime": 1778064932.624347,
+    "hash": "52d7a89ffc87bac6c56575f64f8472a1"
   },
   "C:\\Users\\Luke\\Desktop\\AnchorPoint\\anchorpoint\\groups\\urls.py": {
-    "mtime": 1764602751.6163037,
-    "hash": "4e08f75f13cd223ae2ea2e5af76088cc"
+    "mtime": 1778064932.626347,
+    "hash": "f24f59a12ee4da283edd0b3e28abaea5"
   },
   "C:\\Users\\Luke\\Desktop\\AnchorPoint\\anchorpoint\\groups\\views.py": {
-    "mtime": 1769954649.227918,
-    "hash": "b18248766c7420b94131ff4abefb7dcd"
+    "mtime": 1778157812.7466786,
+    "hash": "84fecda8ea3ffc644a342c6437fdf13a"
   },
   "C:\\Users\\Luke\\Desktop\\AnchorPoint\\anchorpoint\\groups\\__init__.py": {
     "mtime": 1763872716.2158797,
@@ -368,28 +372,28 @@
     "hash": "94c0f85d1450454d02336ad0e3669230"
   },
   "C:\\Users\\Luke\\Desktop\\AnchorPoint\\anchorpoint\\messaging\\forms.py": {
-    "mtime": 1766950614.8649964,
-    "hash": "1959f0d213bf2cb5132786a8ded53be6"
+    "mtime": 1778077387.2373524,
+    "hash": "6af932b0c0e127f6b6492f9fbb566ae9"
   },
   "C:\\Users\\Luke\\Desktop\\AnchorPoint\\anchorpoint\\messaging\\models.py": {
     "mtime": 1766950408.2889423,
     "hash": "363f6dfbc9a3345bafe9523d57fadc1c"
   },
   "C:\\Users\\Luke\\Desktop\\AnchorPoint\\anchorpoint\\messaging\\services.py": {
-    "mtime": 1769954649.2287357,
-    "hash": "5d684e1c24dcf0d12ff07104b189fc76"
+    "mtime": 1778077475.4990115,
+    "hash": "d0b99691600e3025f98a678121f30651"
   },
   "C:\\Users\\Luke\\Desktop\\AnchorPoint\\anchorpoint\\messaging\\tests.py": {
-    "mtime": 1766951550.744023,
-    "hash": "bdf3a53a3ce0b6051973b984289c4e79"
+    "mtime": 1778077523.4753392,
+    "hash": "135b813a2e424662060bc5761f3fef89"
   },
   "C:\\Users\\Luke\\Desktop\\AnchorPoint\\anchorpoint\\messaging\\urls.py": {
-    "mtime": 1766951088.511523,
-    "hash": "e0464acc1d0a8de2e051fec2a7a5a7e8"
+    "mtime": 1778063464.5706942,
+    "hash": "25d4a192e06fc392a1e70193dae8c22e"
   },
   "C:\\Users\\Luke\\Desktop\\AnchorPoint\\anchorpoint\\messaging\\views.py": {
-    "mtime": 1769954649.229242,
-    "hash": "8575d07ac3092ca632db9127b13232f4"
+    "mtime": 1778063464.5716944,
+    "hash": "f09d3bf1116205a6826644340661064a"
   },
   "C:\\Users\\Luke\\Desktop\\AnchorPoint\\anchorpoint\\messaging\\__init__.py": {
     "mtime": 1763872985.8422391,
@@ -428,8 +432,8 @@
     "hash": "ac5de3ddce3e7475b34a0c3fd01383f0"
   },
   "C:\\Users\\Luke\\Desktop\\AnchorPoint\\anchorpoint\\people\\models.py": {
-    "mtime": 1777858494.4912162,
-    "hash": "61b8e1283fc0bb856be618374d581c4c"
+    "mtime": 1778068893.5608423,
+    "hash": "82804101612918132302655a6e692635"
   },
   "C:\\Users\\Luke\\Desktop\\AnchorPoint\\anchorpoint\\people\\tests.py": {
     "mtime": 1766951606.457628,
@@ -444,8 +448,8 @@
     "hash": "04d2965f4332edd360d50688fa1676c6"
   },
   "C:\\Users\\Luke\\Desktop\\AnchorPoint\\anchorpoint\\people\\views.py": {
-    "mtime": 1769954649.231358,
-    "hash": "1ccc6d9c7de202887d7c418634992567"
+    "mtime": 1778157791.1714435,
+    "hash": "70de5a40234a480507ff266168a74e57"
   },
   "C:\\Users\\Luke\\Desktop\\AnchorPoint\\anchorpoint\\people\\__init__.py": {
     "mtime": 1763872714.3439953,
@@ -474,6 +478,10 @@
   "C:\\Users\\Luke\\Desktop\\AnchorPoint\\anchorpoint\\people\\migrations\\0006_add_custody_fields.py": {
     "mtime": 1777858494.4912162,
     "hash": "cb0768b7b932e1eef677714cd2937b45"
+  },
+  "C:\\Users\\Luke\\Desktop\\AnchorPoint\\anchorpoint\\people\\migrations\\0007_index_person_email.py": {
+    "mtime": 1778069115.7803855,
+    "hash": "9cc2ba20b9ffb4eaf74bb0b7921faf7b"
   },
   "C:\\Users\\Luke\\Desktop\\AnchorPoint\\anchorpoint\\people\\migrations\\__init__.py": {
     "mtime": 1763872714.3456774,
@@ -512,8 +520,8 @@
     "hash": "fdcfa01cb1cbf6795eb8f8bf9a8fc076"
   },
   "C:\\Users\\Luke\\Desktop\\AnchorPoint\\CLAUDE.md": {
-    "mtime": 1769954649.2182472,
-    "hash": "f4e7a005aad4c1d3d255c907389931d3"
+    "mtime": 1777892912.5663264,
+    "hash": "de8b42eb295c42749754028c17b8f571"
   },
   "C:\\Users\\Luke\\Desktop\\AnchorPoint\\DEPLOY.md": {
     "mtime": 1769954649.2192497,
@@ -524,8 +532,8 @@
     "hash": "ef44eec916473445f0693d8917fe68ad"
   },
   "C:\\Users\\Luke\\Desktop\\AnchorPoint\\TODO.md": {
-    "mtime": 1777632316.6272645,
-    "hash": "51f376575048d2e15ccea8b2387ab62a"
+    "mtime": 1778172103.4371297,
+    "hash": "f5460011ab846ed7d71bdd8948f826e3"
   },
   "C:\\Users\\Luke\\Desktop\\AnchorPoint\\anchorpoint\\checkin\\templates\\checkin\\config_confirm_delete.html": {
     "mtime": 1777858494.4628277,
@@ -540,8 +548,8 @@
     "hash": "c035659755806e48219792625c31af39"
   },
   "C:\\Users\\Luke\\Desktop\\AnchorPoint\\anchorpoint\\checkin\\templates\\checkin\\dashboard.html": {
-    "mtime": 1771506732.9308717,
-    "hash": "30361759a9ecebc020392e7b1e2d0707"
+    "mtime": 1777864955.4767036,
+    "hash": "bea818e7dfa4152946c649ebf1776ff8"
   },
   "C:\\Users\\Luke\\Desktop\\AnchorPoint\\anchorpoint\\checkin\\templates\\checkin\\printer_form.html": {
     "mtime": 1771506732.936385,
@@ -560,16 +568,16 @@
     "hash": "27741bc337bbb3479456939901c2c9a6"
   },
   "C:\\Users\\Luke\\Desktop\\AnchorPoint\\anchorpoint\\checkin\\templates\\checkin\\session_detail.html": {
-    "mtime": 1771506732.9383845,
-    "hash": "473d8ea7f8208bf5fb65f7ae6f9521a4"
+    "mtime": 1777864999.251287,
+    "hash": "f2e6957c91aab9e755d97c0710f5ad17"
   },
   "C:\\Users\\Luke\\Desktop\\AnchorPoint\\anchorpoint\\checkin\\templates\\checkin\\session_form.html": {
-    "mtime": 1771506732.9393852,
-    "hash": "7d180c5ed8d8aeef629911086f1b3557"
+    "mtime": 1777865006.5258987,
+    "hash": "d0a839dfe922324e4d266f13251ecbe3"
   },
   "C:\\Users\\Luke\\Desktop\\AnchorPoint\\anchorpoint\\checkin\\templates\\checkin\\session_list.html": {
-    "mtime": 1771506732.9393852,
-    "hash": "cf746160669c93f9e650635050492c76"
+    "mtime": 1777865012.8484917,
+    "hash": "926d6c0d57dc9e62da1e936d2ce88ab8"
   },
   "C:\\Users\\Luke\\Desktop\\AnchorPoint\\anchorpoint\\checkin\\templates\\checkin\\checkout\\lookup.html": {
     "mtime": 1771506732.9308717,
@@ -578,10 +586,6 @@
   "C:\\Users\\Luke\\Desktop\\AnchorPoint\\anchorpoint\\checkin\\templates\\checkin\\kiosk\\base.html": {
     "mtime": 1777858494.4658425,
     "hash": "9151520761e679f0c011b5b041ea861d"
-  },
-  "C:\\Users\\Luke\\Desktop\\AnchorPoint\\anchorpoint\\checkin\\templates\\checkin\\kiosk\\complete.html": {
-    "mtime": 1771506732.9333832,
-    "hash": "4ed27d83ce5757bad95357df7aed9b55"
   },
   "C:\\Users\\Luke\\Desktop\\AnchorPoint\\anchorpoint\\checkin\\templates\\checkin\\kiosk\\config_picker.html": {
     "mtime": 1777858494.46684,
@@ -595,14 +599,6 @@
     "mtime": 1777858494.4688401,
     "hash": "491c5939ab0218769323499f667b7587"
   },
-  "C:\\Users\\Luke\\Desktop\\AnchorPoint\\anchorpoint\\checkin\\templates\\checkin\\kiosk\\home.html": {
-    "mtime": 1771506732.9333832,
-    "hash": "7d1bd319a7683f8ecb8122a440406024"
-  },
-  "C:\\Users\\Luke\\Desktop\\AnchorPoint\\anchorpoint\\checkin\\templates\\checkin\\kiosk\\lookup.html": {
-    "mtime": 1771506732.934384,
-    "hash": "5e84093092340d0d999d608fd5918819"
-  },
   "C:\\Users\\Luke\\Desktop\\AnchorPoint\\anchorpoint\\checkin\\templates\\checkin\\kiosk\\lookup_new.html": {
     "mtime": 1777858494.4698405,
     "hash": "af89856a2946992564ebd134dcb275e4"
@@ -615,25 +611,21 @@
     "mtime": 1777858494.4759164,
     "hash": "c88fcb30d6fa3a54c9dc03cff256381e"
   },
-  "C:\\Users\\Luke\\Desktop\\AnchorPoint\\anchorpoint\\checkin\\templates\\checkin\\kiosk\\rooms.html": {
-    "mtime": 1771506732.9353871,
-    "hash": "bea69fbaf6ddaef67c728ade8358b23a"
-  },
-  "C:\\Users\\Luke\\Desktop\\AnchorPoint\\anchorpoint\\checkin\\templates\\checkin\\kiosk\\select.html": {
-    "mtime": 1771506732.9353871,
-    "hash": "b7d644c1492253a278ad94d78e0cbf9c"
-  },
   "C:\\Users\\Luke\\Desktop\\AnchorPoint\\anchorpoint\\checkin\\templates\\checkin\\kiosk\\unlock.html": {
     "mtime": 1777858494.4769137,
     "hash": "19685c840b23d9b63b7e2371be53676d"
   },
   "C:\\Users\\Luke\\Desktop\\AnchorPoint\\anchorpoint\\core\\templates\\core\\user_form.html": {
-    "mtime": 1772206735.4330337,
-    "hash": "df8c3dc677f5aae6ea385802ee07d451"
+    "mtime": 1778200458.3900905,
+    "hash": "53d2efe54e252999fce15d24e81838ea"
   },
   "C:\\Users\\Luke\\Desktop\\AnchorPoint\\anchorpoint\\core\\templates\\core\\user_list.html": {
     "mtime": 1772206750.5519903,
     "hash": "2893261e2ee16d2a31fbec91ae7206cd"
+  },
+  "C:\\Users\\Luke\\Desktop\\AnchorPoint\\anchorpoint\\core\\templates\\core\\partials\\person_match.html": {
+    "mtime": 1778200458.389089,
+    "hash": "f49a2b71ecbabdbe9d5ecdb4de2cefbe"
   },
   "C:\\Users\\Luke\\Desktop\\AnchorPoint\\anchorpoint\\events\\templates\\events\\manage\\event_form.html": {
     "mtime": 1766347241.77925,
@@ -667,13 +659,29 @@
     "mtime": 1766373759.7503886,
     "hash": "b37aa205a188f4bb8315bc2d2ee4411b"
   },
+  "C:\\Users\\Luke\\Desktop\\AnchorPoint\\anchorpoint\\groups\\templates\\groups\\group_confirm_delete.html": {
+    "mtime": 1778064932.619349,
+    "hash": "7def16a8320fa7213c5617ec8b583031"
+  },
+  "C:\\Users\\Luke\\Desktop\\AnchorPoint\\anchorpoint\\groups\\templates\\groups\\group_detail.html": {
+    "mtime": 1778064932.6203477,
+    "hash": "89fc767a88f181df9ab990dc08b49121"
+  },
   "C:\\Users\\Luke\\Desktop\\AnchorPoint\\anchorpoint\\groups\\templates\\groups\\group_form.html": {
-    "mtime": 1764602785.84848,
-    "hash": "eeac218c732fbbaf49d06de3b6b2a6aa"
+    "mtime": 1778064932.621347,
+    "hash": "c88c0ea081b2d37627478cc19a53e8b1"
   },
   "C:\\Users\\Luke\\Desktop\\AnchorPoint\\anchorpoint\\groups\\templates\\groups\\group_list.html": {
-    "mtime": 1764602862.6116674,
-    "hash": "66d37ffd246692e5337033cadac85136"
+    "mtime": 1778157857.4281108,
+    "hash": "1d3ec6be8e2ca871120019884b8e4e52"
+  },
+  "C:\\Users\\Luke\\Desktop\\AnchorPoint\\anchorpoint\\groups\\templates\\groups\\group_member_list.html": {
+    "mtime": 1778064932.6233487,
+    "hash": "3769a43aa28d9ec83457f82587c813c4"
+  },
+  "C:\\Users\\Luke\\Desktop\\AnchorPoint\\anchorpoint\\groups\\templates\\groups\\group_member_search_results.html": {
+    "mtime": 1778064932.6233487,
+    "hash": "ba5b881eaa97875b009aad7c56deb8a4"
   },
   "C:\\Users\\Luke\\Desktop\\AnchorPoint\\anchorpoint\\people\\templates\\people\\people_detail.html": {
     "mtime": 1771506732.9468956,
@@ -684,20 +692,20 @@
     "hash": "736d2c88f5e1aa8b260c677c05ecc0f3"
   },
   "C:\\Users\\Luke\\Desktop\\AnchorPoint\\anchorpoint\\people\\templates\\people\\people_list.html": {
-    "mtime": 1763873156.0364895,
-    "hash": "801cb5ad32699fb058cbba8df8dcf3b6"
+    "mtime": 1778157828.541237,
+    "hash": "f53e1bcd7bed0ad73aa6a2d60df3e59e"
   },
   "C:\\Users\\Luke\\Desktop\\AnchorPoint\\anchorpoint\\templates\\base.html": {
-    "mtime": 1776769595.4003892,
-    "hash": "4a456248bc8ceffc093e65a172e13db1"
+    "mtime": 1778157605.7737434,
+    "hash": "1d2d50a6f1bb64b926e2261d867a1fb0"
   },
   "C:\\Users\\Luke\\Desktop\\AnchorPoint\\anchorpoint\\templates\\core\\dashboard.html": {
     "mtime": 1777858494.494734,
     "hash": "810ad4eae9c089b4425da3df0a8535ec"
   },
   "C:\\Users\\Luke\\Desktop\\AnchorPoint\\anchorpoint\\templates\\core\\login.html": {
-    "mtime": 1763870864.3140948,
-    "hash": "25641ed8310a22740fc686cd35fce3b7"
+    "mtime": 1778200458.3920958,
+    "hash": "a0a034ee97932cf24b9d3f82eaed8cda"
   },
   "C:\\Users\\Luke\\Desktop\\AnchorPoint\\anchorpoint\\templates\\core\\manage_roles.html": {
     "mtime": 1766950240.503639,
@@ -744,24 +752,36 @@
     "hash": "4713a73e9cd175ba98ed164eb9af8f9d"
   },
   "C:\\Users\\Luke\\Desktop\\AnchorPoint\\anchorpoint\\templates\\messaging\\home.html": {
-    "mtime": 1766950886.7925227,
-    "hash": "1cc2f6b8856dce29af050220a55c4c3d"
+    "mtime": 1778063464.572695,
+    "hash": "35f350238ac22db0e19c0c49ebb77663"
+  },
+  "C:\\Users\\Luke\\Desktop\\AnchorPoint\\anchorpoint\\templates\\messaging\\phone_blast_detail.html": {
+    "mtime": 1778063464.5736947,
+    "hash": "8f0debf170ff89700eeee4a55bc29f73"
   },
   "C:\\Users\\Luke\\Desktop\\AnchorPoint\\anchorpoint\\templates\\messaging\\phone_blast_form.html": {
     "mtime": 1766950964.8488922,
     "hash": "1227c1620fbaa602ff08c63180d39bb0"
   },
+  "C:\\Users\\Luke\\Desktop\\AnchorPoint\\anchorpoint\\templates\\messaging\\phone_blast_stats.html": {
+    "mtime": 1778063464.574696,
+    "hash": "5cd78c19c7e542ea7ca32d120a915242"
+  },
   "C:\\Users\\Luke\\Desktop\\AnchorPoint\\anchorpoint\\templates\\messaging\\sms_form.html": {
     "mtime": 1766950937.1716616,
     "hash": "e141e26547bc5b302b2b786b2cd440f2"
   },
+  "C:\\Users\\Luke\\Desktop\\AnchorPoint\\anchorpoint\\templates\\partials\\pagination.html": {
+    "mtime": 1778157822.694899,
+    "hash": "73859bca1249d55a7cef4c2e1b98580d"
+  },
   "C:\\Users\\Luke\\Desktop\\AnchorPoint\\docker\\docker-compose.yml": {
-    "mtime": 1776689125.5028713,
-    "hash": "d8c9d3206104c3430e7b6c75112b7819"
+    "mtime": 1778172240.4533648,
+    "hash": "8f0ab6f882762bdf009cfe012ca0d796"
   },
   "C:\\Users\\Luke\\Desktop\\AnchorPoint\\docker\\requirements.txt": {
-    "mtime": 1771506732.9498963,
-    "hash": "76d4456124be60c5cccb0655bd4eac39"
+    "mtime": 1778066124.376467,
+    "hash": "c20661e7d979b71893cceb2971a30b59"
   },
   "C:\\Users\\Luke\\Desktop\\AnchorPoint\\docker\\test_creds.txt": {
     "mtime": 1773916291.9170296,
@@ -791,6 +811,22 @@
     "mtime": 1777549199.2070196,
     "hash": "34089e5f3ccbcf9196ad289753143369"
   },
+  "C:\\Users\\Luke\\Desktop\\AnchorPoint\\docs\\superpowers\\plans\\2026-05-04-phone-blast-stats.md": {
+    "mtime": 1777893097.0016365,
+    "hash": "1846cbb20f78cc47209092214c866ac5"
+  },
+  "C:\\Users\\Luke\\Desktop\\AnchorPoint\\docs\\superpowers\\plans\\2026-05-06-google-sso.md": {
+    "mtime": 1778065775.3604977,
+    "hash": "c950ae0368cbc2ffdb2e98e564ced20e"
+  },
+  "C:\\Users\\Luke\\Desktop\\AnchorPoint\\docs\\superpowers\\plans\\2026-05-06-group-management.md": {
+    "mtime": 1778064490.3653817,
+    "hash": "819d002b02aa0df0b0754eb9a996786a"
+  },
+  "C:\\Users\\Luke\\Desktop\\AnchorPoint\\docs\\superpowers\\plans\\2026-05-07-user-creation-flow.md": {
+    "mtime": 1778174532.2415004,
+    "hash": "e02286ab6b1a390e0219c1ddd519dffa"
+  },
   "C:\\Users\\Luke\\Desktop\\AnchorPoint\\docs\\superpowers\\specs\\2026-03-19-google-oauth-design.md": {
     "mtime": 1773917077.3303905,
     "hash": "f90e7eb3b05c11f4b57cf9714cd733d8"
@@ -810,6 +846,26 @@
   "C:\\Users\\Luke\\Desktop\\AnchorPoint\\docs\\superpowers\\specs\\2026-04-30-checkin-kiosk-design.md": {
     "mtime": 1777548648.9617374,
     "hash": "997379a041f2211b57caf2a36724589b"
+  },
+  "C:\\Users\\Luke\\Desktop\\AnchorPoint\\docs\\superpowers\\specs\\2026-05-04-phone-blast-stats-design.md": {
+    "mtime": 1777891920.5066693,
+    "hash": "ae41ba8d209277118648fa34056f5753"
+  },
+  "C:\\Users\\Luke\\Desktop\\AnchorPoint\\docs\\superpowers\\specs\\2026-05-06-google-sso-design.md": {
+    "mtime": 1778065624.0599027,
+    "hash": "4cbae6f765bf077672467e1ab188bc5a"
+  },
+  "C:\\Users\\Luke\\Desktop\\AnchorPoint\\docs\\superpowers\\specs\\2026-05-06-group-management-design.md": {
+    "mtime": 1778064186.229622,
+    "hash": "2359520cfd300241ca80337e93f0935b"
+  },
+  "C:\\Users\\Luke\\Desktop\\AnchorPoint\\docs\\superpowers\\specs\\2026-05-07-pagination-design.md": {
+    "mtime": 1778157768.4204645,
+    "hash": "bf0b3b54545cfb99ec3e56202622d85a"
+  },
+  "C:\\Users\\Luke\\Desktop\\AnchorPoint\\docs\\superpowers\\specs\\2026-05-07-user-creation-flow-design.md": {
+    "mtime": 1778174391.2149835,
+    "hash": "c55f61864e445369b007b5ad8aa47d08"
   },
   "C:\\Users\\Luke\\Desktop\\AnchorPoint\\anchorpoint\\media\\events\\releases\\library\\liability.pdf": {
     "mtime": 1766374254.1802487,
