@@ -40,6 +40,7 @@ urlpatterns = [
     path("permissions/roles/", core_views.manage_roles, name="manage_roles"),
     path("users/", core_views.user_list, name="user_list"),
     path("users/new/", core_views.user_create, name="user_create"),
+    path("users/person-check/", core_views.user_person_check, name="user_person_check"),
     path("users/<int:user_id>/edit/", core_views.user_edit, name="user_edit"),
     path("users/<int:user_id>/password/", core_views.user_set_password, name="user_set_password"),
     path("settings/", core_views.settings_home, name="settings_home"),

@@ -33,7 +33,7 @@
 
         <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1.5rem;">
             <hr style="flex:1;border:none;border-top:1px solid var(--gray-200);">
-            <span class="muted-text" style="font-size:0.85rem;white-space:nowrap;">or sign in with username</span>
+            <span class="muted-text" style="font-size:0.85rem;white-space:nowrap;">or sign in with email</span>
             <hr style="flex:1;border:none;border-top:1px solid var(--gray-200);">
         </div>
     {% endif %}
@@ -42,8 +42,8 @@
         {% csrf_token %}
 
         <div class="form-field">
-            <label for="username">Username</label>
-            <input id="username" type="text" name="username" required autocomplete="username">
+            <label for="username">Email</label>
+            <input id="username" type="email" name="username" required autocomplete="email">
         </div>
 
         <div class="form-field">

@@ -3,6 +3,7 @@ from django.contrib import messages
 from django.contrib.auth import authenticate, get_user_model, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import update_session_auth_hash
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.csrf import csrf_exempt
 from google.oauth2 import id_token
@@ -30,14 +31,18 @@ def login_view(request):
         return redirect("dashboard")
 
     if request.method == "POST":
-        username = request.POST.get("username")
-        password = request.POST.get("password")
-        user = authenticate(request, username=username, password=password)
-        if user is not None:
-            login(request, user)
+        email = request.POST.get("username", "").strip()
+        password = request.POST.get("password", "")
+        try:
+            user = User.objects.get(email__iexact=email)
+        except User.DoesNotExist:
+            user = None
+
+        if user is not None and user.check_password(password) and user.is_active:
+            login(request, user, backend="django.contrib.auth.backends.ModelBackend")
             return redirect("dashboard")
         else:
-            messages.error(request, "Invalid username or password.")
+            messages.error(request, "Invalid email or password.")
 
     return render(request, "core/login.html", {
         "google_client_id": settings.GOOGLE_CLIENT_ID,
@@ -300,21 +305,43 @@ def user_create(request):
     if request.method == "POST":
         form = CreateUserForm(request.POST)
         if form.is_valid():
+            email = form.cleaned_data["email"]
             user = User.objects.create_user(
-                username=form.cleaned_data["username"],
+                username=email,
+                email=email,
                 first_name=form.cleaned_data["first_name"],
                 last_name=form.cleaned_data["last_name"],
-                email=form.cleaned_data.get("email", ""),
                 password=form.cleaned_data["password"],
             )
             profile, _ = UserProfile.objects.get_or_create(user=user)
             profile.role = form.cleaned_data["role"]
-            profile.save(update_fields=["role"])
-            messages.success(request, f"User '{user.get_full_name() or user.username}' created successfully.")
+
+            link_person_id = request.POST.get("link_person")
+            if link_person_id:
+                try:
+                    profile.person = Person.objects.get(pk=link_person_id)
+                except Person.DoesNotExist:
+                    pass
+
+            profile.save(update_fields=["role", "person"])
+            messages.success(request, f"User '{user.get_full_name() or email}' created successfully.")
             return redirect("user_list")
+        messages.error(request, "Please fix the errors below.")
     else:
         form = CreateUserForm()
     return render(request, "core/user_form.html", {"form": form, "title": "Add User"})
+
+
+@admin_required
+def user_person_check(request):
+    """HTMX endpoint: returns a person-match partial if an existing Person has this email."""
+    email = request.GET.get("email", "").strip()
+    if not email:
+        return HttpResponse("")
+    person = Person.objects.filter(email__iexact=email).first()
+    if not person:
+        return HttpResponse("")
+    return render(request, "core/partials/person_match.html", {"person": person})
 
 
 @admin_required
