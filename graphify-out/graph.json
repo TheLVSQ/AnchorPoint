@@ -19231,9 +19231,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L194",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "core_tests_userprofilepersonlinktests",
-      "target": "testcase",
-      "confidence_score": 1.0
+      "target": "testcase"
     },
     {
       "relation": "inherits",
@@ -19241,9 +19241,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L223",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "core_tests_emaillogintests",
-      "target": "testcase",
-      "confidence_score": 1.0
+      "target": "testcase"
     },
     {
       "relation": "inherits",
@@ -19251,9 +19251,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L276",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "core_tests_createuserformemailtests",
-      "target": "testcase",
-      "confidence_score": 1.0
+      "target": "testcase"
     },
     {
       "relation": "inherits",
@@ -19261,9 +19261,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L322",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "core_tests_usercreateviewemailtests",
-      "target": "testcase",
-      "confidence_score": 1.0
+      "target": "testcase"
     },
     {
       "relation": "inherits",
@@ -19271,9 +19271,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L361",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "core_tests_userpersonchecktests",
-      "target": "testcase",
-      "confidence_score": 1.0
+      "target": "testcase"
     },
     {
       "relation": "inherits",
@@ -19281,9 +19281,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L407",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "core_tests_usercreatepersonlinktests",
-      "target": "testcase",
-      "confidence_score": 1.0
+      "target": "testcase"
     },
     {
       "relation": "inherits",
@@ -20543,9 +20543,9 @@
       "source_file": "anchorpoint\\core\\forms.py",
       "source_location": "L18",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "core_forms_createuserform",
-      "target": "core_forms_createuserform_clean_email",
-      "confidence_score": 1.0
+      "target": "core_forms_createuserform_clean_email"
     },
     {
       "relation": "method",
@@ -20583,9 +20583,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L315",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "core_tests_organizationsettingsformtests",
-      "target": "core_forms_createuserform",
-      "confidence_score": 0.5
+      "target": "core_forms_createuserform"
     },
     {
       "relation": "uses",
@@ -20593,9 +20593,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L315",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "core_tests_managerolesviewtests",
-      "target": "core_forms_createuserform",
-      "confidence_score": 0.5
+      "target": "core_forms_createuserform"
     },
     {
       "relation": "uses",
@@ -20603,9 +20603,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L315",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "core_tests_emailservicetest",
-      "target": "core_forms_createuserform",
-      "confidence_score": 0.5
+      "target": "core_forms_createuserform"
     },
     {
       "relation": "uses",
@@ -20613,9 +20613,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L315",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "core_tests_checkinadminrequiredtests",
-      "target": "core_forms_createuserform",
-      "confidence_score": 0.5
+      "target": "core_forms_createuserform"
     },
     {
       "relation": "uses",
@@ -20623,9 +20623,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L315",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "core_tests_welcomeemailsignaltest",
-      "target": "core_forms_createuserform",
-      "confidence_score": 0.5
+      "target": "core_forms_createuserform"
     },
     {
       "relation": "uses",
@@ -20633,9 +20633,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L315",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "core_tests_userprofilepersonlinktests",
-      "target": "core_forms_createuserform",
-      "confidence_score": 0.5
+      "target": "core_forms_createuserform"
     },
     {
       "relation": "uses",
@@ -20643,9 +20643,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L315",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "core_tests_emaillogintests",
-      "target": "core_forms_createuserform",
-      "confidence_score": 0.5
+      "target": "core_forms_createuserform"
     },
     {
       "relation": "uses",
@@ -20653,9 +20653,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L315",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "core_tests_createuserformemailtests",
-      "target": "core_forms_createuserform",
-      "confidence_score": 0.5
+      "target": "core_forms_createuserform"
     },
     {
       "relation": "uses",
@@ -20663,9 +20663,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L315",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "core_tests_usercreateviewemailtests",
-      "target": "core_forms_createuserform",
-      "confidence_score": 0.5
+      "target": "core_forms_createuserform"
     },
     {
       "relation": "uses",
@@ -20673,9 +20673,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L315",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "core_tests_userpersonchecktests",
-      "target": "core_forms_createuserform",
-      "confidence_score": 0.5
+      "target": "core_forms_createuserform"
     },
     {
       "relation": "uses",
@@ -20683,9 +20683,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L315",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "core_tests_usercreatepersonlinktests",
-      "target": "core_forms_createuserform",
-      "confidence_score": 0.5
+      "target": "core_forms_createuserform"
     },
     {
       "relation": "uses",
@@ -20693,9 +20693,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L315",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "core_tests_googleauthcallbacktests",
-      "target": "core_forms_createuserform",
-      "confidence_score": 0.5
+      "target": "core_forms_createuserform"
     },
     {
       "relation": "uses",
@@ -20703,9 +20703,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L315",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "core_tests_loginpagetests",
-      "target": "core_forms_createuserform",
-      "confidence_score": 0.5
+      "target": "core_forms_createuserform"
     },
     {
       "relation": "calls",
@@ -21124,9 +21124,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L9",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "core_tests_userprofilepersonlinktests",
-      "target": "core_forms_organizationsettingsform",
-      "confidence_score": 0.5
+      "target": "core_forms_organizationsettingsform"
     },
     {
       "relation": "uses",
@@ -21134,9 +21134,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L9",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "core_tests_emaillogintests",
-      "target": "core_forms_organizationsettingsform",
-      "confidence_score": 0.5
+      "target": "core_forms_organizationsettingsform"
     },
     {
       "relation": "uses",
@@ -21144,9 +21144,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L9",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "core_tests_createuserformemailtests",
-      "target": "core_forms_organizationsettingsform",
-      "confidence_score": 0.5
+      "target": "core_forms_organizationsettingsform"
     },
     {
       "relation": "uses",
@@ -21154,9 +21154,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L9",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "core_tests_usercreateviewemailtests",
-      "target": "core_forms_organizationsettingsform",
-      "confidence_score": 0.5
+      "target": "core_forms_organizationsettingsform"
     },
     {
       "relation": "uses",
@@ -21164,9 +21164,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L9",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "core_tests_userpersonchecktests",
-      "target": "core_forms_organizationsettingsform",
-      "confidence_score": 0.5
+      "target": "core_forms_organizationsettingsform"
     },
     {
       "relation": "uses",
@@ -21174,9 +21174,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L9",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "core_tests_usercreatepersonlinktests",
-      "target": "core_forms_organizationsettingsform",
-      "confidence_score": 0.5
+      "target": "core_forms_organizationsettingsform"
     },
     {
       "relation": "uses",
@@ -21398,9 +21398,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L10",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "core_tests_userprofilepersonlinktests",
-      "target": "core_models_userprofile",
-      "confidence_score": 0.5
+      "target": "core_models_userprofile"
     },
     {
       "relation": "uses",
@@ -21408,9 +21408,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L10",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "core_tests_emaillogintests",
-      "target": "core_models_userprofile",
-      "confidence_score": 0.5
+      "target": "core_models_userprofile"
     },
     {
       "relation": "uses",
@@ -21418,9 +21418,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L10",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "core_tests_createuserformemailtests",
-      "target": "core_models_userprofile",
-      "confidence_score": 0.5
+      "target": "core_models_userprofile"
     },
     {
       "relation": "uses",
@@ -21428,9 +21428,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L10",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "core_tests_usercreateviewemailtests",
-      "target": "core_models_userprofile",
-      "confidence_score": 0.5
+      "target": "core_models_userprofile"
     },
     {
       "relation": "uses",
@@ -21438,9 +21438,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L10",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "core_tests_userpersonchecktests",
-      "target": "core_models_userprofile",
-      "confidence_score": 0.5
+      "target": "core_models_userprofile"
     },
     {
       "relation": "uses",
@@ -21448,9 +21448,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L10",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "core_tests_usercreatepersonlinktests",
-      "target": "core_models_userprofile",
-      "confidence_score": 0.5
+      "target": "core_models_userprofile"
     },
     {
       "relation": "uses",
@@ -22308,9 +22308,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L194",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "anchorpoint_core_tests_py",
-      "target": "core_tests_userprofilepersonlinktests",
-      "confidence_score": 1.0
+      "target": "core_tests_userprofilepersonlinktests"
     },
     {
       "relation": "contains",
@@ -22318,9 +22318,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L223",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "anchorpoint_core_tests_py",
-      "target": "core_tests_emaillogintests",
-      "confidence_score": 1.0
+      "target": "core_tests_emaillogintests"
     },
     {
       "relation": "contains",
@@ -22328,9 +22328,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L276",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "anchorpoint_core_tests_py",
-      "target": "core_tests_createuserformemailtests",
-      "confidence_score": 1.0
+      "target": "core_tests_createuserformemailtests"
     },
     {
       "relation": "contains",
@@ -22338,9 +22338,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L322",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "anchorpoint_core_tests_py",
-      "target": "core_tests_usercreateviewemailtests",
-      "confidence_score": 1.0
+      "target": "core_tests_usercreateviewemailtests"
     },
     {
       "relation": "contains",
@@ -22348,9 +22348,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L361",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "anchorpoint_core_tests_py",
-      "target": "core_tests_userpersonchecktests",
-      "confidence_score": 1.0
+      "target": "core_tests_userpersonchecktests"
     },
     {
       "relation": "contains",
@@ -22358,9 +22358,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L407",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "anchorpoint_core_tests_py",
-      "target": "core_tests_usercreatepersonlinktests",
-      "confidence_score": 1.0
+      "target": "core_tests_usercreatepersonlinktests"
     },
     {
       "relation": "contains",
@@ -22418,9 +22418,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L8",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "core_tests_organizationsettingsformtests",
-      "target": "people_models_person",
-      "confidence_score": 0.5
+      "target": "people_models_person"
     },
     {
       "relation": "uses",
@@ -22478,9 +22478,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L8",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "core_tests_managerolesviewtests",
-      "target": "people_models_person",
-      "confidence_score": 0.5
+      "target": "people_models_person"
     },
     {
       "relation": "uses",
@@ -22578,9 +22578,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L8",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "core_tests_emailservicetest",
-      "target": "people_models_person",
-      "confidence_score": 0.5
+      "target": "people_models_person"
     },
     {
       "relation": "uses",
@@ -22678,9 +22678,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L8",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "core_tests_checkinadminrequiredtests",
-      "target": "people_models_person",
-      "confidence_score": 0.5
+      "target": "people_models_person"
     },
     {
       "relation": "uses",
@@ -22738,9 +22738,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L8",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "core_tests_welcomeemailsignaltest",
-      "target": "people_models_person",
-      "confidence_score": 0.5
+      "target": "people_models_person"
     },
     {
       "relation": "uses",
@@ -22778,9 +22778,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L195",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "core_tests_userprofilepersonlinktests",
-      "target": "core_tests_userprofilepersonlinktests_setup",
-      "confidence_score": 1.0
+      "target": "core_tests_userprofilepersonlinktests_setup"
     },
     {
       "relation": "method",
@@ -22788,9 +22788,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L202",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "core_tests_userprofilepersonlinktests",
-      "target": "core_tests_userprofilepersonlinktests_test_profile_person_defaults_to_null",
-      "confidence_score": 1.0
+      "target": "core_tests_userprofilepersonlinktests_test_profile_person_defaults_to_null"
     },
     {
       "relation": "method",
@@ -22798,9 +22798,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L205",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "core_tests_userprofilepersonlinktests",
-      "target": "core_tests_userprofilepersonlinktests_test_profile_can_be_linked_to_person",
-      "confidence_score": 1.0
+      "target": "core_tests_userprofilepersonlinktests_test_profile_can_be_linked_to_person"
     },
     {
       "relation": "method",
@@ -22808,9 +22808,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L211",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "core_tests_userprofilepersonlinktests",
-      "target": "core_tests_userprofilepersonlinktests_test_person_link_cleared_on_person_delete",
-      "confidence_score": 1.0
+      "target": "core_tests_userprofilepersonlinktests_test_person_link_cleared_on_person_delete"
     },
     {
       "relation": "uses",
@@ -22818,9 +22818,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L8",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "core_tests_userprofilepersonlinktests",
-      "target": "people_models_person",
-      "confidence_score": 0.5
+      "target": "people_models_person"
     },
     {
       "relation": "uses",
@@ -22828,9 +22828,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L114",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "core_tests_userprofilepersonlinktests",
-      "target": "events_models_event",
-      "confidence_score": 0.5
+      "target": "events_models_event"
     },
     {
       "relation": "uses",
@@ -22838,9 +22838,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L114",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "core_tests_userprofilepersonlinktests",
-      "target": "events_models_eventregistration",
-      "confidence_score": 0.5
+      "target": "events_models_eventregistration"
     },
     {
       "relation": "method",
@@ -22848,9 +22848,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L224",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "core_tests_emaillogintests",
-      "target": "core_tests_emaillogintests_setup",
-      "confidence_score": 1.0
+      "target": "core_tests_emaillogintests_setup"
     },
     {
       "relation": "method",
@@ -22858,9 +22858,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L234",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "core_tests_emaillogintests",
-      "target": "core_tests_emaillogintests_test_login_with_email_succeeds",
-      "confidence_score": 1.0
+      "target": "core_tests_emaillogintests_test_login_with_email_succeeds"
     },
     {
       "relation": "method",
@@ -22868,9 +22868,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L241",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "core_tests_emaillogintests",
-      "target": "core_tests_emaillogintests_test_login_with_wrong_password_fails",
-      "confidence_score": 1.0
+      "target": "core_tests_emaillogintests_test_login_with_wrong_password_fails"
     },
     {
       "relation": "method",
@@ -22878,9 +22878,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L249",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "core_tests_emaillogintests",
-      "target": "core_tests_emaillogintests_test_login_with_unknown_email_fails",
-      "confidence_score": 1.0
+      "target": "core_tests_emaillogintests_test_login_with_unknown_email_fails"
     },
     {
       "relation": "method",
@@ -22888,9 +22888,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L257",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "core_tests_emaillogintests",
-      "target": "core_tests_emaillogintests_test_login_with_inactive_user_fails",
-      "confidence_score": 1.0
+      "target": "core_tests_emaillogintests_test_login_with_inactive_user_fails"
     },
     {
       "relation": "method",
@@ -22898,9 +22898,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L267",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "core_tests_emaillogintests",
-      "target": "core_tests_emaillogintests_test_login_page_shows_email_input",
-      "confidence_score": 1.0
+      "target": "core_tests_emaillogintests_test_login_page_shows_email_input"
     },
     {
       "relation": "uses",
@@ -22908,9 +22908,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L8",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "core_tests_emaillogintests",
-      "target": "people_models_person",
-      "confidence_score": 0.5
+      "target": "people_models_person"
     },
     {
       "relation": "uses",
@@ -22918,9 +22918,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L114",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "core_tests_emaillogintests",
-      "target": "events_models_event",
-      "confidence_score": 0.5
+      "target": "events_models_event"
     },
     {
       "relation": "uses",
@@ -22928,9 +22928,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L114",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "core_tests_emaillogintests",
-      "target": "events_models_eventregistration",
-      "confidence_score": 0.5
+      "target": "events_models_eventregistration"
     },
     {
       "relation": "method",
@@ -22938,9 +22938,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L277",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "core_tests_createuserformemailtests",
-      "target": "core_tests_createuserformemailtests_setup",
-      "confidence_score": 1.0
+      "target": "core_tests_createuserformemailtests_setup"
     },
     {
       "relation": "method",
@@ -22948,9 +22948,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L285",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "core_tests_createuserformemailtests",
-      "target": "core_tests_createuserformemailtests_valid_data",
-      "confidence_score": 1.0
+      "target": "core_tests_createuserformemailtests_valid_data"
     },
     {
       "relation": "method",
@@ -22958,9 +22958,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L295",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "core_tests_createuserformemailtests",
-      "target": "core_tests_createuserformemailtests_test_email_required",
-      "confidence_score": 1.0
+      "target": "core_tests_createuserformemailtests_test_email_required"
     },
     {
       "relation": "method",
@@ -22968,9 +22968,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L303",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "core_tests_createuserformemailtests",
-      "target": "core_tests_createuserformemailtests_test_duplicate_email_rejected",
-      "confidence_score": 1.0
+      "target": "core_tests_createuserformemailtests_test_duplicate_email_rejected"
     },
     {
       "relation": "method",
@@ -22978,9 +22978,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L309",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "core_tests_createuserformemailtests",
-      "target": "core_tests_createuserformemailtests_test_valid_form_has_no_username_field",
-      "confidence_score": 1.0
+      "target": "core_tests_createuserformemailtests_test_valid_form_has_no_username_field"
     },
     {
       "relation": "method",
@@ -22988,9 +22988,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L314",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "core_tests_createuserformemailtests",
-      "target": "core_tests_createuserformemailtests_test_password_mismatch_rejected",
-      "confidence_score": 1.0
+      "target": "core_tests_createuserformemailtests_test_password_mismatch_rejected"
     },
     {
       "relation": "uses",
@@ -22998,9 +22998,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L8",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "core_tests_createuserformemailtests",
-      "target": "people_models_person",
-      "confidence_score": 0.5
+      "target": "people_models_person"
     },
     {
       "relation": "uses",
@@ -23008,9 +23008,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L114",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "core_tests_createuserformemailtests",
-      "target": "events_models_event",
-      "confidence_score": 0.5
+      "target": "events_models_event"
     },
     {
       "relation": "uses",
@@ -23018,9 +23018,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L114",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "core_tests_createuserformemailtests",
-      "target": "events_models_eventregistration",
-      "confidence_score": 0.5
+      "target": "events_models_eventregistration"
     },
     {
       "relation": "calls",
@@ -23029,9 +23029,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L297",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "core_tests_createuserformemailtests_test_email_required",
-      "target": "core_tests_createuserformemailtests_valid_data",
-      "confidence_score": 1.0
+      "target": "core_tests_createuserformemailtests_valid_data"
     },
     {
       "relation": "calls",
@@ -23040,9 +23040,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L305",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "core_tests_createuserformemailtests_test_duplicate_email_rejected",
-      "target": "core_tests_createuserformemailtests_valid_data",
-      "confidence_score": 1.0
+      "target": "core_tests_createuserformemailtests_valid_data"
     },
     {
       "relation": "calls",
@@ -23051,9 +23051,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L311",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "core_tests_createuserformemailtests_test_valid_form_has_no_username_field",
-      "target": "core_tests_createuserformemailtests_valid_data",
-      "confidence_score": 1.0
+      "target": "core_tests_createuserformemailtests_valid_data"
     },
     {
       "relation": "calls",
@@ -23062,9 +23062,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L316",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "core_tests_createuserformemailtests_test_password_mismatch_rejected",
-      "target": "core_tests_createuserformemailtests_valid_data",
-      "confidence_score": 1.0
+      "target": "core_tests_createuserformemailtests_valid_data"
     },
     {
       "relation": "method",
@@ -23072,9 +23072,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L323",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "core_tests_usercreateviewemailtests",
-      "target": "core_tests_usercreateviewemailtests_setup",
-      "confidence_score": 1.0
+      "target": "core_tests_usercreateviewemailtests_setup"
     },
     {
       "relation": "method",
@@ -23082,9 +23082,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L330",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "core_tests_usercreateviewemailtests",
-      "target": "core_tests_usercreateviewemailtests_post",
-      "confidence_score": 1.0
+      "target": "core_tests_usercreateviewemailtests_post"
     },
     {
       "relation": "method",
@@ -23092,9 +23092,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L340",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "core_tests_usercreateviewemailtests",
-      "target": "core_tests_usercreateviewemailtests_test_creates_user_with_email_as_username",
-      "confidence_score": 1.0
+      "target": "core_tests_usercreateviewemailtests_test_creates_user_with_email_as_username"
     },
     {
       "relation": "method",
@@ -23102,9 +23102,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L346",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "core_tests_usercreateviewemailtests",
-      "target": "core_tests_usercreateviewemailtests_test_redirects_to_user_list_on_success",
-      "confidence_score": 1.0
+      "target": "core_tests_usercreateviewemailtests_test_redirects_to_user_list_on_success"
     },
     {
       "relation": "method",
@@ -23112,9 +23112,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L350",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "core_tests_usercreateviewemailtests",
-      "target": "core_tests_usercreateviewemailtests_test_duplicate_email_shows_form_error",
-      "confidence_score": 1.0
+      "target": "core_tests_usercreateviewemailtests_test_duplicate_email_shows_form_error"
     },
     {
       "relation": "uses",
@@ -23122,9 +23122,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L8",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "core_tests_usercreateviewemailtests",
-      "target": "people_models_person",
-      "confidence_score": 0.5
+      "target": "people_models_person"
     },
     {
       "relation": "uses",
@@ -23132,9 +23132,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L114",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "core_tests_usercreateviewemailtests",
-      "target": "events_models_event",
-      "confidence_score": 0.5
+      "target": "events_models_event"
     },
     {
       "relation": "uses",
@@ -23142,9 +23142,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L114",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "core_tests_usercreateviewemailtests",
-      "target": "events_models_eventregistration",
-      "confidence_score": 0.5
+      "target": "events_models_eventregistration"
     },
     {
       "relation": "calls",
@@ -23153,9 +23153,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L341",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "core_tests_usercreateviewemailtests_test_creates_user_with_email_as_username",
-      "target": "core_tests_googleauthcallbacktests_post",
-      "confidence_score": 1.0
+      "target": "core_tests_googleauthcallbacktests_post"
     },
     {
       "relation": "calls",
@@ -23164,9 +23164,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L347",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "core_tests_usercreateviewemailtests_test_redirects_to_user_list_on_success",
-      "target": "core_tests_googleauthcallbacktests_post",
-      "confidence_score": 1.0
+      "target": "core_tests_googleauthcallbacktests_post"
     },
     {
       "relation": "calls",
@@ -23175,9 +23175,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L351",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "core_tests_usercreateviewemailtests_test_duplicate_email_shows_form_error",
-      "target": "core_tests_googleauthcallbacktests_post",
-      "confidence_score": 1.0
+      "target": "core_tests_googleauthcallbacktests_post"
     },
     {
       "relation": "method",
@@ -23185,9 +23185,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L362",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "core_tests_userpersonchecktests",
-      "target": "core_tests_userpersonchecktests_setup",
-      "confidence_score": 1.0
+      "target": "core_tests_userpersonchecktests_setup"
     },
     {
       "relation": "method",
@@ -23195,9 +23195,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L373",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "core_tests_userpersonchecktests",
-      "target": "core_tests_userpersonchecktests_test_returns_partial_when_person_found",
-      "confidence_score": 1.0
+      "target": "core_tests_userpersonchecktests_test_returns_partial_when_person_found"
     },
     {
       "relation": "method",
@@ -23205,9 +23205,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L382",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "core_tests_userpersonchecktests",
-      "target": "core_tests_userpersonchecktests_test_returns_empty_when_no_person",
-      "confidence_score": 1.0
+      "target": "core_tests_userpersonchecktests_test_returns_empty_when_no_person"
     },
     {
       "relation": "method",
@@ -23215,9 +23215,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L390",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "core_tests_userpersonchecktests",
-      "target": "core_tests_userpersonchecktests_test_returns_empty_when_no_email",
-      "confidence_score": 1.0
+      "target": "core_tests_userpersonchecktests_test_returns_empty_when_no_email"
     },
     {
       "relation": "method",
@@ -23225,9 +23225,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L395",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "core_tests_userpersonchecktests",
-      "target": "core_tests_userpersonchecktests_test_requires_admin",
-      "confidence_score": 1.0
+      "target": "core_tests_userpersonchecktests_test_requires_admin"
     },
     {
       "relation": "uses",
@@ -23235,9 +23235,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L8",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "core_tests_userpersonchecktests",
-      "target": "people_models_person",
-      "confidence_score": 0.5
+      "target": "people_models_person"
     },
     {
       "relation": "uses",
@@ -23245,9 +23245,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L114",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "core_tests_userpersonchecktests",
-      "target": "events_models_event",
-      "confidence_score": 0.5
+      "target": "events_models_event"
     },
     {
       "relation": "uses",
@@ -23255,9 +23255,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L114",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "core_tests_userpersonchecktests",
-      "target": "events_models_eventregistration",
-      "confidence_score": 0.5
+      "target": "events_models_eventregistration"
     },
     {
       "relation": "method",
@@ -23265,9 +23265,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L408",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "core_tests_usercreatepersonlinktests",
-      "target": "core_tests_usercreatepersonlinktests_setup",
-      "confidence_score": 1.0
+      "target": "core_tests_usercreatepersonlinktests_setup"
     },
     {
       "relation": "method",
@@ -23275,9 +23275,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L419",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "core_tests_usercreatepersonlinktests",
-      "target": "core_tests_usercreatepersonlinktests_test_links_person_when_checkbox_checked",
-      "confidence_score": 1.0
+      "target": "core_tests_usercreatepersonlinktests_test_links_person_when_checkbox_checked"
     },
     {
       "relation": "method",
@@ -23285,9 +23285,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L433",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "core_tests_usercreatepersonlinktests",
-      "target": "core_tests_usercreatepersonlinktests_test_no_link_when_checkbox_absent",
-      "confidence_score": 1.0
+      "target": "core_tests_usercreatepersonlinktests_test_no_link_when_checkbox_absent"
     },
     {
       "relation": "method",
@@ -23295,9 +23295,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L446",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "core_tests_usercreatepersonlinktests",
-      "target": "core_tests_usercreatepersonlinktests_test_stale_person_id_silently_ignored",
-      "confidence_score": 1.0
+      "target": "core_tests_usercreatepersonlinktests_test_stale_person_id_silently_ignored"
     },
     {
       "relation": "uses",
@@ -23305,9 +23305,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L8",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "core_tests_usercreatepersonlinktests",
-      "target": "people_models_person",
-      "confidence_score": 0.5
+      "target": "people_models_person"
     },
     {
       "relation": "uses",
@@ -23315,9 +23315,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L114",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "core_tests_usercreatepersonlinktests",
-      "target": "events_models_event",
-      "confidence_score": 0.5
+      "target": "events_models_event"
     },
     {
       "relation": "uses",
@@ -23325,9 +23325,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L114",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "core_tests_usercreatepersonlinktests",
-      "target": "events_models_eventregistration",
-      "confidence_score": 0.5
+      "target": "events_models_eventregistration"
     },
     {
       "relation": "method",
@@ -23445,9 +23445,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L8",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "core_tests_googleauthcallbacktests",
-      "target": "people_models_person",
-      "confidence_score": 0.5
+      "target": "people_models_person"
     },
     {
       "relation": "uses",
@@ -23585,9 +23585,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L475",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "core_tests_rationale_475",
-      "target": "core_tests_googleauthcallbacktests_mock_verify",
-      "confidence_score": 1.0
+      "target": "core_tests_googleauthcallbacktests_mock_verify"
     },
     {
       "relation": "rationale_for",
@@ -23615,9 +23615,9 @@
       "source_file": "anchorpoint\\core\\tests.py",
       "source_location": "L8",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "core_tests_loginpagetests",
-      "target": "people_models_person",
-      "confidence_score": 0.5
+      "target": "people_models_person"
     },
     {
       "relation": "uses",
@@ -23745,9 +23745,9 @@
       "source_file": "anchorpoint\\core\\views.py",
       "source_location": "L336",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "anchorpoint_core_views_py",
-      "target": "core_views_user_person_check",
-      "confidence_score": 1.0
+      "target": "core_views_user_person_check"
     },
     {
       "relation": "contains",
@@ -23795,9 +23795,9 @@
       "source_file": "anchorpoint\\core\\views.py",
       "source_location": "L59",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "core_views_rationale_59",
-      "target": "core_views_google_auth_callback",
-      "confidence_score": 1.0
+      "target": "core_views_google_auth_callback"
     },
     {
       "relation": "rationale_for",
@@ -23896,9 +23896,9 @@
       "source_file": "anchorpoint\\core\\views.py",
       "source_location": "L337",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "core_views_rationale_337",
-      "target": "core_views_user_person_check",
-      "confidence_score": 1.0
+      "target": "core_views_user_person_check"
     },
     {
       "relation": "contains",
@@ -24187,9 +24187,9 @@
       "source_file": "anchorpoint\\core\\migrations\\0008_userprofile_person_link.py",
       "source_location": "L7",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "anchorpoint_core_migrations_0008_userprofile_person_link_py",
-      "target": "migrations_0008_userprofile_person_link_migration",
-      "confidence_score": 1.0
+      "target": "migrations_0008_userprofile_person_link_migration"
     },
     {
       "relation": "imports_from",
