@@ -1,7 +1,7 @@
 # Graph Report - AnchorPoint  (2026-05-07)
 
 ## Corpus Check
-- 130 files · ~86,720 words
+- 130 files · ~86,765 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary

@@ -21,6 +21,7 @@
 
 - [x] UI Enhancements
 -- [x] Add Favicon
+-- [ ] Overall UI Review and refresh
 -- [ ] Create Group Form -> Group Status: change status checkbox to dropdown
 -- [ ] Phone Blasts: show stats (answered, no answer, etc)
 -- [ ] Phone Blasts: show live progress?
@@ -32,6 +33,11 @@
 --- [ ] Check to see if info matches a current person record as it is being entered
 --- [ ] Login should be user's email address, email address should not be optional
 --- [ ] If a Person exists for a new User, merge or allow the Person/User records to coexist
+--- [ ] When updating a user's Role, clicking the save should have a confirmation alert
+
+
+- Security
+-- [ ] Overall security review before making repo public
 
 ## Bugs to Squash
 
