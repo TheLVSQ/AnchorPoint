@@ -33,6 +33,13 @@ class UserProfile(models.Model):
         default=False,
         help_text="Allow this user to manage SMS and phone blast communications.",
     )
+    person = models.OneToOneField(
+        "people.Person",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="user_profile",
+    )
 
     def __str__(self):
         display_name = self.user.get_full_name() or self.user.username

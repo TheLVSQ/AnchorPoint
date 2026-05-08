@@ -25,16 +25,22 @@
         </div>
 
         <div class="form-field">
-            <label>Username</label>
-            {{ form.username }}
-            {% for e in form.username.errors %}<span class="error-text">{{ e }}</span>{% endfor %}
-        </div>
-
-        <div class="form-field">
-            <label>Email <span class="stat-hint" style="display:inline;">(optional)</span></label>
-            {{ form.email }}
+            <label>Email address</label>
+            {% if not target_user %}
+                <input type="email" name="email"
+                       value="{{ form.email.value|default:'' }}"
+                       autocomplete="email"
+                       hx-get="{% url 'user_person_check' %}"
+                       hx-trigger="change, keyup changed delay:500ms"
+                       hx-target="#person-match"
+                       hx-include="[name='email']">
+            {% else %}
+                {{ form.email }}
+            {% endif %}
             {% for e in form.email.errors %}<span class="error-text">{{ e }}</span>{% endfor %}
         </div>
+
+        <div id="person-match"></div>
 
         <div class="form-field">
             <label>Role</label>
