@@ -4,7 +4,11 @@
 <div class="kiosk-card" style="text-align:center;">
   <div style="font-size:48px;margin-bottom:16px;">✓</div>
   <div class="kiosk-title">You're All Set!</div>
+  {% if printer_ok %}
   <div class="kiosk-subtitle">Labels are printing now</div>
+  {% else %}
+  <div class="kiosk-subtitle">Print your labels below</div>
+  {% endif %}
 
   <div style="margin:28px 0;padding:24px;background:#0d0d20;border-radius:12px;">
     <div style="font-size:12px;color:#666;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px;">
@@ -93,24 +97,26 @@
 
 {% block extra_js %}
 <script>
-  // Auto-print on load
   window.addEventListener('load', function() {
+    {% if not printer_ok %}
+    // No server-side printer configured or print failed — fall back to browser print
     window.print();
-  });
+    {% endif %}
 
-  // Countdown redirect
-  var seconds = 8;
-  var el = document.getElementById('countdown');
-  function tick() {
-    if (seconds <= 0) {
-      window.location.href = "{% url 'checkin:kiosk_lookup' %}";
-      return;
+    // Countdown redirect
+    var seconds = 8;
+    var el = document.getElementById('countdown');
+    function tick() {
+      if (seconds <= 0) {
+        window.location.href = "{% url 'checkin:kiosk_lookup' %}";
+        return;
+      }
+      el.textContent = 'Returning to check-in in ' + seconds + 's...';
+      seconds--;
+      setTimeout(tick, 1000);
     }
-    el.textContent = 'Returning to check-in in ' + seconds + 's...';
-    seconds--;
-    setTimeout(tick, 1000);
-  }
-  tick();
+    tick();
+  });
 </script>
 {% endblock %}
 {% endblock %}
