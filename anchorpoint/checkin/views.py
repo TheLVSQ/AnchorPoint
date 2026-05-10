@@ -221,11 +221,14 @@ def kiosk_confirmation(request):
     org = OrganizationSettings.load()
     session = _get_active_session(request)
 
+    printer_ok = PrintService().print_checkins(checkins, session)
+
     return render(request, "checkin/kiosk/confirmation.html", {
         "checkins": checkins,
         "security_code": security_code,
         "session": session,
         "org": org,
+        "printer_ok": printer_ok,
     })
 
 
