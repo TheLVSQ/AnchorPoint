@@ -13,6 +13,14 @@ from .base import BasePrinterAdapter
 
 logger = logging.getLogger(__name__)
 
+# Lazy import for direct image printing — missing library logs a warning
+try:
+    from escpos.printer import Network as NetworkPrinter
+    ESCPOS_AVAILABLE = True
+except ImportError:
+    ESCPOS_AVAILABLE = False
+    NetworkPrinter = None
+
 
 class ESCPOSAdapter(BasePrinterAdapter):
     """
@@ -141,3 +149,39 @@ class ESCPOSAdapter(BasePrinterAdapter):
             except Exception:
                 pass
             self._printer = None
+
+    def print_images(self, images: list) -> bool:
+        """
+        Print PIL images directly via a network ESC/POS printer.
+        Uses NetworkPrinter for a simple host:port network connection.
+        Cuts after each image.
+
+        For network printers configured with a tcp:// connection string,
+        extracts host/port and opens a fresh NetworkPrinter connection.
+        """
+        if not ESCPOS_AVAILABLE:
+            logger.error("python-escpos library not installed — cannot print")
+            return False
+
+        # Parse host/port from the connection string
+        conn = self.connection_string
+        if conn.startswith("tcp://"):
+            conn = conn[6:]
+        if ":" in conn:
+            host, _, port_str = conn.rpartition(":")
+            port = int(port_str)
+        else:
+            host = conn
+            port = 9100
+
+        p = NetworkPrinter(host, port)
+        try:
+            for img in images:
+                p.image(img)
+                p.cut()
+            return True
+        except Exception:
+            logger.exception("ESC/POS print_images failed")
+            return False
+        finally:
+            p.close()
