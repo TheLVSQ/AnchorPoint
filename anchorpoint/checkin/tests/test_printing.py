@@ -159,7 +159,8 @@ class BrotherQLAdapterTests(DjangoSimpleTestCase):
         img = Image.new("RGB", (696, 200), "white")
         adapter = BrotherQLAdapter("tcp://192.168.1.100", "QL-800")
 
-        with patch("checkin.services.printers.brother_ql_adapter.BrotherQLRaster") as mock_raster_cls, \
+        with patch("checkin.services.printers.brother_ql_adapter.BROTHER_QL_AVAILABLE", True), \
+             patch("checkin.services.printers.brother_ql_adapter.BrotherQLRaster") as mock_raster_cls, \
              patch("checkin.services.printers.brother_ql_adapter.convert") as mock_convert, \
              patch("checkin.services.printers.brother_ql_adapter.ql_send") as mock_send:
             mock_raster = MagicMock()
@@ -197,7 +198,8 @@ class ESCPOSAdapterTests(DjangoSimpleTestCase):
         adapter = ESCPOSAdapter("tcp://192.168.1.101:9100")
 
         mock_printer = MagicMock()
-        with patch("checkin.services.printers.escpos_adapter.NetworkPrinter", return_value=mock_printer):
+        with patch("checkin.services.printers.escpos_adapter.ESCPOS_AVAILABLE", True), \
+             patch("checkin.services.printers.escpos_adapter.NetworkPrinter", return_value=mock_printer):
             result = adapter.print_images([img])
 
         self.assertTrue(result)
