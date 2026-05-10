@@ -286,11 +286,35 @@ class CheckIn(models.Model):
 class PrinterConfiguration(models.Model):
     """Printer settings for label printing."""
 
+    PRINTER_TYPE_CHOICES = [
+        ("brother_ql", "Brother QL"),
+        ("escpos", "ESC/POS Thermal"),
+    ]
+
+    QL_MODEL_CHOICES = [
+        ("QL-700", "QL-700"),
+        ("QL-800", "QL-800"),
+        ("QL-810W", "QL-810W"),
+        ("QL-820NWB", "QL-820NWB"),
+        ("QL-1100", "QL-1100"),
+        ("QL-1110NWB", "QL-1110NWB"),
+    ]
+
     name = models.CharField(max_length=100)
-    printer_type = models.CharField(max_length=50, blank=True)
+    printer_type = models.CharField(
+        max_length=50,
+        choices=PRINTER_TYPE_CHOICES,
+        blank=True,
+    )
     connection_type = models.CharField(max_length=50, blank=True)
     host = models.CharField(max_length=255, blank=True)
     port = models.PositiveIntegerField(null=True, blank=True)
+    ql_model = models.CharField(
+        max_length=20,
+        choices=QL_MODEL_CHOICES,
+        default="QL-800",
+        blank=True,
+    )
     is_default = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
 

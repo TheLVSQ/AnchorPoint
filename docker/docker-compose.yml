@@ -10,6 +10,9 @@ services:
       - media_data:/app/anchorpoint/media
     env_file:
       - .env.production
+    # Uncomment to allow Django to access a USB-connected printer:
+    # devices:
+    #   - /dev/usb/lp0:/dev/usb/lp0
     depends_on:
       db:
         condition: service_healthy
