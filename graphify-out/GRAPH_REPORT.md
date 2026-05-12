@@ -1,12 +1,12 @@
-# Graph Report - AnchorPoint  (2026-05-07)
+# Graph Report - AnchorPoint  (2026-05-11)
 
 ## Corpus Check
-- 130 files · ~86,765 words
+- 134 files · ~94,759 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1374 nodes · 2775 edges · 60 communities detected
-- Extraction: 68% EXTRACTED · 32% INFERRED · 0% AMBIGUOUS · INFERRED: 897 edges (avg confidence: 0.57)
+- 1465 nodes · 2941 edges · 61 communities detected
+- Extraction: 68% EXTRACTED · 32% INFERRED · 0% AMBIGUOUS · INFERRED: 945 edges (avg confidence: 0.57)
 - Token cost: 0 input · 0 output
 
 ## Community Hubs (Navigation)
@@ -54,46 +54,47 @@
 - [[_COMMUNITY_Community 41|Community 41]]
 - [[_COMMUNITY_Community 42|Community 42]]
 - [[_COMMUNITY_Community 43|Community 43]]
-- [[_COMMUNITY_Community 44|Community 44]]
 - [[_COMMUNITY_Community 45|Community 45]]
+- [[_COMMUNITY_Community 46|Community 46]]
 - [[_COMMUNITY_Community 47|Community 47]]
 - [[_COMMUNITY_Community 48|Community 48]]
-- [[_COMMUNITY_Community 49|Community 49]]
+- [[_COMMUNITY_Community 53|Community 53]]
 - [[_COMMUNITY_Community 54|Community 54]]
-- [[_COMMUNITY_Community 55|Community 55]]
+- [[_COMMUNITY_Community 64|Community 64]]
 - [[_COMMUNITY_Community 65|Community 65]]
 - [[_COMMUNITY_Community 66|Community 66]]
 - [[_COMMUNITY_Community 84|Community 84]]
-- [[_COMMUNITY_Community 95|Community 95]]
-- [[_COMMUNITY_Community 97|Community 97]]
+- [[_COMMUNITY_Community 93|Community 93]]
+- [[_COMMUNITY_Community 96|Community 96]]
 - [[_COMMUNITY_Community 98|Community 98]]
-- [[_COMMUNITY_Community 116|Community 116]]
-- [[_COMMUNITY_Community 124|Community 124]]
-- [[_COMMUNITY_Community 126|Community 126]]
+- [[_COMMUNITY_Community 99|Community 99]]
+- [[_COMMUNITY_Community 117|Community 117]]
+- [[_COMMUNITY_Community 125|Community 125]]
+- [[_COMMUNITY_Community 127|Community 127]]
 
 ## God Nodes (most connected - your core abstractions)
-1. `Person` - 70 edges
+1. `Person` - 75 edges
 2. `Event` - 43 edges
-3. `EventRegistration` - 37 edges
-4. `Group` - 37 edges
-5. `OrganizationSettings` - 35 edges
-6. `Base Template (base.html)` - 35 edges
-7. `CheckInConfiguration` - 33 edges
-8. `Room` - 33 edges
-9. `UserProfile` - 33 edges
-10. `GroupMembership` - 33 edges
+3. `Room` - 37 edges
+4. `EventRegistration` - 37 edges
+5. `Group` - 37 edges
+6. `CheckInSession` - 36 edges
+7. `UserProfile` - 36 edges
+8. `PrinterConfiguration` - 35 edges
+9. `OrganizationSettings` - 35 edges
+10. `Base Template (base.html)` - 35 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `kiosk_unlock()` --calls--> `KioskPinForm`  [INFERRED]
-  anchorpoint\checkin\views.py → anchorpoint\checkin\forms.py
-- `CheckInConfiguration` --uses--> `Person`  [INFERRED]
-  anchorpoint\checkin\models.py → anchorpoint\people\models.py
-- `EligibilityTests` --uses--> `CheckInConfiguration`  [INFERRED]
-  anchorpoint\checkin\tests\test_eligibility.py → anchorpoint\checkin\models.py
-- `KioskFlowTests` --uses--> `CheckInConfiguration`  [INFERRED]
-  anchorpoint\checkin\tests\test_kiosk_views.py → anchorpoint\checkin\models.py
-- `QuickRegistrationViewTests` --uses--> `CheckInConfiguration`  [INFERRED]
-  anchorpoint\checkin\tests\test_kiosk_views.py → anchorpoint\checkin\models.py
+- `CheckInConfigurationAdmin` --uses--> `PrinterConfiguration`  [INFERRED]
+  anchorpoint\checkin\admin.py → anchorpoint\checkin\models.py
+- `CheckInWindowAdmin` --uses--> `PrinterConfiguration`  [INFERRED]
+  anchorpoint\checkin\admin.py → anchorpoint\checkin\models.py
+- `RoomAdmin` --uses--> `PrinterConfiguration`  [INFERRED]
+  anchorpoint\checkin\admin.py → anchorpoint\checkin\models.py
+- `CheckInSessionAdmin` --uses--> `PrinterConfiguration`  [INFERRED]
+  anchorpoint\checkin\admin.py → anchorpoint\checkin\models.py
+- `CheckInAdmin` --uses--> `PrinterConfiguration`  [INFERRED]
+  anchorpoint\checkin\admin.py → anchorpoint\checkin\models.py
 
 ## Hyperedges (group relationships)
 - **Attendance Configuration Management Views** — attendance_checkin_config_form, attendance_checkin_config_list [EXTRACTED 1.00]
@@ -110,67 +111,67 @@
 - **Droplet Security Hardening Measures** — ufw_firewall, fail2ban, rationale_localhost_port_binding, github_actions_deploy [EXTRACTED 1.00]
 - **System Email Types** — system_emails_feature, email_service_module, google_workspace_smtp [EXTRACTED 1.00]
 
-## Communities (127 total, 38 thin omitted)
+## Communities (128 total, 40 thin omitted)
 
 ### Community 0 - "Community 0"
 Cohesion: 0.02
-Nodes (138): CheckInAdmin, CheckInConfigurationAdmin, CheckInSessionAdmin, CheckInWindowAdmin, LabelTemplateAdmin, PrinterConfigurationAdmin, RoomAdmin, CheckInConfigurationForm (+130 more)
+Nodes (148): CheckInAdmin, CheckInConfigurationAdmin, CheckInSessionAdmin, CheckInWindowAdmin, LabelTemplateAdmin, PrinterConfigurationAdmin, RoomAdmin, CheckInConfigurationForm (+140 more)
 
 ### Community 1 - "Community 1"
 Cohesion: 0.04
-Nodes (67): Command, OrganizationSettings, Exception, GroupAdmin, GroupMembershipAdmin, GroupMembershipInline, Group, GroupMembership (+59 more)
+Nodes (60): Command, OrganizationSettings, Exception, CommunicationLogAdmin, PhoneBlastAdmin, PhoneCallAdmin, SmsMessageAdmin, SmsRecipientAdmin (+52 more)
 
 ### Community 2 - "Community 2"
-Cohesion: 0.05
-Nodes (60): EventAdmin, EventOccurrenceInline, EventPhotoInline, EventRegistrationAdmin, EventRegistrationAttendeeInline, ReleaseDocumentAdmin, EventForm, EventOccurrenceForm (+52 more)
+Cohesion: 0.03
+Nodes (59): OrganizationSettingsAdmin, UserProfileAdmin, organization_settings(), Render templates and send an email with HTML and plain-text alternatives.     C, Send a welcome email to a newly created user., Send a registration confirmation to the registrant., Notify all admin/staff users of a new event registration., _send() (+51 more)
 
 ### Community 3 - "Community 3"
 Cohesion: 0.03
-Nodes (52): OrganizationSettingsAdmin, UserProfileAdmin, organization_settings(), Render templates and send an email with HTML and plain-text alternatives.     C, Send a welcome email to a newly created user., Send a registration confirmation to the registrant., Notify all admin/staff users of a new event registration., _send() (+44 more)
+Nodes (78): PrinterConfiguration, Printer setup for label printing., Printer settings for label printing., DjangoSimpleTestCase, BrotherQLAdapter, Brother QL Adapter  Sends PIL images to a Brother QL label printer via the broth, Simple test-print image., Sends label images to a Brother QL printer.      connection_string:       - Netw (+70 more)
 
 ### Community 4 - "Community 4"
-Cohesion: 0.06
-Nodes (34): AttendanceRecordAdmin, CheckInConfigurationAdmin, CheckInWindowAdmin, CheckInWindowInline, CheckInConfigurationForm, CheckInSelectionForm, CheckInWindowForm, KioskLookupForm (+26 more)
+Cohesion: 0.04
+Nodes (48): AttendanceRecordAdmin, CheckInConfigurationAdmin, CheckInWindowAdmin, CheckInWindowInline, CheckInConfigurationForm, CheckInSelectionForm, CheckInWindowForm, KioskLookupForm (+40 more)
 
 ### Community 5 - "Community 5"
-Cohesion: 0.05
-Nodes (31): HouseholdForm, HouseholdMembershipForm, HouseholdQuickCreateForm, Meta, formatted_address(), Household, HouseholdMember, Meta (+23 more)
+Cohesion: 0.07
+Nodes (35): EventAdmin, EventOccurrenceInline, EventPhotoInline, EventRegistrationAdmin, EventRegistrationAttendeeInline, ReleaseDocumentAdmin, EventForm, EventOccurrenceForm (+27 more)
 
 ### Community 6 - "Community 6"
+Cohesion: 0.04
+Nodes (21): GroupDeleteViewTests, GroupDetailViewTests, GroupEditViewTests, GroupMemberAddTests, GroupMemberRemoveTests, GroupMemberSearchTests, make_staff_user(), HouseholdForm (+13 more)
+
+### Community 7 - "Community 7"
 Cohesion: 0.05
 Nodes (70): Check-In Configuration Form Template, Check-In Configuration List Template, Attendance Kiosk Confirmation Template, Attendance Kiosk Family Select Template, Attendance Kiosk Lookup Template, Attendance Kiosk Unlock (PIN) Template, Attendee-to-Person Matching Queue Concept, Attendee Model (+62 more)
 
-### Community 7 - "Community 7"
-Cohesion: 0.06
-Nodes (29): LabelGenerator, Label Generator Service  Generates label images as PNG that can be printed on, Generate a parent claim tag as PNG.          Args:             checkin: Check, Generate label images that work with any thermal printer., Generate an allergy alert label as PNG.          Args:             checkin: C, Generate a visitor badge as PNG.          Args:             name: Visitor's n, Convert PIL Image to PNG bytes., Convert label bytes back to PIL Image for preview.          Args: (+21 more)
-
 ### Community 8 - "Community 8"
-Cohesion: 0.06
-Nodes (26): ABC, BasePrinterAdapter, BasePrinterAdapter, is_available(), print_image(), Base Printer Adapter  Abstract base class for all printer adapters., Base class for printer adapters., Initialize the printer adapter.          Args:             connection_string: (+18 more)
-
-### Community 9 - "Community 9"
 Cohesion: 0.07
 Nodes (48): AnchorPoint TODO List, Attendance Module (Legacy, Deprecated), BolivarSocialAccountAdapter (Custom OAuth Adapter), @checkin_admin_required Permission Decorator, CheckInConfiguration Model (Schedule + Eligibility + Rooms), Check-In Kiosk System (Tablet + Thermal Printer), CheckIn Module (Kiosk Check-In System), Check-In System Plan Document (+40 more)
 
-### Community 10 - "Community 10"
+### Community 9 - "Community 9"
 Cohesion: 0.07
-Nodes (7): GroupDeleteViewTests, GroupDetailViewTests, GroupEditViewTests, GroupMemberAddTests, GroupMemberRemoveTests, GroupMemberSearchTests, make_staff_user()
+Nodes (20): Meta, PersonForm, age(), formatted_address(), is_minor(), normalize_phone(), Strip all non-digit characters from a phone number., PeopleDetailCommunicationTests (+12 more)
+
+### Community 10 - "Community 10"
+Cohesion: 0.08
+Nodes (20): ABC, BasePrinterAdapter, BasePrinterAdapter, is_available(), print_image(), Base Printer Adapter  Abstract base class for all printer adapters., Base class for printer adapters., Initialize the printer adapter.          Args:             connection_string: (+12 more)
 
 ### Community 11 - "Community 11"
 Cohesion: 0.1
 Nodes (23): admin_required(), checkin_admin_required(), communications_required(), _get_user_profile(), has_communications_access(), is_admin(), is_checkin_admin(), is_staff_or_above() (+15 more)
 
 ### Community 12 - "Community 12"
+Cohesion: 0.16
+Nodes (25): _apply_contact_data(), create_person_from_attendee(), enroll_person_in_event_group(), ensure_event_group(), _ensure_household(), _ensure_person(), link_guardian_household(), manually_assign_attendee() (+17 more)
+
+### Community 13 - "Community 13"
 Cohesion: 0.07
 Nodes (10): AppConfig, AttendanceConfig, CheckinConfig, CoreConfig, EventsConfig, GroupsConfig, HouseholdsConfig, MessagingConfig (+2 more)
 
-### Community 13 - "Community 13"
+### Community 14 - "Community 14"
 Cohesion: 0.11
 Nodes (24): AnchorPoint CLAUDE.md Developer Guide, Project Context Document, AnchorPoint Deployment Guide, AnchorPoint Church Management System, Cloudflare Tunnel, Django 5.2 Framework, Django REST Framework, Docker Compose Deployment (+16 more)
-
-### Community 14 - "Community 14"
-Cohesion: 0.16
-Nodes (4): GoogleAuthCallbackTests, Return a patch context that makes verify_oauth2_token return a valid payload., Return a patch context that makes verify_oauth2_token return a valid payload., UserCreateViewEmailTests
 
 ### Community 15 - "Community 15"
 Cohesion: 0.17
@@ -181,44 +182,40 @@ Cohesion: 0.18
 Nodes (18): Base HTML Template, Kiosk PIN Security, OrganizationSettings Model, PhoneBlast Model, ReleaseDocument Model, Release Document Library, SMS Blackout Window, SmsMessage Model (+10 more)
 
 ### Community 18 - "Community 18"
-Cohesion: 0.2
-Nodes (8): GroupForm, Meta, group_create(), group_edit(), group_list(), group_member_add(), group_member_remove(), _render_member_list()
-
-### Community 19 - "Community 19"
 Cohesion: 0.29
 Nodes (11): Event Model, Jingle Jam Christmas Celebration Event, Registration Model, Jingle Jam Christmas Event Photo, Email Base Template, Registration Confirmation Email (HTML), Registration Confirmation Email (Text), Staff New Registration Notification (HTML) (+3 more)
 
-### Community 20 - "Community 20"
+### Community 19 - "Community 19"
 Cohesion: 0.31
 Nodes (5): BaseCommand, Command, generate_password(), Management command to create beta test users for AnchorPoint.  Usage:     pyt, Generate a secure random password.
 
-### Community 21 - "Community 21"
+### Community 20 - "Community 20"
 Cohesion: 0.33
 Nodes (7): Migration, normalize_phone(), populate_normalized_phone(), Backfill normalized_phone for all existing Person records., Clear normalized_phone (reverse migration)., Strip all non-digit characters from a phone number., reverse_populate()
 
-### Community 22 - "Community 22"
+### Community 21 - "Community 21"
 Cohesion: 0.5
 Nodes (3): health_check(), URL configuration for anchorpoint project.  The `urlpatterns` list routes URLs, Simple health check endpoint for Docker/load balancer.
 
 ## Knowledge Gaps
-- **203 isolated node(s):** `Run administrative tasks.`, `Simple health check endpoint for Docker/load balancer.`, `Dynamic form for selecting family members and rooms at check-in.`, `Return list of (person_id, room_id) for selected members.`, `Generate a 4-character random alphanumeric security code.` (+198 more)
+- **246 isolated node(s):** `Run administrative tasks.`, `Simple health check endpoint for Docker/load balancer.`, `Dynamic form for selecting family members and rooms at check-in.`, `Return list of (person_id, room_id) for selected members.`, `Generate a 4-character random alphanumeric security code.` (+241 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **38 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **40 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `Person` connect `Community 2` to `Community 0`, `Community 1`, `Community 3`, `Community 4`, `Community 5`, `Community 10`, `Community 11`, `Community 14`, `Community 15`, `Community 23`?**
-  _High betweenness centrality (0.182) - this node is a cross-community bridge._
-- **Why does `OrganizationSettings` connect `Community 1` to `Community 3`, `Community 4`, `Community 5`?**
-  _High betweenness centrality (0.035) - this node is a cross-community bridge._
-- **Why does `CheckInConfiguration` connect `Community 0` to `Community 2`, `Community 5`, `Community 15`?**
-  _High betweenness centrality (0.032) - this node is a cross-community bridge._
-- **Are the 66 inferred relationships involving `Person` (e.g. with `CheckInConfiguration` and `Meta`) actually correct?**
-  _`Person` has 66 INFERRED edges - model-reasoned connections that need verification._
+- **Why does `Person` connect `Community 5` to `Community 0`, `Community 1`, `Community 2`, `Community 3`, `Community 4`, `Community 6`, `Community 9`, `Community 11`, `Community 15`?**
+  _High betweenness centrality (0.264) - this node is a cross-community bridge._
+- **Why does `ESCPOSAdapter` connect `Community 3` to `Community 10`?**
+  _High betweenness centrality (0.045) - this node is a cross-community bridge._
+- **Why does `LabelGeneratorTests` connect `Community 3` to `Community 0`, `Community 5`?**
+  _High betweenness centrality (0.038) - this node is a cross-community bridge._
+- **Are the 71 inferred relationships involving `Person` (e.g. with `CheckInConfiguration` and `Meta`) actually correct?**
+  _`Person` has 71 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 34 inferred relationships involving `Event` (e.g. with `OrganizationSettingsFormTests` and `ManageRolesViewTests`) actually correct?**
   _`Event` has 34 INFERRED edges - model-reasoned connections that need verification._
+- **Are the 30 inferred relationships involving `Room` (e.g. with `CheckInConfigurationAdmin` and `CheckInWindowAdmin`) actually correct?**
+  _`Room` has 30 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 34 inferred relationships involving `EventRegistration` (e.g. with `OrganizationSettingsFormTests` and `ManageRolesViewTests`) actually correct?**
   _`EventRegistration` has 34 INFERRED edges - model-reasoned connections that need verification._
-- **Are the 34 inferred relationships involving `Group` (e.g. with `EligibilityTests` and `GroupMembershipInline`) actually correct?**
-  _`Group` has 34 INFERRED edges - model-reasoned connections that need verification._
