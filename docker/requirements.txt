@@ -12,5 +12,5 @@ whitenoise==6.8.2
 google-auth==2.40.1
 requests==2.33.1
 
-brother_ql==0.11.0
+brother_ql==0.9.4
 python-escpos==3.1
