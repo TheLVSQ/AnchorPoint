@@ -355,7 +355,10 @@ def user_edit(request, user_id):
     if request.method == "POST":
         form = EditUserForm(request.POST, instance=target_user)
         if form.is_valid():
-            form.save()
+            user = form.save(commit=False)
+            # Keep username in sync with email (email is the login identifier)
+            user.username = form.cleaned_data["email"]
+            user.save()
             profile.role = form.cleaned_data["role"]
             profile.can_manage_communications = form.cleaned_data.get("can_manage_communications", False)
             profile.save(update_fields=["role", "can_manage_communications"])
