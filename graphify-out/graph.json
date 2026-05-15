@@ -4447,7 +4447,7 @@
       "label": "user_set_password()",
       "file_type": "code",
       "source_file": "anchorpoint\\core\\views.py",
-      "source_location": "L375",
+      "source_location": "L378",
       "id": "core_views_user_set_password",
       "community": 2,
       "norm_label": "user_set_password()"
