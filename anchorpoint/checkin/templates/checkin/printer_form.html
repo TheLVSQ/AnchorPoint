@@ -15,38 +15,38 @@
             {{ form.name.label_tag }}
             {{ form.name }}
             <p class="stat-hint">A friendly name for this printer</p>
+            {% for e in form.name.errors %}<span class="error-text">{{ e }}</span>{% endfor %}
         </div>
 
         <div class="form-field">
             {{ form.printer_type.label_tag }}
             {{ form.printer_type }}
+            <p class="stat-hint">Select the protocol your printer uses</p>
+            {% for e in form.printer_type.errors %}<span class="error-text">{{ e }}</span>{% endfor %}
         </div>
 
         <div class="form-field">
-            {{ form.connection_string.label_tag }}
-            {{ form.connection_string }}
-            <p class="stat-hint">{{ form.connection_string.help_text }}</p>
+            {{ form.ql_model.label_tag }}
+            {{ form.ql_model }}
+            <p class="stat-hint">Required for Brother QL printers</p>
+            {% for e in form.ql_model.errors %}<span class="error-text">{{ e }}</span>{% endfor %}
         </div>
 
-        <h3 style="margin: 1.5rem 0 1rem;">Label Settings</h3>
+        <h3 style="margin: 1.5rem 0 1rem;">Connection</h3>
 
         <div class="form-grid">
             <div class="form-field">
-                {{ form.label_width_mm.label_tag }}
-                {{ form.label_width_mm }}
-                <p class="stat-hint">Common: 62mm (Brother), 58mm, 80mm</p>
+                {{ form.host.label_tag }}
+                {{ form.host }}
+                <p class="stat-hint">e.g. 192.168.1.100 or /dev/usb/lp0</p>
+                {% for e in form.host.errors %}<span class="error-text">{{ e }}</span>{% endfor %}
             </div>
             <div class="form-field">
-                {{ form.label_height_mm.label_tag }}
-                {{ form.label_height_mm }}
-                <p class="stat-hint">Leave blank for continuous roll</p>
+                {{ form.port.label_tag }}
+                {{ form.port }}
+                <p class="stat-hint">Default: 9100 for network printers</p>
+                {% for e in form.port.errors %}<span class="error-text">{{ e }}</span>{% endfor %}
             </div>
-        </div>
-
-        <div class="form-field">
-            {{ form.dpi.label_tag }}
-            {{ form.dpi }}
-            <p class="stat-hint">Usually 203 for thermal printers, 300 for higher-end models</p>
         </div>
 
         <div class="form-grid">
