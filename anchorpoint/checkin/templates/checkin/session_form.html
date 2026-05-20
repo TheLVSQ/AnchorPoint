@@ -52,14 +52,7 @@
 
         <div class="form-field">
             {{ form.rooms.label_tag }}
-            <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem;">
-                {% for room in form.rooms %}
-                    <label style="display: flex; align-items: center; gap: 0.25rem; padding: 0.5rem; background: var(--gray-100); border-radius: 4px;">
-                        {{ room.tag }}
-                        {{ room.choice_label }}
-                    </label>
-                {% endfor %}
-            </div>
+            {{ form.rooms }}
             <p class="stat-hint" style="margin-top: 0.5rem;">
                 <a href="{% url 'checkin:room_list' %}">Manage rooms</a>
             </p>

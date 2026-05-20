@@ -83,7 +83,7 @@
             font-weight: 500;
         }
 
-        input {
+        input:not([type="checkbox"]):not([type="radio"]) {
             width: 100%;
             padding: 0.9rem 1rem;
             margin-bottom: 1rem;
@@ -94,10 +94,19 @@
             transition: border-color 0.2s ease, box-shadow 0.2s ease;
         }
 
-        input:focus {
+        input:not([type="checkbox"]):not([type="radio"]):focus {
             outline: none;
             border-color: rgba(37, 99, 235, 0.5);
             box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+        }
+
+        input[type="checkbox"],
+        input[type="radio"] {
+            width: 18px;
+            height: 18px;
+            margin: 0;
+            cursor: pointer;
+            accent-color: var(--primary);
         }
 
         button {
@@ -944,11 +953,31 @@
             align-items: center;
             gap: 0.5rem;
             font-weight: 600;
+            color: var(--text);
         }
 
-        .checkbox-field input[type="checkbox"] {
-            width: auto;
-            margin: 0;
+        /* Django CheckboxSelectMultiple widget */
+        ul#id_rooms,
+        ul#id_groups,
+        .checkbox-select-list {
+            list-style: none;
+            padding: 0;
+            margin: 0.5rem 0 0;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        ul#id_rooms li label,
+        ul#id_groups li label,
+        .checkbox-select-list li label {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 500;
+            color: var(--text);
+            cursor: pointer;
+            padding: 0.4rem 0;
         }
 
         .help-text {
