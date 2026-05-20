@@ -18,7 +18,7 @@ class SessionManagerTests(TestCase):
         self.window = CheckInWindow.objects.create(
             configuration=self.config,
             schedule_type=CheckInWindow.TYPE_WEEKLY,
-            day_of_week=now.weekday(),
+            day_of_week=(now.weekday() + 1) % 7,
             checkin_opens=(now - timedelta(hours=1)).time(),
             event_starts=now.time(),
             checkin_closes=(now + timedelta(hours=1)).time(),
