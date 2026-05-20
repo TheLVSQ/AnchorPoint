@@ -147,6 +147,11 @@ class CheckInWindow(models.Model):
         if self.event_starts and self.event_ends and self.event_starts >= self.event_ends:
             raise ValidationError("Event end time must be after event start time.")
 
+    @staticmethod
+    def _sunday_weekday(dt):
+        """Convert Python weekday (Mon=0..Sun=6) to Sunday-first (Sun=0..Sat=6)."""
+        return (dt.weekday() + 1) % 7
+
     def is_checkin_open(self, reference_time=None):
         now = reference_time or timezone.localtime()
         current_time = now.time()
@@ -154,7 +159,7 @@ class CheckInWindow(models.Model):
             if not self.specific_date or self.specific_date != now.date():
                 return False
         else:
-            if self.day_of_week is None or self.day_of_week != now.weekday():
+            if self.day_of_week is None or self.day_of_week != self._sunday_weekday(now):
                 return False
         return self.checkin_opens <= current_time <= self.checkin_closes
 
