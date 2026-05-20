@@ -12,6 +12,16 @@
         {% csrf_token %}
 
         <div class="form-field">
+            <label for="{{ form.configuration.id_for_label }}">Configuration</label>
+            {{ form.configuration }}
+            <p class="stat-hint">
+                Age, grade, and group eligibility filters are set on the configuration.
+                <a href="{% url 'checkin:configuration_list' %}">Manage configurations</a>
+            </p>
+            {% for error in form.configuration.errors %}<span class="error-text">{{ error }}</span>{% endfor %}
+        </div>
+
+        <div class="form-field">
             {{ form.name.label_tag }}
             {{ form.name }}
             {% for error in form.name.errors %}<span class="error-text">{{ error }}</span>{% endfor %}
@@ -55,10 +65,10 @@
             </p>
         </div>
 
-        <div class="form-field">
-            <label style="display: flex; align-items: center; gap: 0.5rem;">
+        <div class="checkbox-field" style="margin-top: 0.5rem;">
+            <label>
                 {{ form.is_active }}
-                Active (available for check-in)
+                Active — this session is available for check-in
             </label>
         </div>
 
