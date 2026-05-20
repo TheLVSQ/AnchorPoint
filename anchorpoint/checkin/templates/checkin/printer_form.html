@@ -49,17 +49,17 @@
             </div>
         </div>
 
-        <div class="form-grid">
-            <div class="form-field">
-                <label style="display: flex; align-items: center; gap: 0.5rem;">
+        <div style="display: flex; flex-wrap: wrap; gap: 1rem 2rem; margin-top: 0.5rem;">
+            <div class="checkbox-field">
+                <label>
                     {{ form.is_default }}
-                    Default printer
+                    Default printer — use for all check-in labels
                 </label>
             </div>
-            <div class="form-field">
-                <label style="display: flex; align-items: center; gap: 0.5rem;">
+            <div class="checkbox-field">
+                <label>
                     {{ form.is_active }}
-                    Active
+                    Active — printer is available for use
                 </label>
             </div>
         </div>

@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
 
-<a class="ghost-link" href="{% url 'checkin:dashboard' %}">&larr; Back to Dashboard</a>
+<a class="ghost-link" href="{% url 'checkin:dashboard' %}">&larr; Back to Check-In Dashboard</a>
 
 <div class="page-header">
     <h1>Printers</h1>
@@ -18,8 +18,8 @@
             <div class="list-item">
                 <div>
                     <strong>{{ printer.name }}</strong>
-                    <span>{{ printer.get_printer_type_display }}</span>
-                    <p class="stat-hint">{{ printer.connection_string }}</p>
+                    <span>{{ printer.get_printer_type_display|default:"No type set" }}</span>
+                    <p class="stat-hint">{{ printer.host }}{% if printer.port %}:{{ printer.port }}{% endif %}</p>
                 </div>
                 <div style="display: flex; gap: 0.5rem; align-items: center;">
                     {% if printer.is_default %}
