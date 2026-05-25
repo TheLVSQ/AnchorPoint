@@ -12,7 +12,7 @@ from households.forms import (
     HouseholdMembershipForm,
     HouseholdQuickCreateForm,
 )
-from households.models import HouseholdMember
+from households.models import Household, HouseholdMember
 from .models import Person
 from .forms import PersonForm
 
@@ -43,12 +43,65 @@ def people_add(request):
         form = PersonForm(request.POST, request.FILES)
         if form.is_valid():
             person = form.save()
-            messages.success(request, "Person added successfully!")
+
+            # Handle household assignment
+            household_action = request.POST.get("household_action", "skip")
+            relationship_type = request.POST.get(
+                "household_relationship", "adult"
+            )
+
+            if household_action == "existing":
+                household_id = request.POST.get("household_id")
+                if household_id:
+                    try:
+                        household = Household.objects.get(pk=household_id)
+                        HouseholdMember.objects.create(
+                            household=household,
+                            person=person,
+                            relationship_type=relationship_type,
+                        )
+                        messages.success(
+                            request,
+                            f"Person added and linked to {household.name}.",
+                        )
+                    except (Household.DoesNotExist, IntegrityError):
+                        messages.success(
+                            request,
+                            "Person added, but could not link to household.",
+                        )
+                else:
+                    messages.success(request, "Person added successfully!")
+
+            elif household_action == "new":
+                household_name = request.POST.get(
+                    "new_household_name", ""
+                ).strip()
+                if not household_name:
+                    household_name = f"{person.last_name} Family"
+                household = Household.objects.create(
+                    name=household_name, primary_adult=person
+                )
+                HouseholdMember.objects.create(
+                    household=household,
+                    person=person,
+                    relationship_type=relationship_type,
+                )
+                messages.success(
+                    request,
+                    f"Person added and {household.name} household created.",
+                )
+            else:
+                messages.success(request, "Person added successfully!")
+
             return redirect("people_detail", pk=person.pk)
     else:
         form = PersonForm()
 
-    return render(request, "people/people_form.html", {"form": form})
+    households = Household.objects.all().order_by("name")
+    return render(request, "people/people_form.html", {
+        "form": form,
+        "households": households,
+    })
 
 
 @staff_required
@@ -153,6 +206,72 @@ def people_household_remove(request, pk, household_pk):
         membership.delete()
         messages.success(request, "Removed from family.")
     return redirect("people_detail", pk=pk)
+
+
+@staff_required
+def people_household_move(request, pk, household_pk):
+    """Move or copy a person from one household to another."""
+    person = get_object_or_404(Person, pk=pk)
+    source_membership = get_object_or_404(
+        HouseholdMember, person=person, household_id=household_pk
+    )
+
+    if request.method == "POST":
+        target_household_id = request.POST.get("target_household")
+        action = request.POST.get("move_action", "move")  # "move" or "copy"
+        relationship_type = request.POST.get(
+            "relationship_type", source_membership.relationship_type
+        )
+
+        if not target_household_id:
+            messages.error(request, "Please select a target household.")
+            return redirect("people_detail", pk=pk)
+
+        try:
+            target_household = Household.objects.get(pk=target_household_id)
+        except Household.DoesNotExist:
+            messages.error(request, "Target household not found.")
+            return redirect("people_detail", pk=pk)
+
+        # Create membership in target household
+        try:
+            HouseholdMember.objects.create(
+                household=target_household,
+                person=person,
+                relationship_type=relationship_type,
+            )
+        except IntegrityError:
+            messages.warning(
+                request,
+                f"{person} is already in {target_household.name}.",
+            )
+            return redirect("people_detail", pk=pk)
+
+        # Remove from source if "move" (not "copy")
+        if action == "move":
+            source_membership.delete()
+            messages.success(
+                request,
+                f"Moved {person} from {source_membership.household.name} "
+                f"to {target_household.name}.",
+            )
+        else:
+            messages.success(
+                request,
+                f"Added {person} to {target_household.name} "
+                f"(kept in {source_membership.household.name}).",
+            )
+
+        return redirect("people_detail", pk=pk)
+
+    # GET: show the move form
+    other_households = Household.objects.exclude(pk=household_pk).order_by("name")
+    return render(request, "people/people_household_move.html", {
+        "person": person,
+        "source_membership": source_membership,
+        "other_households": other_households,
+        "relationship_choices": HouseholdMember.RelationshipType.choices,
+    })
 
 
 @staff_required
