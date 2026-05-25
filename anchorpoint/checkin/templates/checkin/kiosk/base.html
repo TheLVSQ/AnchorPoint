@@ -86,11 +86,21 @@
     }
     .error-text { color: #f87171; font-size: 14px; margin-top: 4px; }
 
+    /* Hide print labels on screen */
+    .print-labels { display: none; }
+
     /* Print styles */
     @media print {
       body * { visibility: hidden; }
-      .print-labels, .print-labels * { visibility: visible; }
-      .print-labels { position: fixed; left: 0; top: 0; }
+      .print-labels {
+        display: block !important;
+        visibility: visible;
+        position: fixed;
+        left: 0;
+        top: 0;
+        width: 100%;
+      }
+      .print-labels * { visibility: visible; }
       @page {
         size: 62mm auto;
         margin: 0;
