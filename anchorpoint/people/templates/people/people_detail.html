@@ -171,10 +171,13 @@
                                 {% endfor %}
                             </ul>
                         </div>
-                        <form method="POST" action="{% url 'people_household_remove' person.pk household.pk %}">
-                            {% csrf_token %}
-                            <button type="submit" class="btn ghost danger">Remove</button>
-                        </form>
+                        <div class="household-actions">
+                            <a class="btn ghost" href="{% url 'people_household_move' person.pk household.pk %}">Move</a>
+                            <form method="POST" action="{% url 'people_household_remove' person.pk household.pk %}">
+                                {% csrf_token %}
+                                <button type="submit" class="btn ghost danger">Remove</button>
+                            </form>
+                        </div>
                     </div>
                 {% endfor %}
             </div>

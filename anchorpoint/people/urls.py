@@ -23,4 +23,9 @@ urlpatterns = [
         views.people_household_remove,
         name="people_household_remove",
     ),
+    path(
+        "<int:pk>/households/<int:household_pk>/move/",
+        views.people_household_move,
+        name="people_household_move",
+    ),
 ]
