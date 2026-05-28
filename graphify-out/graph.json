@@ -14872,9 +14872,9 @@
       "source_file": "anchorpoint\\anchorpoint\\urls.py",
       "source_location": "L31",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "anchorpoint_urls_rationale_31",
-      "target": "anchorpoint_urls_health_check",
-      "confidence_score": 1.0
+      "target": "anchorpoint_urls_health_check"
     },
     {
       "relation": "rationale_for",
@@ -14932,9 +14932,9 @@
       "source_file": "anchorpoint\\api\\apps.py",
       "source_location": "L4",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "anchorpoint_api_apps_py",
-      "target": "api_apps_apiconfig",
-      "confidence_score": 1.0
+      "target": "api_apps_apiconfig"
     },
     {
       "relation": "inherits",
@@ -14942,9 +14942,9 @@
       "source_file": "anchorpoint\\api\\apps.py",
       "source_location": "L4",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "api_apps_apiconfig",
-      "target": "appconfig",
-      "confidence_score": 1.0
+      "target": "appconfig"
     },
     {
       "relation": "inherits",
@@ -15042,9 +15042,9 @@
       "source_file": "anchorpoint\\api\\exceptions.py",
       "source_location": "L4",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "anchorpoint_api_exceptions_py",
-      "target": "api_exceptions_custom_exception_handler",
-      "confidence_score": 1.0
+      "target": "api_exceptions_custom_exception_handler"
     },
     {
       "relation": "contains",
@@ -15052,9 +15052,9 @@
       "source_file": "anchorpoint\\api\\pagination.py",
       "source_location": "L4",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "anchorpoint_api_pagination_py",
-      "target": "api_pagination_defaultpagenumberpagination",
-      "confidence_score": 1.0
+      "target": "api_pagination_defaultpagenumberpagination"
     },
     {
       "relation": "inherits",
@@ -15062,9 +15062,9 @@
       "source_file": "anchorpoint\\api\\pagination.py",
       "source_location": "L4",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "api_pagination_defaultpagenumberpagination",
-      "target": "pagenumberpagination",
-      "confidence_score": 1.0
+      "target": "pagenumberpagination"
     },
     {
       "relation": "contains",
@@ -15072,9 +15072,9 @@
       "source_file": "anchorpoint\\api\\permissions.py",
       "source_location": "L6",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "anchorpoint_api_permissions_py",
-      "target": "api_permissions_isstafforadmin",
-      "confidence_score": 1.0
+      "target": "api_permissions_isstafforadmin"
     },
     {
       "relation": "contains",
@@ -15082,9 +15082,9 @@
       "source_file": "anchorpoint\\api\\permissions.py",
       "source_location": "L22",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "anchorpoint_api_permissions_py",
-      "target": "api_permissions_isadminuserprofile",
-      "confidence_score": 1.0
+      "target": "api_permissions_isadminuserprofile"
     },
     {
       "relation": "imports_from",
@@ -15093,9 +15093,9 @@
       "source_file": "anchorpoint\\api\\viewsets.py",
       "source_location": "L12",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "anchorpoint_api_viewsets_py",
-      "target": "anchorpoint_api_permissions_py",
-      "confidence_score": 1.0
+      "target": "anchorpoint_api_permissions_py"
     },
     {
       "relation": "inherits",
@@ -15103,9 +15103,9 @@
       "source_file": "anchorpoint\\api\\permissions.py",
       "source_location": "L6",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "api_permissions_isstafforadmin",
-      "target": "basepermission",
-      "confidence_score": 1.0
+      "target": "basepermission"
     },
     {
       "relation": "method",
@@ -15113,9 +15113,9 @@
       "source_file": "anchorpoint\\api\\permissions.py",
       "source_location": "L9",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "api_permissions_isstafforadmin",
-      "target": "api_permissions_isstafforadmin_has_permission",
-      "confidence_score": 1.0
+      "target": "api_permissions_isstafforadmin_has_permission"
     },
     {
       "relation": "uses",
@@ -15123,9 +15123,9 @@
       "source_file": "anchorpoint\\api\\permissions.py",
       "source_location": "L3",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_permissions_isstafforadmin",
-      "target": "core_models_userprofile",
-      "confidence_score": 0.5
+      "target": "core_models_userprofile"
     },
     {
       "relation": "uses",
@@ -15133,9 +15133,9 @@
       "source_file": "anchorpoint\\api\\viewsets.py",
       "source_location": "L12",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_viewsets_personviewset",
-      "target": "api_permissions_isstafforadmin",
-      "confidence_score": 0.5
+      "target": "api_permissions_isstafforadmin"
     },
     {
       "relation": "uses",
@@ -15143,9 +15143,9 @@
       "source_file": "anchorpoint\\api\\viewsets.py",
       "source_location": "L12",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_viewsets_householdviewset",
-      "target": "api_permissions_isstafforadmin",
-      "confidence_score": 0.5
+      "target": "api_permissions_isstafforadmin"
     },
     {
       "relation": "uses",
@@ -15153,9 +15153,9 @@
       "source_file": "anchorpoint\\api\\viewsets.py",
       "source_location": "L12",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_viewsets_groupviewset",
-      "target": "api_permissions_isstafforadmin",
-      "confidence_score": 0.5
+      "target": "api_permissions_isstafforadmin"
     },
     {
       "relation": "uses",
@@ -15163,9 +15163,9 @@
       "source_file": "anchorpoint\\api\\viewsets.py",
       "source_location": "L12",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_viewsets_eventviewset",
-      "target": "api_permissions_isstafforadmin",
-      "confidence_score": 0.5
+      "target": "api_permissions_isstafforadmin"
     },
     {
       "relation": "uses",
@@ -15173,9 +15173,9 @@
       "source_file": "anchorpoint\\api\\viewsets.py",
       "source_location": "L12",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_viewsets_checkinsessionviewset",
-      "target": "api_permissions_isstafforadmin",
-      "confidence_score": 0.5
+      "target": "api_permissions_isstafforadmin"
     },
     {
       "relation": "calls",
@@ -15194,9 +15194,9 @@
       "source_file": "anchorpoint\\api\\permissions.py",
       "source_location": "L22",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "api_permissions_isadminuserprofile",
-      "target": "basepermission",
-      "confidence_score": 1.0
+      "target": "basepermission"
     },
     {
       "relation": "method",
@@ -15204,9 +15204,9 @@
       "source_file": "anchorpoint\\api\\permissions.py",
       "source_location": "L25",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "api_permissions_isadminuserprofile",
-      "target": "api_permissions_isadminuserprofile_has_permission",
-      "confidence_score": 1.0
+      "target": "api_permissions_isadminuserprofile_has_permission"
     },
     {
       "relation": "uses",
@@ -15214,9 +15214,9 @@
       "source_file": "anchorpoint\\api\\permissions.py",
       "source_location": "L3",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_permissions_isadminuserprofile",
-      "target": "core_models_userprofile",
-      "confidence_score": 0.5
+      "target": "core_models_userprofile"
     },
     {
       "relation": "contains",
@@ -15224,9 +15224,9 @@
       "source_file": "anchorpoint\\api\\serializers.py",
       "source_location": "L10",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "anchorpoint_api_serializers_py",
-      "target": "api_serializers_personserializer",
-      "confidence_score": 1.0
+      "target": "api_serializers_personserializer"
     },
     {
       "relation": "contains",
@@ -15234,9 +15234,9 @@
       "source_file": "anchorpoint\\api\\serializers.py",
       "source_location": "L181",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "anchorpoint_api_serializers_py",
-      "target": "api_serializers_meta",
-      "confidence_score": 1.0
+      "target": "api_serializers_meta"
     },
     {
       "relation": "contains",
@@ -15244,9 +15244,9 @@
       "source_file": "anchorpoint\\api\\serializers.py",
       "source_location": "L39",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "anchorpoint_api_serializers_py",
-      "target": "api_serializers_householdmemberserializer",
-      "confidence_score": 1.0
+      "target": "api_serializers_householdmemberserializer"
     },
     {
       "relation": "contains",
@@ -15254,9 +15254,9 @@
       "source_file": "anchorpoint\\api\\serializers.py",
       "source_location": "L56",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "anchorpoint_api_serializers_py",
-      "target": "api_serializers_householdserializer",
-      "confidence_score": 1.0
+      "target": "api_serializers_householdserializer"
     },
     {
       "relation": "contains",
@@ -15264,9 +15264,9 @@
       "source_file": "anchorpoint\\api\\serializers.py",
       "source_location": "L83",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "anchorpoint_api_serializers_py",
-      "target": "api_serializers_groupmembershipserializer",
-      "confidence_score": 1.0
+      "target": "api_serializers_groupmembershipserializer"
     },
     {
       "relation": "contains",
@@ -15274,9 +15274,9 @@
       "source_file": "anchorpoint\\api\\serializers.py",
       "source_location": "L103",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "anchorpoint_api_serializers_py",
-      "target": "api_serializers_groupserializer",
-      "confidence_score": 1.0
+      "target": "api_serializers_groupserializer"
     },
     {
       "relation": "contains",
@@ -15284,9 +15284,9 @@
       "source_file": "anchorpoint\\api\\serializers.py",
       "source_location": "L128",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "anchorpoint_api_serializers_py",
-      "target": "api_serializers_eventoccurrenceserializer",
-      "confidence_score": 1.0
+      "target": "api_serializers_eventoccurrenceserializer"
     },
     {
       "relation": "contains",
@@ -15294,9 +15294,9 @@
       "source_file": "anchorpoint\\api\\serializers.py",
       "source_location": "L134",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "anchorpoint_api_serializers_py",
-      "target": "api_serializers_eventserializer",
-      "confidence_score": 1.0
+      "target": "api_serializers_eventserializer"
     },
     {
       "relation": "contains",
@@ -15304,9 +15304,9 @@
       "source_file": "anchorpoint\\api\\serializers.py",
       "source_location": "L178",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "anchorpoint_api_serializers_py",
-      "target": "api_serializers_checkinsessionserializer",
-      "confidence_score": 1.0
+      "target": "api_serializers_checkinsessionserializer"
     },
     {
       "relation": "imports_from",
@@ -15315,9 +15315,9 @@
       "source_file": "anchorpoint\\api\\viewsets.py",
       "source_location": "L13",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "anchorpoint_api_viewsets_py",
-      "target": "anchorpoint_api_serializers_py",
-      "confidence_score": 1.0
+      "target": "anchorpoint_api_serializers_py"
     },
     {
       "relation": "uses",
@@ -15325,9 +15325,9 @@
       "source_file": "anchorpoint\\api\\serializers.py",
       "source_location": "L3",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_serializers_personserializer",
-      "target": "checkin_models_checkinsession",
-      "confidence_score": 0.5
+      "target": "checkin_models_checkinsession"
     },
     {
       "relation": "uses",
@@ -15335,9 +15335,9 @@
       "source_file": "anchorpoint\\api\\serializers.py",
       "source_location": "L4",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_serializers_personserializer",
-      "target": "events_models_event",
-      "confidence_score": 0.5
+      "target": "events_models_event"
     },
     {
       "relation": "uses",
@@ -15345,9 +15345,9 @@
       "source_file": "anchorpoint\\api\\serializers.py",
       "source_location": "L4",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_serializers_personserializer",
-      "target": "events_models_eventoccurrence",
-      "confidence_score": 0.5
+      "target": "events_models_eventoccurrence"
     },
     {
       "relation": "uses",
@@ -15355,9 +15355,9 @@
       "source_file": "anchorpoint\\api\\serializers.py",
       "source_location": "L5",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_serializers_personserializer",
-      "target": "groups_models_group",
-      "confidence_score": 0.5
+      "target": "groups_models_group"
     },
     {
       "relation": "uses",
@@ -15365,9 +15365,9 @@
       "source_file": "anchorpoint\\api\\serializers.py",
       "source_location": "L5",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_serializers_personserializer",
-      "target": "groups_models_groupmembership",
-      "confidence_score": 0.5
+      "target": "groups_models_groupmembership"
     },
     {
       "relation": "uses",
@@ -15375,9 +15375,9 @@
       "source_file": "anchorpoint\\api\\serializers.py",
       "source_location": "L6",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_serializers_personserializer",
-      "target": "households_models_household",
-      "confidence_score": 0.5
+      "target": "households_models_household"
     },
     {
       "relation": "uses",
@@ -15385,9 +15385,9 @@
       "source_file": "anchorpoint\\api\\serializers.py",
       "source_location": "L6",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_serializers_personserializer",
-      "target": "households_models_householdmember",
-      "confidence_score": 0.5
+      "target": "households_models_householdmember"
     },
     {
       "relation": "uses",
@@ -15395,9 +15395,9 @@
       "source_file": "anchorpoint\\api\\serializers.py",
       "source_location": "L7",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_serializers_personserializer",
-      "target": "people_models_person",
-      "confidence_score": 0.5
+      "target": "people_models_person"
     },
     {
       "relation": "uses",
@@ -15405,9 +15405,9 @@
       "source_file": "anchorpoint\\api\\viewsets.py",
       "source_location": "L13",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_viewsets_personviewset",
-      "target": "api_serializers_personserializer",
-      "confidence_score": 0.5
+      "target": "api_serializers_personserializer"
     },
     {
       "relation": "uses",
@@ -15415,9 +15415,9 @@
       "source_file": "anchorpoint\\api\\viewsets.py",
       "source_location": "L13",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_viewsets_householdviewset",
-      "target": "api_serializers_personserializer",
-      "confidence_score": 0.5
+      "target": "api_serializers_personserializer"
     },
     {
       "relation": "uses",
@@ -15425,9 +15425,9 @@
       "source_file": "anchorpoint\\api\\viewsets.py",
       "source_location": "L13",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_viewsets_groupviewset",
-      "target": "api_serializers_personserializer",
-      "confidence_score": 0.5
+      "target": "api_serializers_personserializer"
     },
     {
       "relation": "uses",
@@ -15435,9 +15435,9 @@
       "source_file": "anchorpoint\\api\\viewsets.py",
       "source_location": "L13",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_viewsets_eventviewset",
-      "target": "api_serializers_personserializer",
-      "confidence_score": 0.5
+      "target": "api_serializers_personserializer"
     },
     {
       "relation": "uses",
@@ -15445,9 +15445,9 @@
       "source_file": "anchorpoint\\api\\viewsets.py",
       "source_location": "L13",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_viewsets_checkinsessionviewset",
-      "target": "api_serializers_personserializer",
-      "confidence_score": 0.5
+      "target": "api_serializers_personserializer"
     },
     {
       "relation": "uses",
@@ -15455,9 +15455,9 @@
       "source_file": "anchorpoint\\api\\serializers.py",
       "source_location": "L3",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_serializers_meta",
-      "target": "checkin_models_checkinsession",
-      "confidence_score": 0.5
+      "target": "checkin_models_checkinsession"
     },
     {
       "relation": "uses",
@@ -15465,9 +15465,9 @@
       "source_file": "anchorpoint\\api\\serializers.py",
       "source_location": "L4",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_serializers_meta",
-      "target": "events_models_event",
-      "confidence_score": 0.5
+      "target": "events_models_event"
     },
     {
       "relation": "uses",
@@ -15475,9 +15475,9 @@
       "source_file": "anchorpoint\\api\\serializers.py",
       "source_location": "L4",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_serializers_meta",
-      "target": "events_models_eventoccurrence",
-      "confidence_score": 0.5
+      "target": "events_models_eventoccurrence"
     },
     {
       "relation": "uses",
@@ -15485,9 +15485,9 @@
       "source_file": "anchorpoint\\api\\serializers.py",
       "source_location": "L5",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_serializers_meta",
-      "target": "groups_models_group",
-      "confidence_score": 0.5
+      "target": "groups_models_group"
     },
     {
       "relation": "uses",
@@ -15495,9 +15495,9 @@
       "source_file": "anchorpoint\\api\\serializers.py",
       "source_location": "L5",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_serializers_meta",
-      "target": "groups_models_groupmembership",
-      "confidence_score": 0.5
+      "target": "groups_models_groupmembership"
     },
     {
       "relation": "uses",
@@ -15505,9 +15505,9 @@
       "source_file": "anchorpoint\\api\\serializers.py",
       "source_location": "L6",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_serializers_meta",
-      "target": "households_models_household",
-      "confidence_score": 0.5
+      "target": "households_models_household"
     },
     {
       "relation": "uses",
@@ -15515,9 +15515,9 @@
       "source_file": "anchorpoint\\api\\serializers.py",
       "source_location": "L6",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_serializers_meta",
-      "target": "households_models_householdmember",
-      "confidence_score": 0.5
+      "target": "households_models_householdmember"
     },
     {
       "relation": "uses",
@@ -15525,9 +15525,9 @@
       "source_file": "anchorpoint\\api\\serializers.py",
       "source_location": "L7",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_serializers_meta",
-      "target": "people_models_person",
-      "confidence_score": 0.5
+      "target": "people_models_person"
     },
     {
       "relation": "method",
@@ -15535,9 +15535,9 @@
       "source_file": "anchorpoint\\api\\serializers.py",
       "source_location": "L52",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "api_serializers_householdmemberserializer",
-      "target": "api_serializers_householdmemberserializer_get_person_name",
-      "confidence_score": 1.0
+      "target": "api_serializers_householdmemberserializer_get_person_name"
     },
     {
       "relation": "uses",
@@ -15545,9 +15545,9 @@
       "source_file": "anchorpoint\\api\\serializers.py",
       "source_location": "L3",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_serializers_householdmemberserializer",
-      "target": "checkin_models_checkinsession",
-      "confidence_score": 0.5
+      "target": "checkin_models_checkinsession"
     },
     {
       "relation": "uses",
@@ -15555,9 +15555,9 @@
       "source_file": "anchorpoint\\api\\serializers.py",
       "source_location": "L4",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_serializers_householdmemberserializer",
-      "target": "events_models_event",
-      "confidence_score": 0.5
+      "target": "events_models_event"
     },
     {
       "relation": "uses",
@@ -15565,9 +15565,9 @@
       "source_file": "anchorpoint\\api\\serializers.py",
       "source_location": "L4",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_serializers_householdmemberserializer",
-      "target": "events_models_eventoccurrence",
-      "confidence_score": 0.5
+      "target": "events_models_eventoccurrence"
     },
     {
       "relation": "uses",
@@ -15575,9 +15575,9 @@
       "source_file": "anchorpoint\\api\\serializers.py",
       "source_location": "L5",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_serializers_householdmemberserializer",
-      "target": "groups_models_group",
-      "confidence_score": 0.5
+      "target": "groups_models_group"
     },
     {
       "relation": "uses",
@@ -15585,9 +15585,9 @@
       "source_file": "anchorpoint\\api\\serializers.py",
       "source_location": "L5",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_serializers_householdmemberserializer",
-      "target": "groups_models_groupmembership",
-      "confidence_score": 0.5
+      "target": "groups_models_groupmembership"
     },
     {
       "relation": "uses",
@@ -15595,9 +15595,9 @@
       "source_file": "anchorpoint\\api\\serializers.py",
       "source_location": "L6",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_serializers_householdmemberserializer",
-      "target": "households_models_household",
-      "confidence_score": 0.5
+      "target": "households_models_household"
     },
     {
       "relation": "uses",
@@ -15605,9 +15605,9 @@
       "source_file": "anchorpoint\\api\\serializers.py",
       "source_location": "L6",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_serializers_householdmemberserializer",
-      "target": "households_models_householdmember",
-      "confidence_score": 0.5
+      "target": "households_models_householdmember"
     },
     {
       "relation": "uses",
@@ -15615,9 +15615,9 @@
       "source_file": "anchorpoint\\api\\serializers.py",
       "source_location": "L7",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_serializers_householdmemberserializer",
-      "target": "people_models_person",
-      "confidence_score": 0.5
+      "target": "people_models_person"
     },
     {
       "relation": "uses",
@@ -15625,9 +15625,9 @@
       "source_file": "anchorpoint\\api\\viewsets.py",
       "source_location": "L13",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_viewsets_personviewset",
-      "target": "api_serializers_householdmemberserializer",
-      "confidence_score": 0.5
+      "target": "api_serializers_householdmemberserializer"
     },
     {
       "relation": "uses",
@@ -15635,9 +15635,9 @@
       "source_file": "anchorpoint\\api\\viewsets.py",
       "source_location": "L13",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_viewsets_householdviewset",
-      "target": "api_serializers_householdmemberserializer",
-      "confidence_score": 0.5
+      "target": "api_serializers_householdmemberserializer"
     },
     {
       "relation": "uses",
@@ -15645,9 +15645,9 @@
       "source_file": "anchorpoint\\api\\viewsets.py",
       "source_location": "L13",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_viewsets_groupviewset",
-      "target": "api_serializers_householdmemberserializer",
-      "confidence_score": 0.5
+      "target": "api_serializers_householdmemberserializer"
     },
     {
       "relation": "uses",
@@ -15655,9 +15655,9 @@
       "source_file": "anchorpoint\\api\\viewsets.py",
       "source_location": "L13",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_viewsets_eventviewset",
-      "target": "api_serializers_householdmemberserializer",
-      "confidence_score": 0.5
+      "target": "api_serializers_householdmemberserializer"
     },
     {
       "relation": "uses",
@@ -15665,9 +15665,9 @@
       "source_file": "anchorpoint\\api\\viewsets.py",
       "source_location": "L13",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_viewsets_checkinsessionviewset",
-      "target": "api_serializers_householdmemberserializer",
-      "confidence_score": 0.5
+      "target": "api_serializers_householdmemberserializer"
     },
     {
       "relation": "calls",
@@ -15697,9 +15697,9 @@
       "source_file": "anchorpoint\\api\\serializers.py",
       "source_location": "L76",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "api_serializers_householdserializer",
-      "target": "api_serializers_householdserializer_get_primary_adult_name",
-      "confidence_score": 1.0
+      "target": "api_serializers_householdserializer_get_primary_adult_name"
     },
     {
       "relation": "method",
@@ -15707,9 +15707,9 @@
       "source_file": "anchorpoint\\api\\serializers.py",
       "source_location": "L79",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "api_serializers_householdserializer",
-      "target": "api_serializers_householdserializer_get_member_count",
-      "confidence_score": 1.0
+      "target": "api_serializers_householdserializer_get_member_count"
     },
     {
       "relation": "uses",
@@ -15717,9 +15717,9 @@
       "source_file": "anchorpoint\\api\\serializers.py",
       "source_location": "L3",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_serializers_householdserializer",
-      "target": "checkin_models_checkinsession",
-      "confidence_score": 0.5
+      "target": "checkin_models_checkinsession"
     },
     {
       "relation": "uses",
@@ -15727,9 +15727,9 @@
       "source_file": "anchorpoint\\api\\serializers.py",
       "source_location": "L4",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_serializers_householdserializer",
-      "target": "events_models_event",
-      "confidence_score": 0.5
+      "target": "events_models_event"
     },
     {
       "relation": "uses",
@@ -15737,9 +15737,9 @@
       "source_file": "anchorpoint\\api\\serializers.py",
       "source_location": "L4",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_serializers_householdserializer",
-      "target": "events_models_eventoccurrence",
-      "confidence_score": 0.5
+      "target": "events_models_eventoccurrence"
     },
     {
       "relation": "uses",
@@ -15747,9 +15747,9 @@
       "source_file": "anchorpoint\\api\\serializers.py",
       "source_location": "L5",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_serializers_householdserializer",
-      "target": "groups_models_group",
-      "confidence_score": 0.5
+      "target": "groups_models_group"
     },
     {
       "relation": "uses",
@@ -15757,9 +15757,9 @@
       "source_file": "anchorpoint\\api\\serializers.py",
       "source_location": "L5",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_serializers_householdserializer",
-      "target": "groups_models_groupmembership",
-      "confidence_score": 0.5
+      "target": "groups_models_groupmembership"
     },
     {
       "relation": "uses",
@@ -15767,9 +15767,9 @@
       "source_file": "anchorpoint\\api\\serializers.py",
       "source_location": "L6",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_serializers_householdserializer",
-      "target": "households_models_household",
-      "confidence_score": 0.5
+      "target": "households_models_household"
     },
     {
       "relation": "uses",
@@ -15777,9 +15777,9 @@
       "source_file": "anchorpoint\\api\\serializers.py",
       "source_location": "L6",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_serializers_householdserializer",
-      "target": "households_models_householdmember",
-      "confidence_score": 0.5
+      "target": "households_models_householdmember"
     },
     {
       "relation": "uses",
@@ -15787,9 +15787,9 @@
       "source_file": "anchorpoint\\api\\serializers.py",
       "source_location": "L7",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_serializers_householdserializer",
-      "target": "people_models_person",
-      "confidence_score": 0.5
+      "target": "people_models_person"
     },
     {
       "relation": "uses",
@@ -15797,9 +15797,9 @@
       "source_file": "anchorpoint\\api\\viewsets.py",
       "source_location": "L13",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_viewsets_personviewset",
-      "target": "api_serializers_householdserializer",
-      "confidence_score": 0.5
+      "target": "api_serializers_householdserializer"
     },
     {
       "relation": "uses",
@@ -15807,9 +15807,9 @@
       "source_file": "anchorpoint\\api\\viewsets.py",
       "source_location": "L13",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_viewsets_householdviewset",
-      "target": "api_serializers_householdserializer",
-      "confidence_score": 0.5
+      "target": "api_serializers_householdserializer"
     },
     {
       "relation": "uses",
@@ -15817,9 +15817,9 @@
       "source_file": "anchorpoint\\api\\viewsets.py",
       "source_location": "L13",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_viewsets_groupviewset",
-      "target": "api_serializers_householdserializer",
-      "confidence_score": 0.5
+      "target": "api_serializers_householdserializer"
     },
     {
       "relation": "uses",
@@ -15827,9 +15827,9 @@
       "source_file": "anchorpoint\\api\\viewsets.py",
       "source_location": "L13",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_viewsets_eventviewset",
-      "target": "api_serializers_householdserializer",
-      "confidence_score": 0.5
+      "target": "api_serializers_householdserializer"
     },
     {
       "relation": "uses",
@@ -15837,9 +15837,9 @@
       "source_file": "anchorpoint\\api\\viewsets.py",
       "source_location": "L13",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_viewsets_checkinsessionviewset",
-      "target": "api_serializers_householdserializer",
-      "confidence_score": 0.5
+      "target": "api_serializers_householdserializer"
     },
     {
       "relation": "method",
@@ -15847,9 +15847,9 @@
       "source_file": "anchorpoint\\api\\serializers.py",
       "source_location": "L99",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "api_serializers_groupmembershipserializer",
-      "target": "api_serializers_groupmembershipserializer_get_person_name",
-      "confidence_score": 1.0
+      "target": "api_serializers_groupmembershipserializer_get_person_name"
     },
     {
       "relation": "uses",
@@ -15857,9 +15857,9 @@
       "source_file": "anchorpoint\\api\\serializers.py",
       "source_location": "L3",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_serializers_groupmembershipserializer",
-      "target": "checkin_models_checkinsession",
-      "confidence_score": 0.5
+      "target": "checkin_models_checkinsession"
     },
     {
       "relation": "uses",
@@ -15867,9 +15867,9 @@
       "source_file": "anchorpoint\\api\\serializers.py",
       "source_location": "L4",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_serializers_groupmembershipserializer",
-      "target": "events_models_event",
-      "confidence_score": 0.5
+      "target": "events_models_event"
     },
     {
       "relation": "uses",
@@ -15877,9 +15877,9 @@
       "source_file": "anchorpoint\\api\\serializers.py",
       "source_location": "L4",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_serializers_groupmembershipserializer",
-      "target": "events_models_eventoccurrence",
-      "confidence_score": 0.5
+      "target": "events_models_eventoccurrence"
     },
     {
       "relation": "uses",
@@ -15887,9 +15887,9 @@
       "source_file": "anchorpoint\\api\\serializers.py",
       "source_location": "L5",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_serializers_groupmembershipserializer",
-      "target": "groups_models_group",
-      "confidence_score": 0.5
+      "target": "groups_models_group"
     },
     {
       "relation": "uses",
@@ -15897,9 +15897,9 @@
       "source_file": "anchorpoint\\api\\serializers.py",
       "source_location": "L5",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_serializers_groupmembershipserializer",
-      "target": "groups_models_groupmembership",
-      "confidence_score": 0.5
+      "target": "groups_models_groupmembership"
     },
     {
       "relation": "uses",
@@ -15907,9 +15907,9 @@
       "source_file": "anchorpoint\\api\\serializers.py",
       "source_location": "L6",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_serializers_groupmembershipserializer",
-      "target": "households_models_household",
-      "confidence_score": 0.5
+      "target": "households_models_household"
     },
     {
       "relation": "uses",
@@ -15917,9 +15917,9 @@
       "source_file": "anchorpoint\\api\\serializers.py",
       "source_location": "L6",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_serializers_groupmembershipserializer",
-      "target": "households_models_householdmember",
-      "confidence_score": 0.5
+      "target": "households_models_householdmember"
     },
     {
       "relation": "uses",
@@ -15927,9 +15927,9 @@
       "source_file": "anchorpoint\\api\\serializers.py",
       "source_location": "L7",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_serializers_groupmembershipserializer",
-      "target": "people_models_person",
-      "confidence_score": 0.5
+      "target": "people_models_person"
     },
     {
       "relation": "uses",
@@ -15937,9 +15937,9 @@
       "source_file": "anchorpoint\\api\\viewsets.py",
       "source_location": "L13",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_viewsets_personviewset",
-      "target": "api_serializers_groupmembershipserializer",
-      "confidence_score": 0.5
+      "target": "api_serializers_groupmembershipserializer"
     },
     {
       "relation": "uses",
@@ -15947,9 +15947,9 @@
       "source_file": "anchorpoint\\api\\viewsets.py",
       "source_location": "L13",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_viewsets_householdviewset",
-      "target": "api_serializers_groupmembershipserializer",
-      "confidence_score": 0.5
+      "target": "api_serializers_groupmembershipserializer"
     },
     {
       "relation": "uses",
@@ -15957,9 +15957,9 @@
       "source_file": "anchorpoint\\api\\viewsets.py",
       "source_location": "L13",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_viewsets_groupviewset",
-      "target": "api_serializers_groupmembershipserializer",
-      "confidence_score": 0.5
+      "target": "api_serializers_groupmembershipserializer"
     },
     {
       "relation": "uses",
@@ -15967,9 +15967,9 @@
       "source_file": "anchorpoint\\api\\viewsets.py",
       "source_location": "L13",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_viewsets_eventviewset",
-      "target": "api_serializers_groupmembershipserializer",
-      "confidence_score": 0.5
+      "target": "api_serializers_groupmembershipserializer"
     },
     {
       "relation": "uses",
@@ -15977,9 +15977,9 @@
       "source_file": "anchorpoint\\api\\viewsets.py",
       "source_location": "L13",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_viewsets_checkinsessionviewset",
-      "target": "api_serializers_groupmembershipserializer",
-      "confidence_score": 0.5
+      "target": "api_serializers_groupmembershipserializer"
     },
     {
       "relation": "calls",
@@ -16009,9 +16009,9 @@
       "source_file": "anchorpoint\\api\\serializers.py",
       "source_location": "L124",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "api_serializers_groupserializer",
-      "target": "api_serializers_groupserializer_get_member_count",
-      "confidence_score": 1.0
+      "target": "api_serializers_groupserializer_get_member_count"
     },
     {
       "relation": "uses",
@@ -16019,9 +16019,9 @@
       "source_file": "anchorpoint\\api\\serializers.py",
       "source_location": "L3",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_serializers_groupserializer",
-      "target": "checkin_models_checkinsession",
-      "confidence_score": 0.5
+      "target": "checkin_models_checkinsession"
     },
     {
       "relation": "uses",
@@ -16029,9 +16029,9 @@
       "source_file": "anchorpoint\\api\\serializers.py",
       "source_location": "L4",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_serializers_groupserializer",
-      "target": "events_models_event",
-      "confidence_score": 0.5
+      "target": "events_models_event"
     },
     {
       "relation": "uses",
@@ -16039,9 +16039,9 @@
       "source_file": "anchorpoint\\api\\serializers.py",
       "source_location": "L4",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_serializers_groupserializer",
-      "target": "events_models_eventoccurrence",
-      "confidence_score": 0.5
+      "target": "events_models_eventoccurrence"
     },
     {
       "relation": "uses",
@@ -16049,9 +16049,9 @@
       "source_file": "anchorpoint\\api\\serializers.py",
       "source_location": "L5",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_serializers_groupserializer",
-      "target": "groups_models_group",
-      "confidence_score": 0.5
+      "target": "groups_models_group"
     },
     {
       "relation": "uses",
@@ -16059,9 +16059,9 @@
       "source_file": "anchorpoint\\api\\serializers.py",
       "source_location": "L5",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_serializers_groupserializer",
-      "target": "groups_models_groupmembership",
-      "confidence_score": 0.5
+      "target": "groups_models_groupmembership"
     },
     {
       "relation": "uses",
@@ -16069,9 +16069,9 @@
       "source_file": "anchorpoint\\api\\serializers.py",
       "source_location": "L6",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_serializers_groupserializer",
-      "target": "households_models_household",
-      "confidence_score": 0.5
+      "target": "households_models_household"
     },
     {
       "relation": "uses",
@@ -16079,9 +16079,9 @@
       "source_file": "anchorpoint\\api\\serializers.py",
       "source_location": "L6",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_serializers_groupserializer",
-      "target": "households_models_householdmember",
-      "confidence_score": 0.5
+      "target": "households_models_householdmember"
     },
     {
       "relation": "uses",
@@ -16089,9 +16089,9 @@
       "source_file": "anchorpoint\\api\\serializers.py",
       "source_location": "L7",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_serializers_groupserializer",
-      "target": "people_models_person",
-      "confidence_score": 0.5
+      "target": "people_models_person"
     },
     {
       "relation": "uses",
@@ -16099,9 +16099,9 @@
       "source_file": "anchorpoint\\api\\viewsets.py",
       "source_location": "L13",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_viewsets_personviewset",
-      "target": "api_serializers_groupserializer",
-      "confidence_score": 0.5
+      "target": "api_serializers_groupserializer"
     },
     {
       "relation": "uses",
@@ -16109,9 +16109,9 @@
       "source_file": "anchorpoint\\api\\viewsets.py",
       "source_location": "L13",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_viewsets_householdviewset",
-      "target": "api_serializers_groupserializer",
-      "confidence_score": 0.5
+      "target": "api_serializers_groupserializer"
     },
     {
       "relation": "uses",
@@ -16119,9 +16119,9 @@
       "source_file": "anchorpoint\\api\\viewsets.py",
       "source_location": "L13",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_viewsets_groupviewset",
-      "target": "api_serializers_groupserializer",
-      "confidence_score": 0.5
+      "target": "api_serializers_groupserializer"
     },
     {
       "relation": "uses",
@@ -16129,9 +16129,9 @@
       "source_file": "anchorpoint\\api\\viewsets.py",
       "source_location": "L13",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_viewsets_eventviewset",
-      "target": "api_serializers_groupserializer",
-      "confidence_score": 0.5
+      "target": "api_serializers_groupserializer"
     },
     {
       "relation": "uses",
@@ -16139,9 +16139,9 @@
       "source_file": "anchorpoint\\api\\viewsets.py",
       "source_location": "L13",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_viewsets_checkinsessionviewset",
-      "target": "api_serializers_groupserializer",
-      "confidence_score": 0.5
+      "target": "api_serializers_groupserializer"
     },
     {
       "relation": "uses",
@@ -16149,9 +16149,9 @@
       "source_file": "anchorpoint\\api\\serializers.py",
       "source_location": "L3",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_serializers_eventoccurrenceserializer",
-      "target": "checkin_models_checkinsession",
-      "confidence_score": 0.5
+      "target": "checkin_models_checkinsession"
     },
     {
       "relation": "uses",
@@ -16159,9 +16159,9 @@
       "source_file": "anchorpoint\\api\\serializers.py",
       "source_location": "L4",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_serializers_eventoccurrenceserializer",
-      "target": "events_models_event",
-      "confidence_score": 0.5
+      "target": "events_models_event"
     },
     {
       "relation": "uses",
@@ -16169,9 +16169,9 @@
       "source_file": "anchorpoint\\api\\serializers.py",
       "source_location": "L4",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_serializers_eventoccurrenceserializer",
-      "target": "events_models_eventoccurrence",
-      "confidence_score": 0.5
+      "target": "events_models_eventoccurrence"
     },
     {
       "relation": "uses",
@@ -16179,9 +16179,9 @@
       "source_file": "anchorpoint\\api\\serializers.py",
       "source_location": "L5",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_serializers_eventoccurrenceserializer",
-      "target": "groups_models_group",
-      "confidence_score": 0.5
+      "target": "groups_models_group"
     },
     {
       "relation": "uses",
@@ -16189,9 +16189,9 @@
       "source_file": "anchorpoint\\api\\serializers.py",
       "source_location": "L5",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_serializers_eventoccurrenceserializer",
-      "target": "groups_models_groupmembership",
-      "confidence_score": 0.5
+      "target": "groups_models_groupmembership"
     },
     {
       "relation": "uses",
@@ -16199,9 +16199,9 @@
       "source_file": "anchorpoint\\api\\serializers.py",
       "source_location": "L6",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_serializers_eventoccurrenceserializer",
-      "target": "households_models_household",
-      "confidence_score": 0.5
+      "target": "households_models_household"
     },
     {
       "relation": "uses",
@@ -16209,9 +16209,9 @@
       "source_file": "anchorpoint\\api\\serializers.py",
       "source_location": "L6",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_serializers_eventoccurrenceserializer",
-      "target": "households_models_householdmember",
-      "confidence_score": 0.5
+      "target": "households_models_householdmember"
     },
     {
       "relation": "uses",
@@ -16219,9 +16219,9 @@
       "source_file": "anchorpoint\\api\\serializers.py",
       "source_location": "L7",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_serializers_eventoccurrenceserializer",
-      "target": "people_models_person",
-      "confidence_score": 0.5
+      "target": "people_models_person"
     },
     {
       "relation": "method",
@@ -16229,9 +16229,9 @@
       "source_file": "anchorpoint\\api\\serializers.py",
       "source_location": "L174",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "api_serializers_eventserializer",
-      "target": "api_serializers_eventserializer_get_can_register",
-      "confidence_score": 1.0
+      "target": "api_serializers_eventserializer_get_can_register"
     },
     {
       "relation": "uses",
@@ -16239,9 +16239,9 @@
       "source_file": "anchorpoint\\api\\serializers.py",
       "source_location": "L3",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_serializers_eventserializer",
-      "target": "checkin_models_checkinsession",
-      "confidence_score": 0.5
+      "target": "checkin_models_checkinsession"
     },
     {
       "relation": "uses",
@@ -16249,9 +16249,9 @@
       "source_file": "anchorpoint\\api\\serializers.py",
       "source_location": "L4",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_serializers_eventserializer",
-      "target": "events_models_event",
-      "confidence_score": 0.5
+      "target": "events_models_event"
     },
     {
       "relation": "uses",
@@ -16259,9 +16259,9 @@
       "source_file": "anchorpoint\\api\\serializers.py",
       "source_location": "L4",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_serializers_eventserializer",
-      "target": "events_models_eventoccurrence",
-      "confidence_score": 0.5
+      "target": "events_models_eventoccurrence"
     },
     {
       "relation": "uses",
@@ -16269,9 +16269,9 @@
       "source_file": "anchorpoint\\api\\serializers.py",
       "source_location": "L5",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_serializers_eventserializer",
-      "target": "groups_models_group",
-      "confidence_score": 0.5
+      "target": "groups_models_group"
     },
     {
       "relation": "uses",
@@ -16279,9 +16279,9 @@
       "source_file": "anchorpoint\\api\\serializers.py",
       "source_location": "L5",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_serializers_eventserializer",
-      "target": "groups_models_groupmembership",
-      "confidence_score": 0.5
+      "target": "groups_models_groupmembership"
     },
     {
       "relation": "uses",
@@ -16289,9 +16289,9 @@
       "source_file": "anchorpoint\\api\\serializers.py",
       "source_location": "L6",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_serializers_eventserializer",
-      "target": "households_models_household",
-      "confidence_score": 0.5
+      "target": "households_models_household"
     },
     {
       "relation": "uses",
@@ -16299,9 +16299,9 @@
       "source_file": "anchorpoint\\api\\serializers.py",
       "source_location": "L6",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_serializers_eventserializer",
-      "target": "households_models_householdmember",
-      "confidence_score": 0.5
+      "target": "households_models_householdmember"
     },
     {
       "relation": "uses",
@@ -16309,9 +16309,9 @@
       "source_file": "anchorpoint\\api\\serializers.py",
       "source_location": "L7",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_serializers_eventserializer",
-      "target": "people_models_person",
-      "confidence_score": 0.5
+      "target": "people_models_person"
     },
     {
       "relation": "uses",
@@ -16319,9 +16319,9 @@
       "source_file": "anchorpoint\\api\\viewsets.py",
       "source_location": "L13",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_viewsets_personviewset",
-      "target": "api_serializers_eventserializer",
-      "confidence_score": 0.5
+      "target": "api_serializers_eventserializer"
     },
     {
       "relation": "uses",
@@ -16329,9 +16329,9 @@
       "source_file": "anchorpoint\\api\\viewsets.py",
       "source_location": "L13",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_viewsets_householdviewset",
-      "target": "api_serializers_eventserializer",
-      "confidence_score": 0.5
+      "target": "api_serializers_eventserializer"
     },
     {
       "relation": "uses",
@@ -16339,9 +16339,9 @@
       "source_file": "anchorpoint\\api\\viewsets.py",
       "source_location": "L13",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_viewsets_groupviewset",
-      "target": "api_serializers_eventserializer",
-      "confidence_score": 0.5
+      "target": "api_serializers_eventserializer"
     },
     {
       "relation": "uses",
@@ -16349,9 +16349,9 @@
       "source_file": "anchorpoint\\api\\viewsets.py",
       "source_location": "L13",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_viewsets_eventviewset",
-      "target": "api_serializers_eventserializer",
-      "confidence_score": 0.5
+      "target": "api_serializers_eventserializer"
     },
     {
       "relation": "uses",
@@ -16359,9 +16359,9 @@
       "source_file": "anchorpoint\\api\\viewsets.py",
       "source_location": "L13",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_viewsets_checkinsessionviewset",
-      "target": "api_serializers_eventserializer",
-      "confidence_score": 0.5
+      "target": "api_serializers_eventserializer"
     },
     {
       "relation": "method",
@@ -16369,9 +16369,9 @@
       "source_file": "anchorpoint\\api\\serializers.py",
       "source_location": "L195",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "api_serializers_checkinsessionserializer",
-      "target": "api_serializers_checkinsessionserializer_get_total_checked_in",
-      "confidence_score": 1.0
+      "target": "api_serializers_checkinsessionserializer_get_total_checked_in"
     },
     {
       "relation": "uses",
@@ -16379,9 +16379,9 @@
       "source_file": "anchorpoint\\api\\serializers.py",
       "source_location": "L3",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_serializers_checkinsessionserializer",
-      "target": "checkin_models_checkinsession",
-      "confidence_score": 0.5
+      "target": "checkin_models_checkinsession"
     },
     {
       "relation": "uses",
@@ -16389,9 +16389,9 @@
       "source_file": "anchorpoint\\api\\serializers.py",
       "source_location": "L4",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_serializers_checkinsessionserializer",
-      "target": "events_models_event",
-      "confidence_score": 0.5
+      "target": "events_models_event"
     },
     {
       "relation": "uses",
@@ -16399,9 +16399,9 @@
       "source_file": "anchorpoint\\api\\serializers.py",
       "source_location": "L4",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_serializers_checkinsessionserializer",
-      "target": "events_models_eventoccurrence",
-      "confidence_score": 0.5
+      "target": "events_models_eventoccurrence"
     },
     {
       "relation": "uses",
@@ -16409,9 +16409,9 @@
       "source_file": "anchorpoint\\api\\serializers.py",
       "source_location": "L5",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_serializers_checkinsessionserializer",
-      "target": "groups_models_group",
-      "confidence_score": 0.5
+      "target": "groups_models_group"
     },
     {
       "relation": "uses",
@@ -16419,9 +16419,9 @@
       "source_file": "anchorpoint\\api\\serializers.py",
       "source_location": "L5",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_serializers_checkinsessionserializer",
-      "target": "groups_models_groupmembership",
-      "confidence_score": 0.5
+      "target": "groups_models_groupmembership"
     },
     {
       "relation": "uses",
@@ -16429,9 +16429,9 @@
       "source_file": "anchorpoint\\api\\serializers.py",
       "source_location": "L6",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_serializers_checkinsessionserializer",
-      "target": "households_models_household",
-      "confidence_score": 0.5
+      "target": "households_models_household"
     },
     {
       "relation": "uses",
@@ -16439,9 +16439,9 @@
       "source_file": "anchorpoint\\api\\serializers.py",
       "source_location": "L6",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_serializers_checkinsessionserializer",
-      "target": "households_models_householdmember",
-      "confidence_score": 0.5
+      "target": "households_models_householdmember"
     },
     {
       "relation": "uses",
@@ -16449,9 +16449,9 @@
       "source_file": "anchorpoint\\api\\serializers.py",
       "source_location": "L7",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_serializers_checkinsessionserializer",
-      "target": "people_models_person",
-      "confidence_score": 0.5
+      "target": "people_models_person"
     },
     {
       "relation": "uses",
@@ -16459,9 +16459,9 @@
       "source_file": "anchorpoint\\api\\viewsets.py",
       "source_location": "L13",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_viewsets_personviewset",
-      "target": "api_serializers_checkinsessionserializer",
-      "confidence_score": 0.5
+      "target": "api_serializers_checkinsessionserializer"
     },
     {
       "relation": "uses",
@@ -16469,9 +16469,9 @@
       "source_file": "anchorpoint\\api\\viewsets.py",
       "source_location": "L13",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_viewsets_householdviewset",
-      "target": "api_serializers_checkinsessionserializer",
-      "confidence_score": 0.5
+      "target": "api_serializers_checkinsessionserializer"
     },
     {
       "relation": "uses",
@@ -16479,9 +16479,9 @@
       "source_file": "anchorpoint\\api\\viewsets.py",
       "source_location": "L13",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_viewsets_groupviewset",
-      "target": "api_serializers_checkinsessionserializer",
-      "confidence_score": 0.5
+      "target": "api_serializers_checkinsessionserializer"
     },
     {
       "relation": "uses",
@@ -16489,9 +16489,9 @@
       "source_file": "anchorpoint\\api\\viewsets.py",
       "source_location": "L13",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_viewsets_eventviewset",
-      "target": "api_serializers_checkinsessionserializer",
-      "confidence_score": 0.5
+      "target": "api_serializers_checkinsessionserializer"
     },
     {
       "relation": "uses",
@@ -16499,9 +16499,9 @@
       "source_file": "anchorpoint\\api\\viewsets.py",
       "source_location": "L13",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_viewsets_checkinsessionviewset",
-      "target": "api_serializers_checkinsessionserializer",
-      "confidence_score": 0.5
+      "target": "api_serializers_checkinsessionserializer"
     },
     {
       "relation": "imports_from",
@@ -16510,9 +16510,9 @@
       "source_file": "anchorpoint\\api\\urls.py",
       "source_location": "L4",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "anchorpoint_api_urls_py",
-      "target": "anchorpoint_api_views_py",
-      "confidence_score": 1.0
+      "target": "anchorpoint_api_views_py"
     },
     {
       "relation": "imports_from",
@@ -16521,9 +16521,9 @@
       "source_file": "anchorpoint\\api\\urls.py",
       "source_location": "L5",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "anchorpoint_api_urls_py",
-      "target": "anchorpoint_api_viewsets_py",
-      "confidence_score": 1.0
+      "target": "anchorpoint_api_viewsets_py"
     },
     {
       "relation": "contains",
@@ -16531,9 +16531,9 @@
       "source_file": "anchorpoint\\api\\views.py",
       "source_location": "L6",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "anchorpoint_api_views_py",
-      "target": "api_views_apirootview",
-      "confidence_score": 1.0
+      "target": "api_views_apirootview"
     },
     {
       "relation": "contains",
@@ -16541,9 +16541,9 @@
       "source_file": "anchorpoint\\api\\views.py",
       "source_location": "L18",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "anchorpoint_api_views_py",
-      "target": "api_views_apimeview",
-      "confidence_score": 1.0
+      "target": "api_views_apimeview"
     },
     {
       "relation": "inherits",
@@ -16551,9 +16551,9 @@
       "source_file": "anchorpoint\\api\\views.py",
       "source_location": "L6",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "api_views_apirootview",
-      "target": "apiview",
-      "confidence_score": 1.0
+      "target": "apiview"
     },
     {
       "relation": "method",
@@ -16561,9 +16561,9 @@
       "source_file": "anchorpoint\\api\\views.py",
       "source_location": "L9",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "api_views_apirootview",
-      "target": "api_views_apirootview_get",
-      "confidence_score": 1.0
+      "target": "api_views_apirootview_get"
     },
     {
       "relation": "inherits",
@@ -16571,9 +16571,9 @@
       "source_file": "anchorpoint\\api\\views.py",
       "source_location": "L18",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "api_views_apimeview",
-      "target": "apiview",
-      "confidence_score": 1.0
+      "target": "apiview"
     },
     {
       "relation": "method",
@@ -16581,9 +16581,9 @@
       "source_file": "anchorpoint\\api\\views.py",
       "source_location": "L21",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "api_views_apimeview",
-      "target": "api_views_apimeview_get",
-      "confidence_score": 1.0
+      "target": "api_views_apimeview_get"
     },
     {
       "relation": "contains",
@@ -16591,9 +16591,9 @@
       "source_file": "anchorpoint\\api\\viewsets.py",
       "source_location": "L24",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "anchorpoint_api_viewsets_py",
-      "target": "api_viewsets_personviewset",
-      "confidence_score": 1.0
+      "target": "api_viewsets_personviewset"
     },
     {
       "relation": "contains",
@@ -16601,9 +16601,9 @@
       "source_file": "anchorpoint\\api\\viewsets.py",
       "source_location": "L40",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "anchorpoint_api_viewsets_py",
-      "target": "api_viewsets_householdviewset",
-      "confidence_score": 1.0
+      "target": "api_viewsets_householdviewset"
     },
     {
       "relation": "contains",
@@ -16611,9 +16611,9 @@
       "source_file": "anchorpoint\\api\\viewsets.py",
       "source_location": "L101",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "anchorpoint_api_viewsets_py",
-      "target": "api_viewsets_members",
-      "confidence_score": 1.0
+      "target": "api_viewsets_members"
     },
     {
       "relation": "contains",
@@ -16621,9 +16621,9 @@
       "source_file": "anchorpoint\\api\\viewsets.py",
       "source_location": "L110",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "anchorpoint_api_viewsets_py",
-      "target": "api_viewsets_add_member",
-      "confidence_score": 1.0
+      "target": "api_viewsets_add_member"
     },
     {
       "relation": "contains",
@@ -16631,9 +16631,9 @@
       "source_file": "anchorpoint\\api\\viewsets.py",
       "source_location": "L132",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "anchorpoint_api_viewsets_py",
-      "target": "api_viewsets_remove_member",
-      "confidence_score": 1.0
+      "target": "api_viewsets_remove_member"
     },
     {
       "relation": "contains",
@@ -16641,9 +16641,9 @@
       "source_file": "anchorpoint\\api\\viewsets.py",
       "source_location": "L92",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "anchorpoint_api_viewsets_py",
-      "target": "api_viewsets_groupviewset",
-      "confidence_score": 1.0
+      "target": "api_viewsets_groupviewset"
     },
     {
       "relation": "contains",
@@ -16651,9 +16651,9 @@
       "source_file": "anchorpoint\\api\\viewsets.py",
       "source_location": "L146",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "anchorpoint_api_viewsets_py",
-      "target": "api_viewsets_eventviewset",
-      "confidence_score": 1.0
+      "target": "api_viewsets_eventviewset"
     },
     {
       "relation": "contains",
@@ -16661,9 +16661,9 @@
       "source_file": "anchorpoint\\api\\viewsets.py",
       "source_location": "L170",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "anchorpoint_api_viewsets_py",
-      "target": "api_viewsets_checkinsessionviewset",
-      "confidence_score": 1.0
+      "target": "api_viewsets_checkinsessionviewset"
     },
     {
       "relation": "contains",
@@ -16671,9 +16671,9 @@
       "source_file": "anchorpoint\\api\\viewsets.py",
       "source_location": "L184",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "anchorpoint_api_viewsets_py",
-      "target": "api_viewsets_stats",
-      "confidence_score": 1.0
+      "target": "api_viewsets_stats"
     },
     {
       "relation": "method",
@@ -16681,9 +16681,9 @@
       "source_file": "anchorpoint\\api\\viewsets.py",
       "source_location": "L32",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "api_viewsets_personviewset",
-      "target": "api_viewsets_personviewset_get_queryset",
-      "confidence_score": 1.0
+      "target": "api_viewsets_personviewset_get_queryset"
     },
     {
       "relation": "uses",
@@ -16691,9 +16691,9 @@
       "source_file": "anchorpoint\\api\\viewsets.py",
       "source_location": "L6",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_viewsets_personviewset",
-      "target": "checkin_models_checkinsession",
-      "confidence_score": 0.5
+      "target": "checkin_models_checkinsession"
     },
     {
       "relation": "uses",
@@ -16701,9 +16701,9 @@
       "source_file": "anchorpoint\\api\\viewsets.py",
       "source_location": "L7",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_viewsets_personviewset",
-      "target": "events_models_event",
-      "confidence_score": 0.5
+      "target": "events_models_event"
     },
     {
       "relation": "uses",
@@ -16711,9 +16711,9 @@
       "source_file": "anchorpoint\\api\\viewsets.py",
       "source_location": "L8",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_viewsets_personviewset",
-      "target": "groups_models_group",
-      "confidence_score": 0.5
+      "target": "groups_models_group"
     },
     {
       "relation": "uses",
@@ -16721,9 +16721,9 @@
       "source_file": "anchorpoint\\api\\viewsets.py",
       "source_location": "L8",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_viewsets_personviewset",
-      "target": "groups_models_groupmembership",
-      "confidence_score": 0.5
+      "target": "groups_models_groupmembership"
     },
     {
       "relation": "uses",
@@ -16731,9 +16731,9 @@
       "source_file": "anchorpoint\\api\\viewsets.py",
       "source_location": "L9",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_viewsets_personviewset",
-      "target": "households_models_household",
-      "confidence_score": 0.5
+      "target": "households_models_household"
     },
     {
       "relation": "uses",
@@ -16741,9 +16741,9 @@
       "source_file": "anchorpoint\\api\\viewsets.py",
       "source_location": "L9",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_viewsets_personviewset",
-      "target": "households_models_householdmember",
-      "confidence_score": 0.5
+      "target": "households_models_householdmember"
     },
     {
       "relation": "uses",
@@ -16751,9 +16751,9 @@
       "source_file": "anchorpoint\\api\\viewsets.py",
       "source_location": "L10",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_viewsets_personviewset",
-      "target": "people_models_person",
-      "confidence_score": 0.5
+      "target": "people_models_person"
     },
     {
       "relation": "calls",
@@ -16762,9 +16762,9 @@
       "source_file": "anchorpoint\\api\\viewsets.py",
       "source_location": "L33",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "api_viewsets_personviewset_get_queryset",
-      "target": "api_viewsets_eventviewset_get_queryset",
-      "confidence_score": 1.0
+      "target": "api_viewsets_eventviewset_get_queryset"
     },
     {
       "relation": "uses",
@@ -16772,9 +16772,9 @@
       "source_file": "anchorpoint\\api\\viewsets.py",
       "source_location": "L6",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_viewsets_householdviewset",
-      "target": "checkin_models_checkinsession",
-      "confidence_score": 0.5
+      "target": "checkin_models_checkinsession"
     },
     {
       "relation": "uses",
@@ -16782,9 +16782,9 @@
       "source_file": "anchorpoint\\api\\viewsets.py",
       "source_location": "L7",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_viewsets_householdviewset",
-      "target": "events_models_event",
-      "confidence_score": 0.5
+      "target": "events_models_event"
     },
     {
       "relation": "uses",
@@ -16792,9 +16792,9 @@
       "source_file": "anchorpoint\\api\\viewsets.py",
       "source_location": "L8",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_viewsets_householdviewset",
-      "target": "groups_models_group",
-      "confidence_score": 0.5
+      "target": "groups_models_group"
     },
     {
       "relation": "uses",
@@ -16802,9 +16802,9 @@
       "source_file": "anchorpoint\\api\\viewsets.py",
       "source_location": "L8",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_viewsets_householdviewset",
-      "target": "groups_models_groupmembership",
-      "confidence_score": 0.5
+      "target": "groups_models_groupmembership"
     },
     {
       "relation": "uses",
@@ -16812,9 +16812,9 @@
       "source_file": "anchorpoint\\api\\viewsets.py",
       "source_location": "L9",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_viewsets_householdviewset",
-      "target": "households_models_household",
-      "confidence_score": 0.5
+      "target": "households_models_household"
     },
     {
       "relation": "uses",
@@ -16822,9 +16822,9 @@
       "source_file": "anchorpoint\\api\\viewsets.py",
       "source_location": "L9",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_viewsets_householdviewset",
-      "target": "households_models_householdmember",
-      "confidence_score": 0.5
+      "target": "households_models_householdmember"
     },
     {
       "relation": "uses",
@@ -16832,9 +16832,9 @@
       "source_file": "anchorpoint\\api\\viewsets.py",
       "source_location": "L10",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_viewsets_householdviewset",
-      "target": "people_models_person",
-      "confidence_score": 0.5
+      "target": "people_models_person"
     },
     {
       "relation": "uses",
@@ -16842,9 +16842,9 @@
       "source_file": "anchorpoint\\api\\viewsets.py",
       "source_location": "L6",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_viewsets_groupviewset",
-      "target": "checkin_models_checkinsession",
-      "confidence_score": 0.5
+      "target": "checkin_models_checkinsession"
     },
     {
       "relation": "uses",
@@ -16852,9 +16852,9 @@
       "source_file": "anchorpoint\\api\\viewsets.py",
       "source_location": "L7",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_viewsets_groupviewset",
-      "target": "events_models_event",
-      "confidence_score": 0.5
+      "target": "events_models_event"
     },
     {
       "relation": "uses",
@@ -16862,9 +16862,9 @@
       "source_file": "anchorpoint\\api\\viewsets.py",
       "source_location": "L8",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_viewsets_groupviewset",
-      "target": "groups_models_group",
-      "confidence_score": 0.5
+      "target": "groups_models_group"
     },
     {
       "relation": "uses",
@@ -16872,9 +16872,9 @@
       "source_file": "anchorpoint\\api\\viewsets.py",
       "source_location": "L8",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_viewsets_groupviewset",
-      "target": "groups_models_groupmembership",
-      "confidence_score": 0.5
+      "target": "groups_models_groupmembership"
     },
     {
       "relation": "uses",
@@ -16882,9 +16882,9 @@
       "source_file": "anchorpoint\\api\\viewsets.py",
       "source_location": "L9",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_viewsets_groupviewset",
-      "target": "households_models_household",
-      "confidence_score": 0.5
+      "target": "households_models_household"
     },
     {
       "relation": "uses",
@@ -16892,9 +16892,9 @@
       "source_file": "anchorpoint\\api\\viewsets.py",
       "source_location": "L9",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_viewsets_groupviewset",
-      "target": "households_models_householdmember",
-      "confidence_score": 0.5
+      "target": "households_models_householdmember"
     },
     {
       "relation": "uses",
@@ -16902,9 +16902,9 @@
       "source_file": "anchorpoint\\api\\viewsets.py",
       "source_location": "L10",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_viewsets_groupviewset",
-      "target": "people_models_person",
-      "confidence_score": 0.5
+      "target": "people_models_person"
     },
     {
       "relation": "method",
@@ -16912,9 +16912,9 @@
       "source_file": "anchorpoint\\api\\viewsets.py",
       "source_location": "L152",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "api_viewsets_eventviewset",
-      "target": "api_viewsets_eventviewset_get_permissions",
-      "confidence_score": 1.0
+      "target": "api_viewsets_eventviewset_get_permissions"
     },
     {
       "relation": "method",
@@ -16922,9 +16922,9 @@
       "source_file": "anchorpoint\\api\\viewsets.py",
       "source_location": "L157",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "api_viewsets_eventviewset",
-      "target": "api_viewsets_eventviewset_get_queryset",
-      "confidence_score": 1.0
+      "target": "api_viewsets_eventviewset_get_queryset"
     },
     {
       "relation": "uses",
@@ -16932,9 +16932,9 @@
       "source_file": "anchorpoint\\api\\viewsets.py",
       "source_location": "L6",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_viewsets_eventviewset",
-      "target": "checkin_models_checkinsession",
-      "confidence_score": 0.5
+      "target": "checkin_models_checkinsession"
     },
     {
       "relation": "uses",
@@ -16942,9 +16942,9 @@
       "source_file": "anchorpoint\\api\\viewsets.py",
       "source_location": "L7",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_viewsets_eventviewset",
-      "target": "events_models_event",
-      "confidence_score": 0.5
+      "target": "events_models_event"
     },
     {
       "relation": "uses",
@@ -16952,9 +16952,9 @@
       "source_file": "anchorpoint\\api\\viewsets.py",
       "source_location": "L8",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_viewsets_eventviewset",
-      "target": "groups_models_group",
-      "confidence_score": 0.5
+      "target": "groups_models_group"
     },
     {
       "relation": "uses",
@@ -16962,9 +16962,9 @@
       "source_file": "anchorpoint\\api\\viewsets.py",
       "source_location": "L8",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_viewsets_eventviewset",
-      "target": "groups_models_groupmembership",
-      "confidence_score": 0.5
+      "target": "groups_models_groupmembership"
     },
     {
       "relation": "uses",
@@ -16972,9 +16972,9 @@
       "source_file": "anchorpoint\\api\\viewsets.py",
       "source_location": "L9",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_viewsets_eventviewset",
-      "target": "households_models_household",
-      "confidence_score": 0.5
+      "target": "households_models_household"
     },
     {
       "relation": "uses",
@@ -16982,9 +16982,9 @@
       "source_file": "anchorpoint\\api\\viewsets.py",
       "source_location": "L9",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_viewsets_eventviewset",
-      "target": "households_models_householdmember",
-      "confidence_score": 0.5
+      "target": "households_models_householdmember"
     },
     {
       "relation": "uses",
@@ -16992,9 +16992,9 @@
       "source_file": "anchorpoint\\api\\viewsets.py",
       "source_location": "L10",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_viewsets_eventviewset",
-      "target": "people_models_person",
-      "confidence_score": 0.5
+      "target": "people_models_person"
     },
     {
       "relation": "uses",
@@ -17002,9 +17002,9 @@
       "source_file": "anchorpoint\\api\\viewsets.py",
       "source_location": "L6",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_viewsets_checkinsessionviewset",
-      "target": "checkin_models_checkinsession",
-      "confidence_score": 0.5
+      "target": "checkin_models_checkinsession"
     },
     {
       "relation": "uses",
@@ -17012,9 +17012,9 @@
       "source_file": "anchorpoint\\api\\viewsets.py",
       "source_location": "L7",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_viewsets_checkinsessionviewset",
-      "target": "events_models_event",
-      "confidence_score": 0.5
+      "target": "events_models_event"
     },
     {
       "relation": "uses",
@@ -17022,9 +17022,9 @@
       "source_file": "anchorpoint\\api\\viewsets.py",
       "source_location": "L8",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_viewsets_checkinsessionviewset",
-      "target": "groups_models_group",
-      "confidence_score": 0.5
+      "target": "groups_models_group"
     },
     {
       "relation": "uses",
@@ -17032,9 +17032,9 @@
       "source_file": "anchorpoint\\api\\viewsets.py",
       "source_location": "L8",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_viewsets_checkinsessionviewset",
-      "target": "groups_models_groupmembership",
-      "confidence_score": 0.5
+      "target": "groups_models_groupmembership"
     },
     {
       "relation": "uses",
@@ -17042,9 +17042,9 @@
       "source_file": "anchorpoint\\api\\viewsets.py",
       "source_location": "L9",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_viewsets_checkinsessionviewset",
-      "target": "households_models_household",
-      "confidence_score": 0.5
+      "target": "households_models_household"
     },
     {
       "relation": "uses",
@@ -17052,9 +17052,9 @@
       "source_file": "anchorpoint\\api\\viewsets.py",
       "source_location": "L9",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_viewsets_checkinsessionviewset",
-      "target": "households_models_householdmember",
-      "confidence_score": 0.5
+      "target": "households_models_householdmember"
     },
     {
       "relation": "uses",
@@ -17062,9 +17062,9 @@
       "source_file": "anchorpoint\\api\\viewsets.py",
       "source_location": "L10",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "api_viewsets_checkinsessionviewset",
-      "target": "people_models_person",
-      "confidence_score": 0.5
+      "target": "people_models_person"
     },
     {
       "relation": "imports_from",
@@ -21705,9 +21705,9 @@
       "source_file": "anchorpoint\\checkin\\migrations\\0003_remove_attendance_tables.py",
       "source_location": "L6",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "anchorpoint_checkin_migrations_0003_remove_attendance_tables_py",
-      "target": "migrations_0003_remove_attendance_tables_drop_attendance_tables",
-      "confidence_score": 1.0
+      "target": "migrations_0003_remove_attendance_tables_drop_attendance_tables"
     },
     {
       "relation": "contains",
@@ -21725,9 +21725,9 @@
       "source_file": "anchorpoint\\checkin\\migrations\\0003_remove_attendance_tables.py",
       "source_location": "L7",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "migrations_0003_remove_attendance_tables_rationale_7",
-      "target": "migrations_0003_remove_attendance_tables_drop_attendance_tables",
-      "confidence_score": 1.0
+      "target": "migrations_0003_remove_attendance_tables_drop_attendance_tables"
     },
     {
       "relation": "contains",
