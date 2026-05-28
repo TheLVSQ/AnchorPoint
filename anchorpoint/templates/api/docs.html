@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>AnchorPoint API Docs</title>
+</head>
+<body>
+    <main>
+        <h1>AnchorPoint API</h1>
+        <p>Base URL: <code>/api/v1/</code></p>
+        <p>OpenAPI schema: <a href="/api/schema/">/api/schema/</a></p>
+        <ul>
+            <li><code>GET /api/v1/</code> - API root</li>
+            <li><code>GET /api/v1/me/</code> - Authenticated user profile</li>
+            <li><code>/api/v1/people/</code> - People CRUD (staff)</li>
+            <li><code>/api/v1/households/</code> - Households CRUD + member actions (staff)</li>
+            <li><code>/api/v1/groups/</code> - Groups CRUD + member actions (staff)</li>
+            <li><code>/api/v1/events/</code> - Events list/detail public; write for staff</li>
+            <li><code>/api/v1/checkin/sessions/</code> - Check-in sessions list/detail</li>
+        </ul>
+        <p>Authentication currently uses Django session auth.</p>
+    </main>
+</body>
+</html>

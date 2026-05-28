@@ -3,6 +3,21 @@
 from django.db import migrations
 
 
+def drop_attendance_tables(apps, schema_editor):
+    """Drop old attendance tables if they exist (works on both PG and SQLite)."""
+    connection = schema_editor.connection
+    tables = connection.introspection.table_names()
+    old_tables = [
+        "attendance_attendancerecord",
+        "attendance_checkinwindow",
+        "attendance_checkinconfiguration_groups",
+        "attendance_checkinconfiguration",
+    ]
+    for table in old_tables:
+        if table in tables:
+            schema_editor.execute(f"DROP TABLE IF EXISTS {table};")
+
+
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -10,20 +25,5 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RunSQL(
-            "DROP TABLE IF EXISTS attendance_attendancerecord CASCADE;",
-            migrations.RunSQL.noop,
-        ),
-        migrations.RunSQL(
-            "DROP TABLE IF EXISTS attendance_checkinwindow CASCADE;",
-            migrations.RunSQL.noop,
-        ),
-        migrations.RunSQL(
-            "DROP TABLE IF EXISTS attendance_checkinconfiguration_groups CASCADE;",
-            migrations.RunSQL.noop,
-        ),
-        migrations.RunSQL(
-            "DROP TABLE IF EXISTS attendance_checkinconfiguration CASCADE;",
-            migrations.RunSQL.noop,
-        ),
+        migrations.RunPython(drop_attendance_tables, migrations.RunPython.noop),
     ]

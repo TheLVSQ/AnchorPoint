@@ -20,8 +20,11 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.http import JsonResponse
 from django.urls import include, path
+from django.views.generic import TemplateView
 from core import views as core_views
 from events import views as event_views
+from rest_framework.permissions import AllowAny
+from rest_framework.schemas import get_schema_view
 
 
 def health_check(request):
@@ -29,8 +32,23 @@ def health_check(request):
     return JsonResponse({"status": "ok"})
 
 
+schema_view = get_schema_view(
+    title="AnchorPoint API",
+    description="Versioned API for AnchorPoint church operations data.",
+    version="1.0.0",
+    permission_classes=[AllowAny],
+)
+
+
 urlpatterns = [
     path("health/", health_check, name="health_check"),
+    path("api/schema/", schema_view, name="api_schema"),
+    path(
+        "api/docs/",
+        TemplateView.as_view(template_name="api/docs.html"),
+        name="api_docs",
+    ),
+    path("api/v1/", include(("api.urls", "api"), namespace="api")),
     path("admin/", admin.site.urls),
     path("login/", core_views.login_view, name="login"),
     path("logout/", core_views.logout_view, name="logout"),

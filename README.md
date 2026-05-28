@@ -69,6 +69,14 @@ A lightweight church management system for small-to-mid-sized churches. Inspired
 
 See [DEPLOY.md](DEPLOY.md) for full deployment instructions using Docker and Cloudflare Tunnel.
 
+## API
+
+AnchorPoint now includes a versioned DRF API at `/api/v1/`.
+
+- API overview and endpoint reference: [docs/api.md](docs/api.md)
+- OpenAPI schema endpoint: `/api/schema/`
+- Built-in API docs page: `/api/docs/`
+
 ### Quick Docker Deployment
 
 ```bash
