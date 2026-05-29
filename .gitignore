@@ -62,3 +62,8 @@ Thumbs.db
 docs/superpowers
 .superpowers/
 .gitignore
+
+# Graphify artifacts
+graphify-out/
+anchorpoint/graphify-out/
+.graphify_python

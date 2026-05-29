@@ -10,6 +10,8 @@ from checkin.models import (
 from core.models import OrganizationSettings
 from households.models import Household, HouseholdMember
 from people.models import Person
+from django.contrib.auth import get_user_model
+from core.models import UserProfile
 
 
 class KioskFlowTests(TestCase):
@@ -181,3 +183,108 @@ class QuickRegistrationViewTests(TestCase):
             response,
             reverse("checkin:kiosk_family_select", args=[household.pk]),
         )
+
+
+class StandaloneSessionFallbackTests(TestCase):
+    def setUp(self):
+        self.household = Household.objects.create(name="Anderson Family", phone="555-222-1111")
+        self.child = Person.objects.create(
+            first_name="Noah",
+            last_name="Anderson",
+            birthdate=date.today() - timedelta(days=365 * 9),
+        )
+        HouseholdMember.objects.create(
+            household=self.household,
+            person=self.child,
+            relationship_type=HouseholdMember.RelationshipType.CHILD,
+        )
+        self.room = Room.objects.create(name="Room B")
+        self.session = CheckInSession.objects.create(
+            name="Standalone Session",
+            date=timezone.localdate(),
+            checkin_opens=(timezone.localtime() - timedelta(hours=1)).time(),
+            checkin_closes=(timezone.localtime() + timedelta(hours=1)).time(),
+            event_starts=timezone.localtime().time(),
+            event_ends=(timezone.localtime() + timedelta(hours=2)).time(),
+            is_active=True,
+        )
+        self.session.rooms.add(self.room)
+        org = OrganizationSettings.load()
+        org.kiosk_pin = "1234"
+        org.save()
+
+    def _unlock(self):
+        session = self.client.session
+        session["kiosk_authenticated"] = True
+        session.save()
+
+    def test_lookup_uses_standalone_session_when_no_open_configs(self):
+        self._unlock()
+        response = self.client.get(reverse("checkin:kiosk_lookup"))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["session"].pk, self.session.pk)
+
+    def test_family_select_allows_checkin_for_standalone_session(self):
+        self._unlock()
+        self.client.get(reverse("checkin:kiosk_lookup"))
+        response = self.client.post(
+            reverse("checkin:kiosk_family_select", args=[self.household.pk]),
+            {
+                f"select_{self.child.pk}": "on",
+                f"room_{self.child.pk}": str(self.room.pk),
+            },
+        )
+        self.assertRedirects(response, reverse("checkin:kiosk_confirmation"))
+        self.assertTrue(
+            CheckIn.objects.filter(session=self.session, person=self.child).exists()
+        )
+
+
+class SessionStatsAccessControlTests(TestCase):
+    def setUp(self):
+        self.session = CheckInSession.objects.create(
+            name="Stats Session",
+            date=timezone.localdate(),
+            checkin_opens=(timezone.localtime() - timedelta(hours=1)).time(),
+            checkin_closes=(timezone.localtime() + timedelta(hours=1)).time(),
+            event_starts=timezone.localtime().time(),
+            event_ends=(timezone.localtime() + timedelta(hours=2)).time(),
+            is_active=True,
+        )
+        user_model = get_user_model()
+        self.staff_user = user_model.objects.create_user(
+            username="staff@example.com",
+            email="staff@example.com",
+            password="pass1234",
+        )
+        self.staff_user.profile.role = UserProfile.Role.STAFF
+        self.staff_user.profile.save(update_fields=["role"])
+
+        self.volunteer_user = user_model.objects.create_user(
+            username="vol@example.com",
+            email="vol@example.com",
+            password="pass1234",
+        )
+        self.volunteer_user.profile.role = UserProfile.Role.VOLUNTEER
+        self.volunteer_user.profile.save(update_fields=["role"])
+
+    def test_stats_requires_login(self):
+        response = self.client.get(
+            reverse("checkin:api_session_stats", args=[self.session.pk])
+        )
+        self.assertEqual(response.status_code, 302)
+
+    def test_stats_denies_non_staff_user(self):
+        self.client.login(username="vol@example.com", password="pass1234")
+        response = self.client.get(
+            reverse("checkin:api_session_stats", args=[self.session.pk])
+        )
+        self.assertEqual(response.status_code, 403)
+
+    def test_stats_allows_staff_user(self):
+        self.client.login(username="staff@example.com", password="pass1234")
+        response = self.client.get(
+            reverse("checkin:api_session_stats", args=[self.session.pk])
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("checked_in", response.json())

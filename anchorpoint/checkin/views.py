@@ -92,7 +92,7 @@ def kiosk_lookup(request):
 
     org = OrganizationSettings.load()
 
-    # Find open configurations
+    # Find open configurations (schedule-driven sessions)
     now = timezone.localtime()
     open_configs = []
     for config in CheckInConfiguration.objects.filter(is_active=True):
@@ -100,22 +100,33 @@ def kiosk_lookup(request):
         if windows:
             open_configs.append((config, windows[0]))
 
-    if not open_configs:
-        next_window = _next_upcoming_window()
-        return render(request, "checkin/kiosk/no_sessions.html", {
-            "org": org, "next_window": next_window,
-        })
-
-    if len(open_configs) == 1:
-        config, window = open_configs[0]
-        session = get_or_create_session(config, window)
-        request.session[KIOSK_SESSION_ID_KEY] = session.pk
-    elif len(open_configs) > 1:
-        # Multiple configs open — if none selected yet, show picker
-        if not request.session.get(KIOSK_SESSION_ID_KEY):
-            return render(request, "checkin/kiosk/config_picker.html", {
-                "open_configs": open_configs,
-                "org": org,
+    if open_configs:
+        if len(open_configs) == 1:
+            config, window = open_configs[0]
+            session = get_or_create_session(config, window)
+            request.session[KIOSK_SESSION_ID_KEY] = session.pk
+        elif len(open_configs) > 1:
+            # Multiple configs open — if none selected yet, show picker
+            if not request.session.get(KIOSK_SESSION_ID_KEY):
+                return render(request, "checkin/kiosk/config_picker.html", {
+                    "open_configs": open_configs,
+                    "org": org,
+                })
+    else:
+        # No config windows open — fall back to any active standalone session today
+        today = timezone.localdate()
+        standalone_session = (
+            CheckInSession.objects
+            .filter(date=today, is_active=True)
+            .order_by("-checkin_opens")
+            .first()
+        )
+        if standalone_session:
+            request.session[KIOSK_SESSION_ID_KEY] = standalone_session.pk
+        else:
+            next_window = _next_upcoming_window()
+            return render(request, "checkin/kiosk/no_sessions.html", {
+                "org": org, "next_window": next_window,
             })
 
     session = _get_active_session(request)
@@ -156,12 +167,17 @@ def kiosk_family_select(request, household_id):
         return redir
 
     session = _get_active_session(request)
-    if not session or not session.configuration:
+    if not session:
         return redirect("checkin:kiosk_lookup")
 
     household = get_object_or_404(Household, pk=household_id)
     config = session.configuration
-    members_with_eligibility = get_eligible_members(household, config)
+    if config:
+        members_with_eligibility = get_eligible_members(household, config)
+    else:
+        # Standalone session (no config) — everyone is eligible
+        members = household.members.all().select_related()
+        members_with_eligibility = [(person, True) for person in members]
     rooms = list(session.rooms.all())
 
     if request.method == "POST":
@@ -673,6 +689,7 @@ def printer_test(request, printer_id):
 # =============================================================================
 
 
+@staff_required
 def api_session_stats(request, session_id):
     """Get real-time stats for a session (AJAX)."""
     session = get_object_or_404(CheckInSession, pk=session_id)
