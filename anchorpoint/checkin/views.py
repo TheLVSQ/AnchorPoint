@@ -68,6 +68,23 @@ def _next_upcoming_window():
     return None
 
 
+def _printer_health():
+    service = PrintService()
+    if not service.printer_config:
+        return {
+            "configured": False,
+            "available": False,
+            "name": None,
+            "last_successful_print_at": None,
+        }
+    return {
+        "configured": True,
+        "available": service.is_printer_available(),
+        "name": service.printer_config.name,
+        "last_successful_print_at": service.printer_config.last_successful_print_at,
+    }
+
+
 # =============================================================================
 # KIOSK VIEWS (Public-facing, PIN-gated)
 # =============================================================================
@@ -75,6 +92,7 @@ def _next_upcoming_window():
 
 def kiosk_unlock(request):
     org = OrganizationSettings.load()
+    printer_health = _printer_health()
     if request.method == "POST":
         form = KioskPinForm(request.POST, expected_pin=org.kiosk_pin)
         if form.is_valid():
@@ -82,7 +100,11 @@ def kiosk_unlock(request):
             return redirect("checkin:kiosk_lookup")
     else:
         form = KioskPinForm()
-    return render(request, "checkin/kiosk/unlock.html", {"form": form, "org": org})
+    return render(
+        request,
+        "checkin/kiosk/unlock.html",
+        {"form": form, "org": org, "printer_health": printer_health},
+    )
 
 
 def kiosk_lookup(request):
@@ -91,6 +113,7 @@ def kiosk_lookup(request):
         return redir
 
     org = OrganizationSettings.load()
+    printer_health = _printer_health()
 
     # Find open configurations (schedule-driven sessions)
     now = timezone.localtime()
@@ -111,6 +134,7 @@ def kiosk_lookup(request):
                 return render(request, "checkin/kiosk/config_picker.html", {
                     "open_configs": open_configs,
                     "org": org,
+                    "printer_health": printer_health,
                 })
     else:
         # No config windows open — fall back to any active standalone session today
@@ -126,7 +150,7 @@ def kiosk_lookup(request):
         else:
             next_window = _next_upcoming_window()
             return render(request, "checkin/kiosk/no_sessions.html", {
-                "org": org, "next_window": next_window,
+                "org": org, "next_window": next_window, "printer_health": printer_health,
             })
 
     session = _get_active_session(request)
@@ -158,6 +182,7 @@ def kiosk_lookup(request):
         "query": query,
         "session": session,
         "org": org,
+        "printer_health": printer_health,
     })
 
 
@@ -236,12 +261,14 @@ def kiosk_confirmation(request):
     checkins = CheckIn.objects.filter(pk__in=checkin_ids).select_related("person", "room")
     org = OrganizationSettings.load()
     session = _get_active_session(request)
+    printer_ok = PrintService().print_checkins(checkins, session) if session else False
 
     return render(request, "checkin/kiosk/confirmation.html", {
         "checkins": checkins,
         "security_code": security_code,
         "session": session,
         "org": org,
+        "printer_ok": printer_ok,
     })
 
 

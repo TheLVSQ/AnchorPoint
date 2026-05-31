@@ -90,7 +90,12 @@
     @media print {
       body * { visibility: hidden; }
       .print-labels, .print-labels * { visibility: visible; }
-      .print-labels { position: fixed; left: 0; top: 0; }
+      .print-labels {
+        display: block !important;
+        position: fixed;
+        left: 0;
+        top: 0;
+      }
       @page {
         size: 62mm auto;
         margin: 0;

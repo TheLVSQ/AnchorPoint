@@ -68,6 +68,7 @@ A lightweight church management system for small-to-mid-sized churches. Inspired
 ## Production Deployment
 
 See [DEPLOY.md](DEPLOY.md) for full deployment instructions using Docker and Cloudflare Tunnel.
+For remote kiosk label printing through a local Raspberry Pi print server, see [docs/checkin-printer-raspberry-pi.md](docs/checkin-printer-raspberry-pi.md).
 
 ### Quick Docker Deployment
 

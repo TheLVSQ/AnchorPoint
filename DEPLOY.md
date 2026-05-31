@@ -192,3 +192,11 @@ docker compose exec web python manage.py createsuperuser
 - Keep your `.env.production` file secure (don't commit to git)
 - The Cloudflare tunnel provides SSL/TLS encryption
 - Consider enabling Cloudflare Access for additional security
+
+## Check-In Printer on a Different Network
+
+If AnchorPoint runs on a VPS and your label printer is local (church campus), the VPS cannot reach `192.168.x.x` directly. Use a Raspberry Pi print server bridge and route traffic over a private network (recommended: Tailscale).
+
+Full setup guide:
+
+- [docs/checkin-printer-raspberry-pi.md](docs/checkin-printer-raspberry-pi.md)
