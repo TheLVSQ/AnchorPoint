@@ -7,7 +7,7 @@
     <h1>{{ session.name }}</h1>
     <p class="page-subtitle">
         {{ session.date|date:"l, F j, Y" }} &middot;
-        {{ session.start_time|time:"g:i A" }} - {{ session.end_time|time:"g:i A" }}
+        {{ session.checkin_opens|time:"g:i A" }} - {{ session.checkin_closes|time:"g:i A" }}
         {% if session.is_open %}
             <span class="chip" style="background: #dcfce7; color: #166534;">Open</span>
         {% else %}
@@ -19,7 +19,7 @@
 <div class="hero-actions" style="margin-bottom: 2rem;">
     <a href="{% url 'checkin:checkout_lookup' session.pk %}" class="btn">Checkout</a>
     <a href="{% url 'checkin:session_edit' session.pk %}" class="btn ghost">Edit Session</a>
-    <a href="{% url 'checkin:kiosk_lookup' session.pk %}" class="btn ghost" target="_blank">Open Kiosk</a>
+    <a href="{% url 'checkin:kiosk_lookup' %}" class="btn ghost" target="_blank">Open Kiosk</a>
 </div>
 
 <div class="detail-grid">

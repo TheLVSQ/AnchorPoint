@@ -296,6 +296,7 @@ class PrinterConfiguration(models.Model):
     connection_type = models.CharField(max_length=50, blank=True)
     host = models.CharField(max_length=255, blank=True)
     port = models.PositiveIntegerField(null=True, blank=True)
+    last_successful_print_at = models.DateTimeField(null=True, blank=True)
     is_default = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
 

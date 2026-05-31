@@ -37,7 +37,7 @@
         </p>
     {% endif %}
 
-    <a href="{% url 'checkin:kiosk_home' %}" class="btn-kiosk btn-kiosk-primary">
+    <a href="{% url 'checkin:kiosk_lookup' %}" class="btn-kiosk btn-kiosk-primary">
         Done
     </a>
 </div>
@@ -45,7 +45,7 @@
 <script>
 // Auto-redirect after 30 seconds
 setTimeout(function() {
-    window.location.href = "{% url 'checkin:kiosk_home' %}";
+    window.location.href = "{% url 'checkin:kiosk_lookup' %}";
 }, 30000);
 </script>
 {% endblock %}

@@ -21,14 +21,27 @@
             <div class="form-field">
                 {{ form.date.label_tag }}
                 {{ form.date }}
+                {% for error in form.date.errors %}<span class="error-text">{{ error }}</span>{% endfor %}
             </div>
             <div class="form-field">
-                {{ form.start_time.label_tag }}
-                {{ form.start_time }}
+                {{ form.checkin_opens.label_tag }}
+                {{ form.checkin_opens }}
+                {% for error in form.checkin_opens.errors %}<span class="error-text">{{ error }}</span>{% endfor %}
             </div>
             <div class="form-field">
-                {{ form.end_time.label_tag }}
-                {{ form.end_time }}
+                {{ form.checkin_closes.label_tag }}
+                {{ form.checkin_closes }}
+                {% for error in form.checkin_closes.errors %}<span class="error-text">{{ error }}</span>{% endfor %}
+            </div>
+            <div class="form-field">
+                {{ form.event_starts.label_tag }}
+                {{ form.event_starts }}
+                {% for error in form.event_starts.errors %}<span class="error-text">{{ error }}</span>{% endfor %}
+            </div>
+            <div class="form-field">
+                {{ form.event_ends.label_tag }}
+                {{ form.event_ends }}
+                {% for error in form.event_ends.errors %}<span class="error-text">{{ error }}</span>{% endfor %}
             </div>
         </div>
 
@@ -45,6 +58,7 @@
             <p class="stat-hint" style="margin-top: 0.5rem;">
                 <a href="{% url 'checkin:room_list' %}">Manage rooms</a>
             </p>
+            {% for error in form.rooms.errors %}<span class="error-text">{{ error }}</span>{% endfor %}
         </div>
 
         <div class="form-field">
@@ -58,6 +72,7 @@
             <button type="submit" class="btn">Save Session</button>
             <a href="{% url 'checkin:session_list' %}" class="btn ghost">Cancel</a>
         </div>
+        {% for error in form.non_field_errors %}<span class="error-text">{{ error }}</span>{% endfor %}
     </form>
 </div>
 
