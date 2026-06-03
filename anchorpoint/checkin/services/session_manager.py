@@ -12,25 +12,22 @@ def get_or_create_session(config, window, user=None):
     """
     today = timezone.localdate()
 
-    session = CheckInSession.objects.filter(
+    # get_or_create + the (configuration, window, date) unique constraint make
+    # this race-safe: two kiosks hitting lookup at once can't create duplicate
+    # sessions that would split check-ins and break the dashboard counts.
+    session, created = CheckInSession.objects.get_or_create(
         configuration=config,
         window=window,
         date=today,
-    ).first()
-
-    if session:
-        return session
-
-    session = CheckInSession.objects.create(
-        configuration=config,
-        window=window,
-        name=config.name,
-        date=today,
-        checkin_opens=window.checkin_opens,
-        checkin_closes=window.checkin_closes,
-        event_starts=window.event_starts,
-        event_ends=window.event_ends,
-        created_by=user,
+        defaults={
+            "name": config.name,
+            "checkin_opens": window.checkin_opens,
+            "checkin_closes": window.checkin_closes,
+            "event_starts": window.event_starts,
+            "event_ends": window.event_ends,
+            "created_by": user,
+        },
     )
-    session.rooms.set(config.rooms.all())
+    if created:
+        session.rooms.set(config.rooms.all())
     return session

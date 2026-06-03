@@ -21,6 +21,12 @@ COPY . .
 # Copy gunicorn config
 COPY docker/gunicorn.conf.py ./gunicorn.conf.py
 
+# Entrypoint applies DB migrations before the app server starts. sed strips any
+# CR characters so the script runs on Linux even if checked out with CRLF on
+# Windows.
+COPY docker/entrypoint.sh /app/entrypoint.sh
+RUN sed -i 's/\r$//' /app/entrypoint.sh && chmod +x /app/entrypoint.sh
+
 # Create directories for static and media files
 RUN mkdir -p /app/anchorpoint/staticfiles /app/anchorpoint/media
 
@@ -29,6 +35,9 @@ WORKDIR /app/anchorpoint
 RUN SECRET_KEY=build-time-placeholder python manage.py collectstatic --noinput --clear
 
 EXPOSE 8000
+
+# Migrations run here (entrypoint) before gunicorn (CMD) takes over.
+ENTRYPOINT ["/app/entrypoint.sh"]
 
 # Run with gunicorn using config file
 CMD ["gunicorn", "--config", "/app/gunicorn.conf.py", "anchorpoint.wsgi:application"]
