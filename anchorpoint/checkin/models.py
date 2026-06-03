@@ -21,6 +21,26 @@ def generate_security_code():
     return "".join(random.choices(SECURITY_CODE_CHARS, k=4))
 
 
+def generate_unique_security_code(session, max_attempts=100):
+    """Generate a security code that does not collide with any *active*
+    (not-yet-checked-out) check-in in the same session.
+
+    Checkout matches families solely by (session, security_code); if two
+    families share a code, a parent could be shown — and could check out —
+    another family's children. Guaranteeing uniqueness among active codes
+    closes that child-safety gap. Codes are free to reuse once checked out.
+    """
+    for _ in range(max_attempts):
+        code = generate_security_code()
+        if not session.checkins.filter(
+            security_code=code, checked_out_at__isnull=True
+        ).exists():
+            return code
+    # Practically unreachable (28**4 ≈ 614k codes vs. a few hundred active
+    # check-ins). Fall back to the last code rather than failing the check-in.
+    return code
+
+
 class CheckInConfiguration(models.Model):
     """Named check-in configuration controlling schedule, eligibility, and rooms."""
 
@@ -229,6 +249,15 @@ class CheckInSession(models.Model):
 
     class Meta:
         ordering = ["-date", "-checkin_opens"]
+        constraints = [
+            # At most one schedule-driven session per config+window per day.
+            # Standalone sessions (configuration/window NULL) are exempt because
+            # NULLs compare distinct, so the kiosk fallback can still create one.
+            models.UniqueConstraint(
+                fields=["configuration", "window", "date"],
+                name="uniq_session_per_config_window_date",
+            ),
+        ]
 
     def __str__(self):
         return f"{self.name} - {self.date}"
