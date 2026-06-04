@@ -5,6 +5,7 @@ urlpatterns = [
     path("", views.people_list, name="people_list"),
     path("add/", views.people_add, name="people_add"),
     path("lookup/", views.people_lookup, name="people_lookup"),
+    path("search/", views.people_search, name="people_search"),
     path("<int:pk>/", views.people_detail, name="people_detail"),
     path("<int:pk>/edit/", views.people_edit, name="people_edit"),
     path(
@@ -21,5 +22,10 @@ urlpatterns = [
         "<int:pk>/households/<int:household_pk>/remove/",
         views.people_household_remove,
         name="people_household_remove",
+    ),
+    path(
+        "<int:pk>/households/<int:household_pk>/move/",
+        views.people_household_move,
+        name="people_household_move",
     ),
 ]

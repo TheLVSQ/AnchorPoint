@@ -2,26 +2,6 @@
 {% block title %}Family Check-In{% endblock %}
 {% block content %}
 <div class="kiosk-card">
-  <div style="margin-bottom:12px;">
-    {% if printer_health.configured and printer_health.available %}
-      <span style="display:inline-block;padding:6px 10px;border-radius:999px;background:#14532d;color:#bbf7d0;font-size:12px;font-weight:700;">
-        Printer Ready{% if printer_health.name %}: {{ printer_health.name }}{% endif %}
-      </span>
-    {% elif printer_health.configured %}
-      <span style="display:inline-block;padding:6px 10px;border-radius:999px;background:#7f1d1d;color:#fecaca;font-size:12px;font-weight:700;">
-        Printer Offline{% if printer_health.name %}: {{ printer_health.name }}{% endif %}
-      </span>
-    {% else %}
-      <span style="display:inline-block;padding:6px 10px;border-radius:999px;background:#374151;color:#e5e7eb;font-size:12px;font-weight:700;">
-        No Printer Configured
-      </span>
-    {% endif %}
-    {% if printer_health.last_successful_print_at %}
-      <div style="margin-top:6px;font-size:12px;color:#9ca3af;">
-        Last successful print: {{ printer_health.last_successful_print_at|date:"M j, g:i A" }}
-      </div>
-    {% endif %}
-  </div>
   {% if session.configuration.welcome_message %}
     <div style="font-size:16px;color:#a0a0c0;margin-bottom:16px;">
       {{ session.configuration.welcome_message }}

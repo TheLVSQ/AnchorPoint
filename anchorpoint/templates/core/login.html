@@ -1,26 +1,57 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="container">
+<div class="container" style="max-width:420px;margin:4rem auto;">
 
-    <h1>AnchorPoint Login</h1>
+    <h1 style="text-align:center;margin-bottom:2rem;">AnchorPoint</h1>
 
     {% if messages %}
         {% for message in messages %}
-            <div class="message">{{ message }}</div>
+            <div class="message {{ message.tags }}">{{ message }}</div>
         {% endfor %}
+    {% endif %}
+
+    {% if google_client_id %}
+        <script src="https://accounts.google.com/gsi/client" async defer></script>
+
+        <div id="g_id_onload"
+             data-client_id="{{ google_client_id }}"
+             data-ux_mode="redirect"
+             data-login_uri="{% url 'google_auth' %}"
+             data-auto_prompt="false">
+        </div>
+
+        <div class="g_id_signin"
+             data-type="standard"
+             data-size="large"
+             data-theme="outline"
+             data-text="sign_in_with"
+             data-shape="rectangular"
+             data-width="360"
+             style="display:flex;justify-content:center;margin-bottom:1.5rem;">
+        </div>
+
+        <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1.5rem;">
+            <hr style="flex:1;border:none;border-top:1px solid var(--gray-200);">
+            <span class="muted-text" style="font-size:0.85rem;white-space:nowrap;">or sign in with email</span>
+            <hr style="flex:1;border:none;border-top:1px solid var(--gray-200);">
+        </div>
     {% endif %}
 
     <form method="POST">
         {% csrf_token %}
 
-        <label for="username">Username</label>
-        <input id="username" type="text" name="username" required>
+        <div class="form-field">
+            <label for="username">Email</label>
+            <input id="username" type="email" name="username" required autocomplete="email">
+        </div>
 
-        <label for="password">Password</label>
-        <input id="password" type="password" name="password" required>
+        <div class="form-field">
+            <label for="password">Password</label>
+            <input id="password" type="password" name="password" required autocomplete="current-password">
+        </div>
 
-        <button type="submit">Log In</button>
+        <button type="submit" class="btn" style="width:100%;margin-top:1rem;">Log In</button>
     </form>
 
 </div>

@@ -63,7 +63,7 @@ docs/superpowers
 .superpowers/
 .gitignore
 
-# Graphify artifacts
-graphify-out/
+# Graphify files
 anchorpoint/graphify-out/
+graphify-out/cache/
 .graphify_python

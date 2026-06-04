@@ -8,7 +8,8 @@
 
 <div class="hero-actions" style="margin-bottom: 2rem;">
     <a href="{% url 'checkin:session_create' %}" class="btn">Create Session</a>
-    <a href="{% url 'checkin:room_list' %}" class="btn ghost">Manage Rooms</a>
+    <a href="{% url 'checkin:configuration_list' %}" class="btn ghost">Configurations</a>
+    <a href="{% url 'checkin:room_list' %}" class="btn ghost">Rooms</a>
     <a href="{% url 'checkin:printer_list' %}" class="btn ghost">Printers</a>
 </div>
 
@@ -17,7 +18,7 @@
         {% for session in sessions %}
             <section class="detail-card">
                 <h2>{{ session.name }}</h2>
-                <p class="stat-hint">{{ session.start_time|time:"g:i A" }} - {{ session.end_time|time:"g:i A" }}</p>
+                <p class="stat-hint">{{ session.checkin_opens|time:"g:i A" }} - {{ session.checkin_closes|time:"g:i A" }}</p>
 
                 <div style="display: flex; gap: 2rem; margin: 1.5rem 0;">
                     <div>
@@ -31,7 +32,7 @@
                 <div class="hero-actions">
                     <a href="{% url 'checkin:session_detail' session.pk %}" class="btn">View Details</a>
                     <a href="{% url 'checkin:checkout_lookup' session.pk %}" class="btn ghost">Checkout</a>
-                    <a href="{% url 'checkin:kiosk_lookup' session.pk %}" class="btn ghost" target="_blank">Open Kiosk</a>
+                    <a href="{% url 'checkin:kiosk_lookup' %}" class="btn ghost" target="_blank">Open Kiosk</a>
                 </div>
             </section>
         {% endfor %}
@@ -47,22 +48,37 @@
     <h2>Quick Links</h2>
     <ul class="detail-list">
         <li>
+            <a href="{% url 'checkin:configuration_list' %}">Configurations</a>
+            <span>Schedule windows, eligibility filters, and room assignments</span>
+        </li>
+        <li>
             <a href="{% url 'checkin:session_list' %}">All Sessions</a>
             <span>View past check-in sessions</span>
         </li>
         <li>
             <a href="{% url 'checkin:room_list' %}">Room Setup</a>
-            <span>Configure rooms and age groups</span>
+            <span>Configure rooms for check-in</span>
         </li>
         <li>
             <a href="{% url 'checkin:printer_list' %}">Printer Setup</a>
             <span>Configure label printers</span>
         </li>
         <li>
-            <a href="{% url 'checkin:kiosk_lookup' %}" target="_blank">Kiosk Mode</a>
+            <a href="{% url 'checkin:kiosk_unlock' %}" target="_blank">Kiosk Mode</a>
             <span>Open self-service check-in</span>
         </li>
     </ul>
+</section>
+
+<section class="detail-card" style="margin-top: 1.5rem;">
+    <h2>Kiosk PIN</h2>
+    <p class="stat-hint" style="margin-bottom: 0.75rem;">
+        The kiosk PIN is required to unlock the check-in screen on a shared device.
+        Set or change it in Organization Settings.
+    </p>
+    <a href="{% url 'organization_settings' %}#kiosk-pin" class="ghost-link">
+        Go to Organization Settings &rarr;
+    </a>
 </section>
 
 {% endblock %}

@@ -34,11 +34,13 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("login/", core_views.login_view, name="login"),
     path("logout/", core_views.logout_view, name="logout"),
+    path("auth/google/", core_views.google_auth_callback, name="google_auth"),
     path("", core_views.dashboard, name="dashboard"),
     path("profile/", core_views.profile, name="profile"),
     path("permissions/roles/", core_views.manage_roles, name="manage_roles"),
     path("users/", core_views.user_list, name="user_list"),
     path("users/new/", core_views.user_create, name="user_create"),
+    path("users/person-check/", core_views.user_person_check, name="user_person_check"),
     path("users/<int:user_id>/edit/", core_views.user_edit, name="user_edit"),
     path("users/<int:user_id>/password/", core_views.user_set_password, name="user_set_password"),
     path("settings/", core_views.settings_home, name="settings_home"),
@@ -59,6 +61,11 @@ urlpatterns = [
     ),
 ]
 
-# Serve media files - needed for phone blast audio files to be accessible by Twilio
-# In a larger production setup, you'd use nginx or a CDN instead
-urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+# Serve media files directly — Django's static() helper only works with DEBUG=True,
+# so we wire up the serve view explicitly for production compatibility.
+# For high-traffic deployments replace this with nginx or a CDN.
+from django.views.static import serve
+from django.urls import re_path
+urlpatterns += [
+    re_path(r"^media/(?P<path>.*)$", serve, {"document_root": settings.MEDIA_ROOT}),
+]

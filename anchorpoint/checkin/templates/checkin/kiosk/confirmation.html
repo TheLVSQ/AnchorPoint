@@ -4,7 +4,11 @@
 <div class="kiosk-card" style="text-align:center;">
   <div style="font-size:48px;margin-bottom:16px;">✓</div>
   <div class="kiosk-title">You're All Set!</div>
-  <div class="kiosk-subtitle">Printing labels… if nothing prints, tap “Print Labels”.</div>
+  {% if printer_ok %}
+  <div class="kiosk-subtitle">Labels are printing now</div>
+  {% else %}
+  <div class="kiosk-subtitle">Print your labels below</div>
+  {% endif %}
 
   <div style="margin:28px 0;padding:24px;background:#0d0d20;border-radius:12px;">
     <div style="font-size:12px;color:#666;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px;">
@@ -30,15 +34,12 @@
     <a href="{% url 'checkin:kiosk_lookup' %}" class="btn btn-secondary" style="padding:14px 32px;">
       Check In Another Family
     </a>
-    <button type="button" onclick="window.print()" class="btn btn-primary" style="padding:14px 32px;margin-left:8px;">
-      Print Labels
-    </button>
   </div>
   <div id="countdown" style="margin-top:16px;font-size:13px;color:#555;"></div>
 </div>
 
 <!-- Hidden print area — shown only during print -->
-<div class="print-labels" style="display:none;">
+<div class="print-labels">
   {% for checkin in checkins %}
     <div class="label">
       <div>
@@ -96,12 +97,15 @@
 
 {% block extra_js %}
 <script>
-  // Print the labels from the kiosk's own browser to its local printer.
-  // (The app server is remote and cannot reach the on-site printer.)
-  var el = document.getElementById('countdown');
+  window.addEventListener('load', function() {
+    {% if not printer_ok %}
+    // No server-side printer configured or print failed — fall back to browser print
+    window.print();
+    {% endif %}
 
-  function startCountdown() {
+    // Countdown redirect
     var seconds = 8;
+    var el = document.getElementById('countdown');
     function tick() {
       if (seconds <= 0) {
         window.location.href = "{% url 'checkin:kiosk_lookup' %}";
@@ -112,22 +116,6 @@
       setTimeout(tick, 1000);
     }
     tick();
-  }
-
-  // Don't redirect while the print dialog is open; resume the countdown
-  // once printing finishes (or is cancelled).
-  var counted = false;
-  window.addEventListener('afterprint', function () {
-    if (!counted) { counted = true; startCountdown(); }
-  });
-
-  window.addEventListener('load', function () {
-    window.print();
-    // Fallback: if afterprint never fires (silent kiosk printing, or a
-    // browser that doesn't emit it), still return to the lookup screen.
-    setTimeout(function () {
-      if (!counted) { counted = true; startCountdown(); }
-    }, 2500);
   });
 </script>
 {% endblock %}

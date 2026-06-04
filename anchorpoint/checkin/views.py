@@ -75,23 +75,6 @@ def _next_upcoming_window():
     return None
 
 
-def _printer_health():
-    service = PrintService()
-    if not service.printer_config:
-        return {
-            "configured": False,
-            "available": False,
-            "name": None,
-            "last_successful_print_at": None,
-        }
-    return {
-        "configured": True,
-        "available": service.is_printer_available(),
-        "name": service.printer_config.name,
-        "last_successful_print_at": service.printer_config.last_successful_print_at,
-    }
-
-
 # =============================================================================
 # KIOSK VIEWS (Public-facing, PIN-gated)
 # =============================================================================
@@ -99,7 +82,6 @@ def _printer_health():
 
 def kiosk_unlock(request):
     org = OrganizationSettings.load()
-    printer_health = _printer_health()
     if request.method == "POST":
         form = KioskPinForm(request.POST, expected_pin=org.kiosk_pin)
         if form.is_valid():
@@ -107,11 +89,7 @@ def kiosk_unlock(request):
             return redirect("checkin:kiosk_lookup")
     else:
         form = KioskPinForm()
-    return render(
-        request,
-        "checkin/kiosk/unlock.html",
-        {"form": form, "org": org, "printer_health": printer_health},
-    )
+    return render(request, "checkin/kiosk/unlock.html", {"form": form, "org": org})
 
 
 def kiosk_lookup(request):
@@ -120,7 +98,6 @@ def kiosk_lookup(request):
         return redir
 
     org = OrganizationSettings.load()
-    printer_health = _printer_health()
 
     # Find open configurations (schedule-driven sessions)
     now = timezone.localtime()
@@ -146,7 +123,6 @@ def kiosk_lookup(request):
                 return render(request, "checkin/kiosk/config_picker.html", {
                     "open_configs": open_configs,
                     "org": org,
-                    "printer_health": printer_health,
                 })
     else:
         # No config windows open — fall back to any active standalone session today
@@ -162,7 +138,7 @@ def kiosk_lookup(request):
         else:
             next_window = _next_upcoming_window()
             return render(request, "checkin/kiosk/no_sessions.html", {
-                "org": org, "next_window": next_window, "printer_health": printer_health,
+                "org": org, "next_window": next_window,
             })
 
     session = _get_active_session(request)
@@ -194,7 +170,6 @@ def kiosk_lookup(request):
         "query": query,
         "session": session,
         "org": org,
-        "printer_health": printer_health,
     })
 
 
@@ -285,15 +260,14 @@ def kiosk_confirmation(request):
     org = OrganizationSettings.load()
     session = _get_active_session(request)
 
-    # Labels print from the kiosk's own browser (CSS @media print), because the
-    # printer lives on the kiosk's local network — the remote app server cannot
-    # reach it. The confirmation page triggers window.print() against whatever
-    # printer the kiosk device is configured to use.
+    printer_ok = PrintService().print_checkins(checkins, session)
+
     return render(request, "checkin/kiosk/confirmation.html", {
         "checkins": checkins,
         "security_code": security_code,
         "session": session,
         "org": org,
+        "printer_ok": printer_ok,
     })
 
 
@@ -495,7 +469,12 @@ def _config_form(request, instance):
 def dashboard(request):
     """Check-in dashboard showing current sessions."""
     today = timezone.localdate()
-    sessions = CheckInSession.objects.filter(date=today).order_by("checkin_opens")
+    sessions = (
+        CheckInSession.objects
+        .filter(date=today)
+        .prefetch_related("checkins")
+        .order_by("checkin_opens")
+    )
 
     return render(
         request,
@@ -538,7 +517,12 @@ def session_detail(request, session_id):
 @staff_required
 def session_list(request):
     """List all check-in sessions."""
-    sessions = CheckInSession.objects.all().order_by("-date", "-checkin_opens")
+    sessions = (
+        CheckInSession.objects
+        .all()
+        .prefetch_related("checkins")
+        .order_by("-date", "-checkin_opens")
+    )
 
     return render(
         request,
@@ -744,7 +728,6 @@ def printer_test(request, printer_id):
 # =============================================================================
 
 
-@staff_required
 def api_session_stats(request, session_id):
     """Get real-time stats for a session (AJAX)."""
     session = get_object_or_404(CheckInSession, pk=session_id)

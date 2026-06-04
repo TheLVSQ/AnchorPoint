@@ -1,0 +1,14 @@
+<div id="people-results">
+    <div class="cards">
+        {% for person in page_obj %}
+            <div class="card">
+                <h2>{{ person.first_name }} {{ person.last_name }}</h2>
+                <p>{{ person.email }}</p>
+                <a href="{% url 'people_detail' person.pk %}">View</a>
+            </div>
+        {% empty %}
+            <p>No people found.</p>
+        {% endfor %}
+    </div>
+    {% include "partials/pagination.html" %}
+</div>

@@ -8,19 +8,18 @@ User = get_user_model()
 
 
 class CreateUserForm(forms.Form):
-    username = forms.CharField(max_length=150)
     first_name = forms.CharField(max_length=150)
     last_name = forms.CharField(max_length=150)
-    email = forms.EmailField(required=False)
+    email = forms.EmailField(label="Email address")
     role = forms.ChoiceField(choices=UserProfile.Role.choices)
     password = forms.CharField(widget=forms.PasswordInput, min_length=8)
     confirm_password = forms.CharField(widget=forms.PasswordInput, label="Confirm password")
 
-    def clean_username(self):
-        username = self.cleaned_data["username"]
-        if User.objects.filter(username=username).exists():
-            raise forms.ValidationError("A user with that username already exists.")
-        return username
+    def clean_email(self):
+        email = self.cleaned_data["email"].strip().lower()
+        if User.objects.filter(email__iexact=email).exists():
+            raise forms.ValidationError("A user with that email already exists.")
+        return email
 
     def clean(self):
         cleaned = super().clean()
@@ -35,7 +34,7 @@ class EditUserForm(forms.ModelForm):
 
     class Meta:
         model = User
-        fields = ["first_name", "last_name", "email", "username"]
+        fields = ["first_name", "last_name", "email"]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

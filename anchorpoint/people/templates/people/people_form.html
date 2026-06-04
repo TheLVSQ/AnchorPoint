@@ -146,6 +146,60 @@
             </div>
         </div>
 
+        {% if not form.instance.pk %}
+        <div class="form-section">
+            <h3>Family</h3>
+            <p class="section-hint">Link this person to a household so they appear in check-in search.</p>
+
+            <div class="household-choice">
+                <label class="radio-option">
+                    <input type="radio" name="household_action" value="existing" id="hh_existing">
+                    <span>Join an existing family</span>
+                </label>
+                <label class="radio-option">
+                    <input type="radio" name="household_action" value="new" id="hh_new">
+                    <span>Create a new family</span>
+                </label>
+                <label class="radio-option">
+                    <input type="radio" name="household_action" value="skip" id="hh_skip" checked>
+                    <span>Skip for now</span>
+                </label>
+            </div>
+
+            <div id="household-existing-fields" class="household-fields" style="display:none;">
+                <div class="form-field">
+                    <label for="household_id">Select household</label>
+                    <select name="household_id" id="household_id">
+                        <option value="">— Choose a family —</option>
+                        {% for hh in households %}
+                            <option value="{{ hh.pk }}">{{ hh.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div id="household-new-fields" class="household-fields" style="display:none;">
+                <div class="form-field">
+                    <label for="new_household_name">Family name</label>
+                    <input type="text" name="new_household_name" id="new_household_name"
+                           placeholder="e.g. Smith Family (defaults to last name)">
+                </div>
+            </div>
+
+            <div id="household-relationship-field" class="household-fields" style="display:none;">
+                <div class="form-field">
+                    <label for="household_relationship">Relationship</label>
+                    <select name="household_relationship" id="household_relationship">
+                        <option value="adult">Adult</option>
+                        <option value="child">Child</option>
+                        <option value="student">Student</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
         <div class="form-section">
             <h3>Care & Notes</h3>
             <div class="form-grid">
@@ -175,21 +229,34 @@
 document.addEventListener("DOMContentLoaded", function () {
     const input = document.getElementById("id_profile_photo");
     const preview = document.getElementById("photoPreview");
-    if (!input || !preview) {
-        return;
+    if (input && preview) {
+        input.addEventListener("change", function (event) {
+            const [file] = event.target.files;
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function (readerEvent) {
+                preview.innerHTML = `<img src="${readerEvent.target.result}" alt="Selected profile photo preview">`;
+            };
+            reader.readAsDataURL(file);
+        });
     }
 
-    input.addEventListener("change", function (event) {
-        const [file] = event.target.files;
-        if (!file) {
-            return;
-        }
-        const reader = new FileReader();
-        reader.onload = function (readerEvent) {
-            preview.innerHTML = `<img src="${readerEvent.target.result}" alt="Selected profile photo preview">`;
-        };
-        reader.readAsDataURL(file);
-    });
+    // Household assignment toggle
+    const radios = document.querySelectorAll('input[name="household_action"]');
+    const existingFields = document.getElementById("household-existing-fields");
+    const newFields = document.getElementById("household-new-fields");
+    const relField = document.getElementById("household-relationship-field");
+
+    if (radios.length) {
+        radios.forEach(function(radio) {
+            radio.addEventListener("change", function() {
+                const val = this.value;
+                if (existingFields) existingFields.style.display = val === "existing" ? "block" : "none";
+                if (newFields) newFields.style.display = val === "new" ? "block" : "none";
+                if (relField) relField.style.display = val === "skip" ? "none" : "block";
+            });
+        });
+    }
 });
 </script>
 

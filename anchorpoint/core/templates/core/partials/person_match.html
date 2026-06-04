@@ -1,0 +1,8 @@
+<div class="detail-card" style="background:#eff6ff;border:1px solid #bfdbfe;padding:1rem;margin-top:0.5rem;border-radius:8px;">
+    <p style="margin:0 0 0.5rem;"><strong>Person record found:</strong> {{ person.first_name }} {{ person.last_name }}
+    {% if person.email %}<span class="stat-hint"> &middot; {{ person.email }}</span>{% endif %}</p>
+    <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;">
+        <input type="checkbox" name="link_person" value="{{ person.pk }}" checked>
+        Link this user account to {{ person.first_name }}'s Person record
+    </label>
+</div>

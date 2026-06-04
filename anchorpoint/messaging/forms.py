@@ -9,6 +9,19 @@ from .models import PhoneBlast, SmsMessage
 from .services import is_within_blackout_window
 
 
+def get_group_phone_recipients(group):
+    """Return all Person records in a group who have a phone number and opt-in."""
+    return list(
+        Person.objects.filter(
+            group_memberships__group=group,
+            phone__isnull=False,
+            phone_opt_in=True,
+        )
+        .exclude(phone__exact="")
+        .distinct()
+    )
+
+
 class SmsMessageForm(forms.ModelForm):
     class Meta:
         model = SmsMessage
@@ -86,16 +99,7 @@ class SmsMessageForm(forms.ModelForm):
             if not group:
                 self.add_error("group", "Select a group to broadcast your SMS.")
             else:
-                members = (
-                    Person.objects.filter(
-                        group_memberships__group=group,
-                        phone__isnull=False,
-                        phone_opt_in=True,
-                    )
-                    .exclude(phone__exact="")
-                    .distinct()
-                )
-                recipients = list(members)
+                recipients = get_group_phone_recipients(group)
         return recipients
 
     def get_recipients(self):
@@ -128,16 +132,7 @@ class PhoneBlastForm(forms.ModelForm):
         if not group:
             self.add_error("group", "Select the group you want to contact.")
         else:
-            members = (
-                Person.objects.filter(
-                    group_memberships__group=group,
-                    phone__isnull=False,
-                    phone_opt_in=True,
-                )
-                .exclude(phone__exact="")
-                .distinct()
-            )
-            self._recipients = list(members)
+            self._recipients = get_group_phone_recipients(group)
 
         if not self._recipients and group:
             raise forms.ValidationError(
