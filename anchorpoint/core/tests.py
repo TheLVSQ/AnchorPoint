@@ -542,3 +542,56 @@ class LoginPageTests(TestCase):
         response = self.client.get(reverse("login"))
         self.assertContains(response, 'name="username"')
         self.assertContains(response, 'name="password"')
+
+
+class CreateAdminCommandTests(TestCase):
+    def test_creates_admin_with_given_password(self):
+        from io import StringIO
+        from django.core.management import call_command
+
+        call_command(
+            "create_admin",
+            "--username", "owner",
+            "--email", "owner@example.org",
+            "--password", "Choose-My-Own-1",
+            "--name", "Owner Person",
+            stdout=StringIO(),
+        )
+        user = get_user_model().objects.get(username="owner")
+        self.assertTrue(user.is_staff)
+        self.assertTrue(user.is_superuser)
+        self.assertTrue(user.check_password("Choose-My-Own-1"))
+        self.assertEqual(user.first_name, "Owner")
+        self.assertEqual(user.last_name, "Person")
+        self.assertEqual(user.profile.role, UserProfile.Role.ADMIN)
+        self.assertTrue(user.profile.can_manage_communications)
+
+    def test_promotes_existing_user_without_touching_password(self):
+        from io import StringIO
+        from django.core.management import call_command
+
+        user = get_user_model().objects.create_user(username="existing", password="orig-pass")
+        call_command("create_admin", "--username", "existing", stdout=StringIO())
+        user.refresh_from_db()
+        self.assertEqual(user.profile.role, UserProfile.Role.ADMIN)
+        self.assertTrue(user.is_superuser)
+        self.assertTrue(user.check_password("orig-pass"))  # unchanged
+
+
+class RotatePasswordsCommandTests(TestCase):
+    def test_rotates_named_user(self):
+        from io import StringIO
+        from django.core.management import call_command
+
+        user = get_user_model().objects.create_user(username="staffer", password="old-pass")
+        call_command("rotate_passwords", "staffer", stdout=StringIO())
+        user.refresh_from_db()
+        self.assertFalse(user.check_password("old-pass"))
+
+    def test_errors_when_no_target_given(self):
+        from io import StringIO
+        from django.core.management import call_command
+        from django.core.management.base import CommandError
+
+        with self.assertRaises(CommandError):
+            call_command("rotate_passwords", stdout=StringIO())
