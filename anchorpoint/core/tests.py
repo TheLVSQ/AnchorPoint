@@ -35,9 +35,8 @@ class ManageRolesViewTests(TestCase):
         response = self.client.post(
             reverse("manage_roles"),
             {
-                "user_id": self.user.id,
-                "role": UserProfile.Role.STAFF,
-                "can_manage_communications": "on",
+                f"role_{self.user.pk}": UserProfile.Role.STAFF,
+                f"comms_{self.user.pk}": "on",
             },
         )
         self.assertEqual(response.status_code, 302)

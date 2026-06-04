@@ -66,3 +66,4 @@ docs/superpowers
 # Graphify files
 anchorpoint/graphify-out/
 graphify-out/cache/
+.graphify_python

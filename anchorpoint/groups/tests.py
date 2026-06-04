@@ -48,7 +48,8 @@ class GroupDetailViewTests(TestCase):
         self.client.logout()
         url = reverse("groups:detail", args=[self.group.pk])
         response = self.client.get(url)
-        self.assertRedirects(response, f"/accounts/login/?next={url}", fetch_redirect_response=False)
+        # staff_required redirects to the app's own login page.
+        self.assertRedirects(response, "/login/", fetch_redirect_response=False)
 
 
 class GroupEditViewTests(TestCase):
@@ -74,7 +75,7 @@ class GroupEditViewTests(TestCase):
             "location": "",
             "meeting_schedule": "",
             "capacity": "",
-            "is_active": "on",
+            "is_active": "True",
         })
         self.assertRedirects(response, reverse("groups:detail", args=[self.group.pk]))
         self.group.refresh_from_db()

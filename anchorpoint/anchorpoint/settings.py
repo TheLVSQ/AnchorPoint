@@ -12,7 +12,13 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 from pathlib import Path
 import os
+import sys
 from dotenv import load_dotenv
+
+# Django forces DEBUG=False during test runs, which would otherwise activate the
+# production HTTPS hardening below (secure cookies, SSL redirect) and break the
+# HTTP test client. Detect test runs so that block stays production-only.
+TESTING = "test" in sys.argv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -154,6 +160,14 @@ STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
+# During tests, isolate uploads in a throwaway directory so they don't collide
+# with previously-uploaded files (which would make Django append a random
+# suffix to the stored filename and break filename assertions) or pollute the
+# real media dir.
+if TESTING:
+    import tempfile
+    MEDIA_ROOT = tempfile.mkdtemp(prefix="anchorpoint-test-media-")
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
@@ -171,17 +185,57 @@ DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", EMAIL_HOST_USER)
 
 
 # Security settings for production (when not in DEBUG mode)
-if not DEBUG:
-    # HTTPS settings (Cloudflare handles SSL termination)
+if not DEBUG and not TESTING:
+    # HTTPS settings (Cloudflare terminates TLS and forwards X-Forwarded-Proto)
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
-    # Only enforce secure cookies if HTTPS is required
-    # Set REQUIRE_HTTPS=True in env when using Cloudflare tunnel
-    if os.getenv("REQUIRE_HTTPS", "False").lower() == "true":
+    # Default to enforcing HTTPS in production. Set REQUIRE_HTTPS=False only for
+    # a deliberate non-TLS local prod test (otherwise cookies would leak over
+    # plain HTTP). Previously this defaulted off, leaving secure cookies unset.
+    _require_https = os.getenv("REQUIRE_HTTPS", "True").lower() == "true"
+    if _require_https:
         SESSION_COOKIE_SECURE = True
         CSRF_COOKIE_SECURE = True
+        SECURE_SSL_REDIRECT = True
+        # HSTS: tell browsers to use HTTPS for a year. Disable by setting
+        # SECURE_HSTS_SECONDS=0 if you are still validating the TLS setup.
+        SECURE_HSTS_SECONDS = int(os.getenv("SECURE_HSTS_SECONDS", "31536000"))
+        SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+        SECURE_HSTS_PRELOAD = True
 
     # Additional security headers
     SECURE_CONTENT_TYPE_NOSNIFF = True
     SECURE_BROWSER_XSS_FILTER = True
     X_FRAME_OPTIONS = "DENY"
+
+
+# Logging — send Django and application logs to stdout/stderr so gunicorn and
+# Docker capture them. Without this, app loggers (printer/SMS/email failures,
+# etc.) have no handler and their messages are silently dropped in production.
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "verbose": {
+            "format": "{asctime} {levelname} {name}: {message}",
+            "style": "{",
+        },
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "verbose",
+        },
+    },
+    "root": {
+        "handlers": ["console"],
+        "level": os.getenv("LOG_LEVEL", "INFO"),
+    },
+    "loggers": {
+        "django": {
+            "handlers": ["console"],
+            "level": os.getenv("DJANGO_LOG_LEVEL", "INFO"),
+            "propagate": False,
+        },
+    },
+}
