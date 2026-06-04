@@ -17,8 +17,7 @@ jobs:
 
       - name: Recreate containers
         working-directory: /home/deploy/anchorpoint/docker
+        # Database migrations run automatically on container startup via
+        # docker/entrypoint.sh (migrate --noinput before gunicorn). A separate
+        # migrate step here would race that one and fail with DuplicateTable.
         run: docker compose --env-file .env.production up -d
-
-      - name: Run migrations
-        working-directory: /home/deploy/anchorpoint/docker
-        run: docker compose --env-file .env.production exec -T web python manage.py migrate
