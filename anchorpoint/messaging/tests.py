@@ -201,9 +201,12 @@ class MessagingDeliveryTests(TestCase):
                 settings_obj=self.settings_obj,
                 base_url="https://example.com",
             )
+        # Derive the expected audio URL from the stored file so the assertion is
+        # robust to filename suffixing when the test media dir already holds a
+        # file of the same name.
         mock_call.assert_called_once_with(
             self.person.phone,
-            "https://example.com/media/message.mp3",
+            f"https://example.com{blast.audio_file.url}",
             status_callback_url="https://example.com/communications/phone-blast/webhook/call-status/",
         )
 
