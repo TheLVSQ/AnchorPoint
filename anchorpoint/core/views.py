@@ -33,10 +33,9 @@ def login_view(request):
     if request.method == "POST":
         email = request.POST.get("username", "").strip()
         password = request.POST.get("password", "")
-        try:
-            user = User.objects.get(email__iexact=email)
-        except User.DoesNotExist:
-            user = None
+        # filter().first() (not get()) so a stray duplicate email can never 500
+        # the login page; emails are also uniqueness-constrained at the DB level.
+        user = User.objects.filter(email__iexact=email).first()
 
         if user is not None and user.check_password(password) and user.is_active:
             login(request, user, backend="django.contrib.auth.backends.ModelBackend")
@@ -88,9 +87,8 @@ def google_auth_callback(request):
         return redirect("login")
 
     UserModel = get_user_model()
-    try:
-        user = UserModel.objects.get(email__iexact=email)
-    except UserModel.DoesNotExist:
+    user = UserModel.objects.filter(email__iexact=email).first()
+    if user is None:
         messages.error(
             request,
             "No AnchorPoint account found for this Google account. "

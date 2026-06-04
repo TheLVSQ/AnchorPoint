@@ -595,3 +595,40 @@ class RotatePasswordsCommandTests(TestCase):
 
         with self.assertRaises(CommandError):
             call_command("rotate_passwords", stdout=StringIO())
+
+
+@override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
+class CreateAdminNoEmailTests(TestCase):
+    def test_create_admin_sends_no_welcome_email(self):
+        from io import StringIO
+        from django.core.management import call_command
+
+        mail.outbox.clear()
+        call_command(
+            "create_admin",
+            "--username", "newadmin",
+            "--email", "newadmin@example.org",
+            "--password", "pw-123456",
+            stdout=StringIO(),
+        )
+        # The welcome-email signal is suppressed for hand-created admins.
+        self.assertEqual(len(mail.outbox), 0)
+        self.assertTrue(get_user_model().objects.get(username="newadmin").is_superuser)
+
+
+@override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
+class UserEmailUniquenessTests(TestCase):
+    def test_duplicate_nonblank_email_rejected_case_insensitively(self):
+        from django.db import IntegrityError, transaction
+
+        get_user_model().objects.create_user(username="a", email="dup@example.org", password="p")
+        with self.assertRaises(IntegrityError):
+            with transaction.atomic():
+                get_user_model().objects.create_user(
+                    username="b", email="DUP@example.org", password="p"
+                )
+
+    def test_multiple_blank_emails_allowed(self):
+        get_user_model().objects.create_user(username="noemail1", email="", password="p")
+        get_user_model().objects.create_user(username="noemail2", email="", password="p")
+        self.assertEqual(get_user_model().objects.filter(email="").count(), 2)

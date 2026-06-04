@@ -15,8 +15,9 @@ import string
 
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
+from django.db.models.signals import post_save
 
-from core.models import UserProfile
+from core.models import UserProfile, ensure_user_profile
 
 User = get_user_model()
 
@@ -46,9 +47,17 @@ class Command(BaseCommand):
         password = options["password"]
         name = options["name"].strip()
 
-        user, created = User.objects.get_or_create(
-            username=username, defaults={"email": email}
-        )
+        # Suppress the post_save welcome-email signal while creating the user:
+        # a hand-created admin doesn't need a welcome email, and the synchronous
+        # SMTP send would otherwise block (esp. where outbound SMTP is filtered).
+        # We create the profile explicitly below, so the signal isn't needed.
+        post_save.disconnect(ensure_user_profile, sender=User)
+        try:
+            user, created = User.objects.get_or_create(
+                username=username, defaults={"email": email}
+            )
+        finally:
+            post_save.connect(ensure_user_profile, sender=User)
 
         generated = False
         if password is None and created:
