@@ -69,7 +69,9 @@ Key environment variables (see `.env.production.example`):
 
 ## Management Commands
 
-- `python manage.py setup_beta_users` - Creates admin + 2 staff testers with random passwords
+- `python manage.py create_admin --username <u> --email <e> [--password <p>] [--name "First Last"]` - Create or promote a user to admin (staff + superuser + ADMIN role). Idempotent; generates a password if none given. **Preferred way to bootstrap an admin after deployment.**
+- `python manage.py rotate_passwords <username...>` (or `--all-staff`) - Reset the given users' passwords to fresh random values and print them once. Use after a credential exposure or lockout.
+- `python manage.py setup_beta_users` - (Legacy) Creates admin + 2 staff testers with random passwords. Superseded by `create_admin` for new deployments.
 
 ## Known Limitations
 
