@@ -197,6 +197,10 @@ if not DEBUG and not TESTING:
         SESSION_COOKIE_SECURE = True
         CSRF_COOKIE_SECURE = True
         SECURE_SSL_REDIRECT = True
+        # The container healthcheck probes http://localhost:8000/health/ directly
+        # (no X-Forwarded-Proto), so without this it would be 301'd to https on a
+        # non-TLS port and fail. Exempt the health endpoint from the SSL redirect.
+        SECURE_REDIRECT_EXEMPT = [r"^health/$"]
         # HSTS: tell browsers to use HTTPS for a year. Disable by setting
         # SECURE_HSTS_SECONDS=0 if you are still validating the TLS setup.
         SECURE_HSTS_SECONDS = int(os.getenv("SECURE_HSTS_SECONDS", "31536000"))
