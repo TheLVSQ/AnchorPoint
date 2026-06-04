@@ -17,7 +17,7 @@
             <div class="list-item">
                 <div>
                     <strong>{{ session.name }}</strong>
-                    <span>{{ session.date|date:"M j, Y" }} &middot; {{ session.start_time|time:"g:i A" }}</span>
+                    <span>{{ session.date|date:"M j, Y" }} &middot; {{ session.checkin_opens|time:"g:i A" }}</span>
                     <p class="stat-hint">{{ session.checkins.count }} check-ins</p>
                 </div>
                 <div style="display: flex; gap: 0.5rem; align-items: center;">

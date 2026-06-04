@@ -1,7 +1,9 @@
 {% extends "base.html" %}
 {% block content %}
 
-<div class="page-header">
+<a class="ghost-link" href="{% url 'checkin:dashboard' %}">&larr; Back to Check-In Dashboard</a>
+
+<div class="page-header" style="margin-top: 1rem;">
   <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
     <div>
       <h1>Check-In Configurations</h1>

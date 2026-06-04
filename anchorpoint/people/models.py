@@ -45,7 +45,7 @@ class Person(models.Model):
 
     first_name = models.CharField(max_length=150)
     last_name = models.CharField(max_length=150)
-    email = models.EmailField(blank=True, null=True)
+    email = models.EmailField(blank=True, null=True, db_index=True)
     phone = models.CharField(max_length=50, blank=True, null=True)
     normalized_phone = models.CharField(
         max_length=20,
@@ -89,7 +89,20 @@ class Person(models.Model):
     custody_flag = models.BooleanField(default=False)
     custody_notes = models.TextField(blank=True)
     unauthorized_pickup = models.TextField(blank=True)
-    status = models.CharField(max_length=50, default="guest")
+    STATUS_CHOICES = [
+        ("guest", "Guest"),
+        ("visitor", "Visitor"),
+        ("regular_attendee", "Regular Attendee"),
+        ("member", "Member"),
+        ("volunteer", "Volunteer"),
+        ("inactive", "Inactive"),
+    ]
+
+    status = models.CharField(
+        max_length=50,
+        choices=STATUS_CHOICES,
+        default="guest",
+    )
     notes = models.TextField(blank=True, null=True)
 
     def __str__(self):

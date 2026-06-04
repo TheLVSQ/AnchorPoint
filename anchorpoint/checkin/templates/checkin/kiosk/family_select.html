@@ -37,7 +37,7 @@
               {% for room in rooms %}
                 <label style="cursor:pointer;">
                   <input type="radio" name="room_{{ person.pk }}" value="{{ room.pk }}"
-                         style="display:none;">
+                         style="display:none;" required>
                   <span class="room-btn" data-person="{{ person.pk }}" data-room="{{ room.pk }}"
                         style="display:inline-block;padding:8px 16px;border-radius:8px;
                                background:#1a1a30;border:1px solid #333;font-size:14px;

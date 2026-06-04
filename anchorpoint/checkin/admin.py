@@ -79,14 +79,7 @@ class CheckInAdmin(admin.ModelAdmin):
 
 @admin.register(PrinterConfiguration)
 class PrinterConfigurationAdmin(admin.ModelAdmin):
-    list_display = [
-        "name",
-        "printer_type",
-        "host",
-        "last_successful_print_at",
-        "is_default",
-        "is_active",
-    ]
+    list_display = ["name", "printer_type", "host", "is_default", "is_active"]
     list_filter = ["printer_type", "is_active", "is_default"]
     list_editable = ["is_active"]
 

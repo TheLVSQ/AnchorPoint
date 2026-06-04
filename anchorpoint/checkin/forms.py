@@ -121,7 +121,7 @@ class CheckInSessionForm(forms.ModelForm):
     class Meta:
         model = CheckInSession
         fields = [
-            "name", "date", "checkin_opens", "checkin_closes",
+            "configuration", "name", "date", "checkin_opens", "checkin_closes",
             "event_starts", "event_ends", "rooms", "is_active",
         ]
         widgets = {
@@ -132,6 +132,12 @@ class CheckInSessionForm(forms.ModelForm):
             "event_ends": forms.TimeInput(attrs={"type": "time"}),
             "rooms": forms.CheckboxSelectMultiple(),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["configuration"].queryset = CheckInConfiguration.objects.filter(is_active=True)
+        self.fields["configuration"].required = False
+        self.fields["configuration"].empty_label = "— None (standalone session) —"
 
 
 class RoomForm(forms.ModelForm):

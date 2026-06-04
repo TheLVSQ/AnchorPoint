@@ -4,7 +4,7 @@
 <section class="card">
     <div class="page-header">
         <span class="chip">Groups</span>
-        <h1>Create Group</h1>
+        <h1>{{ title }}</h1>
         <p class="page-subtitle">Capture the basics now; refine rosters and automation later.</p>
     </div>
 
@@ -75,8 +75,8 @@
         </div>
 
         <div class="form-actions">
-            <a class="btn ghost" href="{% url 'groups:list' %}">Cancel</a>
-            <button type="submit">Create Group</button>
+            <a class="btn ghost" href="{{ cancel_url }}">Cancel</a>
+            <button type="submit">{{ title }}</button>
         </div>
     </form>
 </section>

@@ -1,8 +1,13 @@
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import authenticate, get_user_model, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import update_session_auth_hash
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.views.decorators.csrf import csrf_exempt
+from google.oauth2 import id_token
+from google.auth.transport import requests as google_requests
 from people.models import Person
 
 from events.forms import ReleaseDocumentForm
@@ -22,24 +27,79 @@ from .permissions import admin_required
 
 
 def login_view(request):
+    if request.user.is_authenticated:
+        return redirect("dashboard")
+
     if request.method == "POST":
-        username = request.POST.get("username")
-        password = request.POST.get("password")
+        email = request.POST.get("username", "").strip()
+        password = request.POST.get("password", "")
+        try:
+            user = User.objects.get(email__iexact=email)
+        except User.DoesNotExist:
+            user = None
 
-        user = authenticate(request, username=username, password=password)
-
-        if user is not None:
-            login(request, user)
+        if user is not None and user.check_password(password) and user.is_active:
+            login(request, user, backend="django.contrib.auth.backends.ModelBackend")
             return redirect("dashboard")
         else:
-            messages.error(request, "Invalid username or password.")
+            messages.error(request, "Invalid email or password.")
 
-    return render(request, "core/login.html")
+    return render(request, "core/login.html", {
+        "google_client_id": settings.GOOGLE_CLIENT_ID,
+    })
 
 
 def logout_view(request):
     logout(request)
     return redirect("login")
+
+
+@csrf_exempt
+def google_auth_callback(request):
+    """
+    Receives the signed JWT from Google Identity Services and logs the user in.
+    CSRF is intentionally exempt — the JWT cryptographic signature is the security mechanism.
+    Restricted to @bolivar.church emails that match an existing AnchorPoint user.
+    """
+    if request.method != "POST":
+        return redirect("login")
+
+    credential = request.POST.get("credential", "")
+    client_id = settings.GOOGLE_CLIENT_ID
+
+    if not credential or not client_id:
+        messages.error(request, "Google sign-in is not available.")
+        return redirect("login")
+
+    try:
+        idinfo = id_token.verify_oauth2_token(
+            credential,
+            google_requests.Request(),
+            client_id,
+        )
+    except ValueError:
+        messages.error(request, "Google sign-in failed. Please try again.")
+        return redirect("login")
+
+    email = idinfo.get("email", "").lower()
+
+    if not email.endswith("@bolivar.church"):
+        messages.error(request, "Only @bolivar.church accounts may sign in with Google.")
+        return redirect("login")
+
+    UserModel = get_user_model()
+    try:
+        user = UserModel.objects.get(email__iexact=email)
+    except UserModel.DoesNotExist:
+        messages.error(
+            request,
+            "No AnchorPoint account found for this Google account. "
+            "Contact your administrator.",
+        )
+        return redirect("login")
+
+    login(request, user, backend="django.contrib.auth.backends.ModelBackend")
+    return redirect("dashboard")
 
 
 User = get_user_model()
@@ -122,21 +182,24 @@ def manage_roles(request):
     )
 
     if request.method == "POST":
-        form = RoleAssignmentForm(request.POST)
-        if form.is_valid():
-            target_user = get_object_or_404(User, pk=form.cleaned_data["user_id"])
-            profile, _ = UserProfile.objects.get_or_create(user=target_user)
-            profile.role = form.cleaned_data["role"]
-            profile.can_manage_communications = form.cleaned_data[
-                "can_manage_communications"
-            ]
+        valid_roles = {r for r, _ in UserProfile.Role.choices}
+        updated = 0
+        for user in users:
+            role_key = f"role_{user.pk}"
+            comms_key = f"comms_{user.pk}"
+            if role_key not in request.POST:
+                continue
+            role = request.POST[role_key]
+            if role not in valid_roles:
+                continue
+            comms = request.POST.get(comms_key) == "on"
+            profile, _ = UserProfile.objects.get_or_create(user=user)
+            profile.role = role
+            profile.can_manage_communications = comms
             profile.save(update_fields=["role", "can_manage_communications"])
-            display_name = target_user.get_full_name() or target_user.username
-            messages.success(request, f"{display_name} role updated.")
-            return redirect("manage_roles")
-        messages.error(
-            request, "There was a problem updating that role. Please try again."
-        )
+            updated += 1
+        messages.success(request, f"Roles updated for {updated} user{'s' if updated != 1 else ''}.")
+        return redirect("manage_roles")
 
     context = {
         "users": users,
@@ -245,21 +308,43 @@ def user_create(request):
     if request.method == "POST":
         form = CreateUserForm(request.POST)
         if form.is_valid():
+            email = form.cleaned_data["email"]
             user = User.objects.create_user(
-                username=form.cleaned_data["username"],
+                username=email,
+                email=email,
                 first_name=form.cleaned_data["first_name"],
                 last_name=form.cleaned_data["last_name"],
-                email=form.cleaned_data.get("email", ""),
                 password=form.cleaned_data["password"],
             )
             profile, _ = UserProfile.objects.get_or_create(user=user)
             profile.role = form.cleaned_data["role"]
-            profile.save(update_fields=["role"])
-            messages.success(request, f"User '{user.get_full_name() or user.username}' created successfully.")
+
+            link_person_id = request.POST.get("link_person")
+            if link_person_id:
+                try:
+                    profile.person = Person.objects.get(pk=link_person_id)
+                except Person.DoesNotExist:
+                    pass
+
+            profile.save(update_fields=["role", "person"])
+            messages.success(request, f"User '{user.get_full_name() or email}' created successfully.")
             return redirect("user_list")
+        messages.error(request, "Please fix the errors below.")
     else:
         form = CreateUserForm()
     return render(request, "core/user_form.html", {"form": form, "title": "Add User"})
+
+
+@admin_required
+def user_person_check(request):
+    """HTMX endpoint: returns a person-match partial if an existing Person has this email."""
+    email = request.GET.get("email", "").strip()
+    if not email:
+        return HttpResponse("")
+    person = Person.objects.filter(email__iexact=email).first()
+    if not person:
+        return HttpResponse("")
+    return render(request, "core/partials/person_match.html", {"person": person})
 
 
 @admin_required
@@ -270,7 +355,10 @@ def user_edit(request, user_id):
     if request.method == "POST":
         form = EditUserForm(request.POST, instance=target_user)
         if form.is_valid():
-            form.save()
+            user = form.save(commit=False)
+            # Keep username in sync with email (email is the login identifier)
+            user.username = form.cleaned_data["email"]
+            user.save()
             profile.role = form.cleaned_data["role"]
             profile.can_manage_communications = form.cleaned_data.get("can_manage_communications", False)
             profile.save(update_fields=["role", "can_manage_communications"])
