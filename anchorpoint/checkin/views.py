@@ -21,7 +21,7 @@ from .forms import (
 )
 from .models import (
     CheckIn, CheckInConfiguration, CheckInSession, CheckInWindow,
-    Room, PrinterConfiguration, generate_security_code,
+    Room, PrinterConfiguration, generate_unique_security_code,
 )
 from .services import PrintService
 from .services.eligibility import get_eligible_members
@@ -46,10 +46,17 @@ def _ensure_kiosk(request):
 
 
 def _get_active_session(request):
-    """Get the active CheckInSession from the kiosk session."""
+    """Get the active CheckInSession from the kiosk session.
+
+    Scoped to *today* so a session id left over from a previous day (the kiosk
+    browser keeps the cookie indefinitely) is never reused — that would check
+    families into a closed/stale session.
+    """
     session_id = request.session.get(KIOSK_SESSION_ID_KEY)
     if session_id:
-        return CheckInSession.objects.filter(pk=session_id, is_active=True).first()
+        return CheckInSession.objects.filter(
+            pk=session_id, is_active=True, date=timezone.localdate()
+        ).first()
     return None
 
 
@@ -106,8 +113,13 @@ def kiosk_lookup(request):
             session = get_or_create_session(config, window)
             request.session[KIOSK_SESSION_ID_KEY] = session.pk
         elif len(open_configs) > 1:
-            # Multiple configs open — if none selected yet, show picker
-            if not request.session.get(KIOSK_SESSION_ID_KEY):
+            # Multiple configs open — show the picker unless the kiosk already
+            # holds a session for one of the *currently open* configs today.
+            # (A leftover id from another day/config must not skip the picker.)
+            current = _get_active_session(request)
+            open_config_ids = {config.pk for config, _ in open_configs}
+            if not (current and current.configuration_id in open_config_ids and current.is_open):
+                request.session.pop(KIOSK_SESSION_ID_KEY, None)
                 return render(request, "checkin/kiosk/config_picker.html", {
                     "open_configs": open_configs,
                     "org": org,
@@ -191,21 +203,32 @@ def kiosk_family_select(request, household_id):
             if not selected:
                 form.add_error(None, "Please select at least one person.")
             else:
-                security_code = generate_security_code()
+                security_code = generate_unique_security_code(session)
                 checkin_ids = []
                 for person_id, room_id in selected:
                     person = Person.objects.get(pk=person_id)
                     room = Room.objects.get(pk=room_id) if room_id else None
-                    checkin, created = CheckIn.objects.get_or_create(
+                    # Reuse an existing *active* check-in (re-print/move room);
+                    # otherwise create one. A previously checked-out person gets
+                    # a fresh record. Either way the pk is included so the person
+                    # always appears on the confirmation page and labels.
+                    checkin = CheckIn.objects.filter(
                         session=session,
                         person=person,
-                        defaults={
-                            "room": room,
-                            "security_code": security_code,
-                        },
-                    )
-                    if created:
-                        checkin_ids.append(checkin.pk)
+                        checked_out_at__isnull=True,
+                    ).first()
+                    if checkin:
+                        checkin.room = room
+                        checkin.security_code = security_code
+                        checkin.save(update_fields=["room", "security_code"])
+                    else:
+                        checkin = CheckIn.objects.create(
+                            session=session,
+                            person=person,
+                            room=room,
+                            security_code=security_code,
+                        )
+                    checkin_ids.append(checkin.pk)
 
                 request.session["kiosk_checkin_ids"] = checkin_ids
                 request.session["kiosk_security_code"] = security_code
@@ -312,8 +335,11 @@ def kiosk_select_config(request):
             try:
                 config = CheckInConfiguration.objects.get(pk=config_pk, is_active=True)
                 window = CheckInWindow.objects.get(pk=window_pk, configuration=config, is_active=True)
-                session = get_or_create_session(config, window)
-                request.session[KIOSK_SESSION_ID_KEY] = session.pk
+                # Only honor a window that is actually open right now — guards
+                # against a stale POST selecting a window that has since closed.
+                if window.is_checkin_open(timezone.localtime()):
+                    session = get_or_create_session(config, window)
+                    request.session[KIOSK_SESSION_ID_KEY] = session.pk
             except (CheckInConfiguration.DoesNotExist, CheckInWindow.DoesNotExist):
                 pass
     return redirect("checkin:kiosk_lookup")
@@ -702,8 +728,10 @@ def printer_test(request, printer_id):
 # =============================================================================
 
 
+@staff_required
 def api_session_stats(request, session_id):
-    """Get real-time stats for a session (AJAX)."""
+    """Get real-time stats for a session (AJAX). Staff-only — exposes
+    attendance counts and per-room occupancy."""
     session = get_object_or_404(CheckInSession, pk=session_id)
 
     checked_in = session.checkins.filter(checked_out_at__isnull=True).count()

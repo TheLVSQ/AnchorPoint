@@ -4,12 +4,17 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
+from unittest import mock
+
 from checkin.models import (
     CheckIn, CheckInConfiguration, CheckInSession, CheckInWindow, Room,
+    generate_unique_security_code,
 )
 from core.models import OrganizationSettings
 from households.models import Household, HouseholdMember
 from people.models import Person
+from django.contrib.auth import get_user_model
+from core.models import UserProfile
 
 
 class KioskFlowTests(TestCase):
@@ -122,6 +127,34 @@ class KioskFlowTests(TestCase):
         checkin = CheckIn.objects.get(person=self.child)
         self.assertEqual(len(checkin.security_code), 4)
 
+    def test_checked_out_child_can_check_in_again(self):
+        self._unlock()
+        self.client.get(reverse("checkin:kiosk_lookup"), {"query": "Johnson"})
+        post_data = {
+            f"select_{self.child.pk}": "on",
+            f"room_{self.child.pk}": str(self.room.pk),
+        }
+        self.client.post(
+            reverse("checkin:kiosk_family_select", args=[self.household.pk]), post_data
+        )
+        first = CheckIn.objects.get(person=self.child)
+        first.checkout()
+
+        # Re-running the flow for a checked-out child must produce a fresh
+        # active check-in (not silently no-op), and surface it on confirmation.
+        self.client.get(reverse("checkin:kiosk_lookup"), {"query": "Johnson"})
+        self.client.post(
+            reverse("checkin:kiosk_family_select", args=[self.household.pk]), post_data
+        )
+        active = CheckIn.objects.filter(
+            person=self.child, checked_out_at__isnull=True
+        )
+        self.assertEqual(active.count(), 1)
+        self.assertEqual(
+            self.client.session.get("kiosk_checkin_ids"),
+            [active.first().pk],
+        )
+
     def test_family_select_without_session_redirects_to_lookup(self):
         self._unlock()
         # Don't hit lookup first — no session_id set
@@ -181,3 +214,170 @@ class QuickRegistrationViewTests(TestCase):
             response,
             reverse("checkin:kiosk_family_select", args=[household.pk]),
         )
+
+
+class StandaloneSessionFallbackTests(TestCase):
+    def setUp(self):
+        self.household = Household.objects.create(name="Anderson Family", phone="555-222-1111")
+        self.child = Person.objects.create(
+            first_name="Noah",
+            last_name="Anderson",
+            birthdate=date.today() - timedelta(days=365 * 9),
+        )
+        HouseholdMember.objects.create(
+            household=self.household,
+            person=self.child,
+            relationship_type=HouseholdMember.RelationshipType.CHILD,
+        )
+        self.room = Room.objects.create(name="Room B")
+        self.session = CheckInSession.objects.create(
+            name="Standalone Session",
+            date=timezone.localdate(),
+            checkin_opens=(timezone.localtime() - timedelta(hours=1)).time(),
+            checkin_closes=(timezone.localtime() + timedelta(hours=1)).time(),
+            event_starts=timezone.localtime().time(),
+            event_ends=(timezone.localtime() + timedelta(hours=2)).time(),
+            is_active=True,
+        )
+        self.session.rooms.add(self.room)
+        org = OrganizationSettings.load()
+        org.kiosk_pin = "1234"
+        org.save()
+
+    def _unlock(self):
+        session = self.client.session
+        session["kiosk_authenticated"] = True
+        session.save()
+
+    def test_lookup_uses_standalone_session_when_no_open_configs(self):
+        self._unlock()
+        response = self.client.get(reverse("checkin:kiosk_lookup"))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["session"].pk, self.session.pk)
+
+    def test_stale_session_from_previous_day_is_not_reused(self):
+        # A session id left in the kiosk cookie from yesterday must not be used
+        # to check anyone in today.
+        self._unlock()
+        stale = CheckInSession.objects.create(
+            name="Yesterday",
+            date=timezone.localdate() - timedelta(days=1),
+            checkin_opens=(timezone.localtime() - timedelta(hours=1)).time(),
+            checkin_closes=(timezone.localtime() + timedelta(hours=1)).time(),
+            event_starts=timezone.localtime().time(),
+            event_ends=(timezone.localtime() + timedelta(hours=2)).time(),
+            is_active=True,
+        )
+        kiosk_sess = self.client.session
+        kiosk_sess["kiosk_session_id"] = stale.pk
+        kiosk_sess.save()
+
+        response = self.client.get(reverse("checkin:kiosk_lookup"))
+        self.assertEqual(response.status_code, 200)
+        # Falls back to today's standalone session, never the stale one.
+        self.assertEqual(response.context["session"].pk, self.session.pk)
+
+    def test_family_select_allows_checkin_for_standalone_session(self):
+        self._unlock()
+        self.client.get(reverse("checkin:kiosk_lookup"))
+        response = self.client.post(
+            reverse("checkin:kiosk_family_select", args=[self.household.pk]),
+            {
+                f"select_{self.child.pk}": "on",
+                f"room_{self.child.pk}": str(self.room.pk),
+            },
+        )
+        self.assertRedirects(response, reverse("checkin:kiosk_confirmation"))
+        self.assertTrue(
+            CheckIn.objects.filter(session=self.session, person=self.child).exists()
+        )
+
+
+class SecurityCodeUniquenessTests(TestCase):
+    """A shared security code must never collide with another *active* family
+    in the same session, or checkout would surface the wrong children."""
+
+    def setUp(self):
+        self.session = CheckInSession.objects.create(
+            name="Codes Session",
+            date=timezone.localdate(),
+            checkin_opens=(timezone.localtime() - timedelta(hours=1)).time(),
+            checkin_closes=(timezone.localtime() + timedelta(hours=1)).time(),
+            event_starts=timezone.localtime().time(),
+            event_ends=(timezone.localtime() + timedelta(hours=2)).time(),
+            is_active=True,
+        )
+        self.person = Person.objects.create(first_name="A", last_name="B")
+
+    def test_skips_code_already_active_in_session(self):
+        CheckIn.objects.create(
+            session=self.session, person=self.person, security_code="ABCD",
+        )
+        # Force the raw generator to return the taken code once, then a free one.
+        with mock.patch(
+            "checkin.models.generate_security_code",
+            side_effect=["ABCD", "WXYZ"],
+        ):
+            code = generate_unique_security_code(self.session)
+        self.assertEqual(code, "WXYZ")
+
+    def test_reuses_code_freed_by_checkout(self):
+        ci = CheckIn.objects.create(
+            session=self.session, person=self.person, security_code="ABCD",
+        )
+        ci.checkout()  # now checked out — code is free to reuse
+        with mock.patch(
+            "checkin.models.generate_security_code", side_effect=["ABCD"],
+        ):
+            code = generate_unique_security_code(self.session)
+        self.assertEqual(code, "ABCD")
+
+
+class SessionStatsAccessControlTests(TestCase):
+    def setUp(self):
+        self.session = CheckInSession.objects.create(
+            name="Stats Session",
+            date=timezone.localdate(),
+            checkin_opens=(timezone.localtime() - timedelta(hours=1)).time(),
+            checkin_closes=(timezone.localtime() + timedelta(hours=1)).time(),
+            event_starts=timezone.localtime().time(),
+            event_ends=(timezone.localtime() + timedelta(hours=2)).time(),
+            is_active=True,
+        )
+        user_model = get_user_model()
+        self.staff_user = user_model.objects.create_user(
+            username="staff@example.com",
+            email="staff@example.com",
+            password="pass1234",
+        )
+        self.staff_user.profile.role = UserProfile.Role.STAFF
+        self.staff_user.profile.save(update_fields=["role"])
+
+        self.volunteer_user = user_model.objects.create_user(
+            username="vol@example.com",
+            email="vol@example.com",
+            password="pass1234",
+        )
+        self.volunteer_user.profile.role = UserProfile.Role.VOLUNTEER
+        self.volunteer_user.profile.save(update_fields=["role"])
+
+    def test_stats_requires_login(self):
+        response = self.client.get(
+            reverse("checkin:api_session_stats", args=[self.session.pk])
+        )
+        self.assertEqual(response.status_code, 302)
+
+    def test_stats_denies_non_staff_user(self):
+        self.client.login(username="vol@example.com", password="pass1234")
+        response = self.client.get(
+            reverse("checkin:api_session_stats", args=[self.session.pk])
+        )
+        self.assertEqual(response.status_code, 403)
+
+    def test_stats_allows_staff_user(self):
+        self.client.login(username="staff@example.com", password="pass1234")
+        response = self.client.get(
+            reverse("checkin:api_session_stats", args=[self.session.pk])
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("checked_in", response.json())
