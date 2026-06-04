@@ -728,8 +728,10 @@ def printer_test(request, printer_id):
 # =============================================================================
 
 
+@staff_required
 def api_session_stats(request, session_id):
-    """Get real-time stats for a session (AJAX)."""
+    """Get real-time stats for a session (AJAX). Staff-only — exposes
+    attendance counts and per-room occupancy."""
     session = get_object_or_404(CheckInSession, pk=session_id)
 
     checked_in = session.checkins.filter(checked_out_at__isnull=True).count()

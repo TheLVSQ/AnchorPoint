@@ -6,6 +6,7 @@ from django.test import Client, TestCase
 from django.urls import reverse
 from django.utils import timezone
 
+from core.models import UserProfile
 from groups.models import GroupMembership
 from people.models import Person
 
@@ -369,6 +370,8 @@ class EventRosterViewTests(TestCase):
             password="password123",
             is_staff=True,
         )
+        self.user.profile.role = UserProfile.Role.STAFF
+        self.user.profile.save()
         self.event = Event.objects.create(
             title="Retreat",
             summary="Summary",
