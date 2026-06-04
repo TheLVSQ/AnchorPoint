@@ -12,6 +12,8 @@ class PeopleLookupViewTests(TestCase):
         self.user = get_user_model().objects.create_user(
             username="tester", password="password123"
         )
+        self.user.profile.role = UserProfile.Role.STAFF
+        self.user.profile.save()
         Person.objects.create(
             first_name="Casey",
             last_name="Jordan",
@@ -47,6 +49,8 @@ class PeopleDetailCommunicationTests(TestCase):
         self.user = get_user_model().objects.create_user(
             username="viewer", password="password123"
         )
+        self.user.profile.role = UserProfile.Role.STAFF
+        self.user.profile.save()
         self.person = Person.objects.create(
             first_name="Jordan",
             last_name="Banks",

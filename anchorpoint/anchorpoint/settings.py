@@ -160,6 +160,14 @@ STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
+# During tests, isolate uploads in a throwaway directory so they don't collide
+# with previously-uploaded files (which would make Django append a random
+# suffix to the stored filename and break filename assertions) or pollute the
+# real media dir.
+if TESTING:
+    import tempfile
+    MEDIA_ROOT = tempfile.mkdtemp(prefix="anchorpoint-test-media-")
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
