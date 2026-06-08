@@ -97,10 +97,15 @@ def cmd_run(args):
     if not server or not token:
         sys.exit("Not paired yet. Run the 'pair' command first.")
     printer = args.printer or config.get("printer")
+    save_dir = args.save_dir
+    once = args.once
     headers = {"Authorization": f"Bearer {token}"}
 
+    if save_dir:
+        os.makedirs(save_dir, exist_ok=True)
+
     print(f"AnchorPoint agent '{config.get('agent_name')}' polling {server}")
-    print(f"Printing to: {printer or 'system default printer'}")
+    print(f"Output: {('saving PNGs to ' + save_dir) if save_dir else (printer or 'system default printer')}")
 
     while True:
         try:
@@ -110,10 +115,15 @@ def cmd_run(args):
             if resp.status_code == 401:
                 sys.exit("Token rejected. Re-pair this agent in AnchorPoint settings.")
             if resp.status_code == 204:
+                if once:
+                    print("No pending jobs.")
+                    return
                 time.sleep(POLL_INTERVAL_SECONDS)
                 continue
             if resp.status_code != 200:
                 print(f"Poll error {resp.status_code}: {resp.text}", file=sys.stderr)
+                if once:
+                    return
                 time.sleep(POLL_INTERVAL_SECONDS)
                 continue
 
@@ -125,13 +135,25 @@ def cmd_run(args):
                 _ack(server, headers, job["id"], False, f"image fetch {img.status_code}")
                 continue
 
-            ok, err = _print_png(img.content, printer)
+            if save_dir:
+                # Debug mode: write the label to a folder instead of printing —
+                # useful for validating the pipeline before CUPS/the printer is set up.
+                path = os.path.join(save_dir, f"job-{job['id']}.png")
+                with open(path, "wb") as fh:
+                    fh.write(img.content)
+                ok, err = True, ""
+            else:
+                ok, err = _print_png(img.content, printer)
+
             _ack(server, headers, job["id"], ok, err)
             label = job.get("description") or job.get("kind")
-            print(("printed" if ok else f"FAILED ({err}):") + f" {label}")
+            verb = "saved" if (save_dir and ok) else ("printed" if ok else f"FAILED ({err}):")
+            print(f"{verb} {label}")
             # Drain the rest of the batch immediately rather than waiting.
         except requests.RequestException as exc:
             print(f"Network error: {exc}", file=sys.stderr)
+            if once:
+                return
             time.sleep(POLL_INTERVAL_SECONDS)
 
 
@@ -159,6 +181,10 @@ def main():
 
     p_run = sub.add_parser("run", help="Poll for and print labels")
     p_run.add_argument("--printer", help="CUPS printer name (overrides config)")
+    p_run.add_argument("--save-dir", dest="save_dir",
+                       help="Debug: save label PNGs to this folder instead of printing")
+    p_run.add_argument("--once", action="store_true",
+                       help="Process pending jobs then exit (don't keep polling)")
     p_run.set_defaults(func=cmd_run)
 
     args = parser.parse_args()
