@@ -265,6 +265,12 @@ def settings_home(request):
             "accent": True,
         },
         {
+            "title": "Print Agents",
+            "description": "Connect a local printer so check-in labels print automatically.",
+            "url": "checkin:print_agents",
+            "accent": True,
+        },
+        {
             "title": "People Defaults",
             "description": "Coming soon: customize statuses, workflows, and intake forms.",
             "url": None,

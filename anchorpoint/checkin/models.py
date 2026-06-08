@@ -1,4 +1,6 @@
+import hashlib
 import random
+import secrets
 import string
 
 from django.contrib.auth import get_user_model
@@ -9,6 +11,12 @@ from django.utils import timezone
 from people.models import Person
 
 User = get_user_model()
+
+
+def hash_agent_token(token: str) -> str:
+    """Hash a print-agent token for storage. Tokens are high-entropy random
+    strings, so a fast SHA-256 is sufficient (no need for password hashing)."""
+    return hashlib.sha256(token.encode()).hexdigest()
 
 
 # Characters that are easy to read and won't be confused
@@ -366,3 +374,105 @@ class LabelTemplate(models.Model):
 
     def __str__(self):
         return self.name
+
+
+# Online if the agent has polled within this many seconds.
+AGENT_ONLINE_WINDOW_SECONDS = 60
+# Pairing codes are valid for this long after being issued.
+PAIRING_CODE_TTL_SECONDS = 15 * 60
+
+
+class PrintAgent(models.Model):
+    """A local print agent that polls the server for jobs and prints them on a
+    LAN printer. The server never connects to the printer — the agent makes
+    only outbound HTTPS calls, so no VPN/inbound networking is required."""
+
+    name = models.CharField(max_length=120)
+    token_hash = models.CharField(max_length=64, blank=True)
+    pairing_code = models.CharField(max_length=12, blank=True, db_index=True)
+    pairing_expires_at = models.DateTimeField(null=True, blank=True)
+    is_active = models.BooleanField(default=True)
+    last_seen_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+    @property
+    def is_paired(self):
+        return bool(self.token_hash)
+
+    @property
+    def is_online(self):
+        if not self.last_seen_at:
+            return False
+        return (timezone.now() - self.last_seen_at).total_seconds() < AGENT_ONLINE_WINDOW_SECONDS
+
+    def issue_pairing_code(self):
+        """Generate a fresh, short, human-typable pairing code with a TTL."""
+        # No ambiguous characters (shares the security-code alphabet).
+        self.pairing_code = "".join(random.choices(SECURITY_CODE_CHARS, k=8))
+        self.pairing_expires_at = timezone.now() + timezone.timedelta(
+            seconds=PAIRING_CODE_TTL_SECONDS
+        )
+        self.token_hash = ""  # re-pairing invalidates any old token
+        self.save(update_fields=["pairing_code", "pairing_expires_at", "token_hash"])
+        return self.pairing_code
+
+    def complete_pairing(self):
+        """Consume the pairing code and issue a long-lived agent token (returned
+        once, only its hash is stored)."""
+        token = secrets.token_urlsafe(32)
+        self.token_hash = hash_agent_token(token)
+        self.pairing_code = ""
+        self.pairing_expires_at = None
+        self.last_seen_at = timezone.now()
+        self.save(update_fields=[
+            "token_hash", "pairing_code", "pairing_expires_at", "last_seen_at",
+        ])
+        return token
+
+
+class PrintJob(models.Model):
+    """A single rendered label (PNG) queued for an agent to print."""
+
+    PENDING = "pending"
+    CLAIMED = "claimed"
+    PRINTED = "printed"
+    FAILED = "failed"
+    STATUS_CHOICES = [
+        (PENDING, "Pending"),
+        (CLAIMED, "Claimed"),
+        (PRINTED, "Printed"),
+        (FAILED, "Failed"),
+    ]
+
+    agent = models.ForeignKey(
+        PrintAgent, on_delete=models.CASCADE, related_name="jobs"
+    )
+    # PNG bytes stored in the DB (not the public media dir) since labels carry
+    # children's names and pickup codes; served only via the authed agent API.
+    image_data = models.BinaryField()
+    kind = models.CharField(max_length=20, default="label")  # child / pickup / test
+    description = models.CharField(max_length=200, blank=True)
+    status = models.CharField(max_length=12, choices=STATUS_CHOICES, default=PENDING)
+    attempts = models.PositiveIntegerField(default=0)
+    error_message = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    claimed_at = models.DateTimeField(null=True, blank=True)
+    printed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["created_at"]
+        indexes = [
+            models.Index(
+                fields=["agent", "status", "created_at"],
+                name="ck_printjob_agent_status_idx",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.kind} job #{self.pk} ({self.status})"
