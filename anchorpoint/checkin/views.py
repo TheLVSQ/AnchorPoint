@@ -1,4 +1,5 @@
 import json
+import logging
 import re
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse, HttpResponseForbidden
@@ -21,12 +22,15 @@ from .forms import (
 )
 from .models import (
     CheckIn, CheckInConfiguration, CheckInSession, CheckInWindow,
-    Room, PrinterConfiguration, generate_unique_security_code,
+    Room, PrinterConfiguration, PrintAgent, generate_unique_security_code,
 )
 from .services import PrintService
 from .services.eligibility import get_eligible_members
 from .services.session_manager import get_or_create_session
 from .services.quick_registration import register_new_family
+from .services.print_queue import enqueue_checkin_labels, enqueue_test_label
+
+logger = logging.getLogger(__name__)
 
 
 KIOSK_SESSION_KEY = "kiosk_authenticated"
@@ -232,6 +236,18 @@ def kiosk_family_select(request, household_id):
 
                 request.session["kiosk_checkin_ids"] = checkin_ids
                 request.session["kiosk_security_code"] = security_code
+                # Queue labels for the local print agent. No-op if none is
+                # paired (the confirmation page still offers browser printing),
+                # and never block check-in on a printing problem.
+                try:
+                    ordered = sorted(
+                        CheckIn.objects.filter(pk__in=checkin_ids)
+                        .select_related("person", "room"),
+                        key=lambda c: checkin_ids.index(c.pk),
+                    )
+                    enqueue_checkin_labels(ordered, session)
+                except Exception:
+                    logger.exception("Failed to queue print jobs for check-in")
                 return redirect("checkin:kiosk_confirmation")
     else:
         form = FamilyMemberSelectForm(
@@ -753,3 +769,61 @@ def api_session_stats(request, session_id):
         "total": checked_in + checked_out,
         "rooms": rooms,
     })
+
+
+# =============================================================================
+# PRINT AGENT MANAGEMENT (surfaced in Settings)
+# =============================================================================
+
+
+@staff_required
+def print_agent_list(request):
+    agents = PrintAgent.objects.all()
+    return render(request, "checkin/agents/list.html", {"agents": agents})
+
+
+@staff_required
+@require_POST
+def print_agent_create(request):
+    name = (request.POST.get("name") or "").strip()
+    if not name:
+        messages.error(request, "Give the print agent a name.")
+        return redirect("checkin:print_agents")
+    agent = PrintAgent.objects.create(name=name)
+    agent.issue_pairing_code()
+    messages.success(
+        request,
+        f"Created '{name}'. Enter its pairing code (shown below) into the agent.",
+    )
+    return redirect("checkin:print_agents")
+
+
+@staff_required
+@require_POST
+def print_agent_repair(request, agent_id):
+    agent = get_object_or_404(PrintAgent, pk=agent_id)
+    agent.issue_pairing_code()
+    messages.success(request, f"New pairing code issued for '{agent.name}'.")
+    return redirect("checkin:print_agents")
+
+
+@staff_required
+@require_POST
+def print_agent_delete(request, agent_id):
+    agent = get_object_or_404(PrintAgent, pk=agent_id)
+    name = agent.name
+    agent.delete()
+    messages.success(request, f"Removed '{name}'.")
+    return redirect("checkin:print_agents")
+
+
+@staff_required
+@require_POST
+def print_agent_test(request, agent_id):
+    agent = get_object_or_404(PrintAgent, pk=agent_id)
+    if not agent.is_paired:
+        messages.error(request, "Pair the agent before sending a test print.")
+    else:
+        enqueue_test_label(agent)
+        messages.success(request, f"Test label queued for '{agent.name}'.")
+    return redirect("checkin:print_agents")

@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block content %}
+
+<a class="ghost-link" href="{% url 'settings_home' %}">&larr; Back to Settings</a>
+
+<div class="page-header">
+    <h1>Print Agents</h1>
+    <p class="page-subtitle">
+        A print agent is a small helper that runs next to your label printer and
+        prints check-in tags automatically. It only makes outbound connections,
+        so there's no network setup — just install it, pair it with the code
+        below, and check-in labels print on their own.
+    </p>
+</div>
+
+<div class="list-card" style="margin-bottom: 2rem;">
+    <div class="list-card__body">
+        <form method="POST" action="{% url 'checkin:print_agent_create' %}"
+              style="display:flex; gap:0.5rem; align-items:flex-end; flex-wrap:wrap;">
+            {% csrf_token %}
+            <div class="form-field" style="flex:1; min-width:220px;">
+                <label for="name">Add a print agent</label>
+                <input id="name" type="text" name="name"
+                       placeholder="e.g. Front Desk Printer" required>
+            </div>
+            <button type="submit" class="btn">Add Agent</button>
+        </form>
+    </div>
+</div>
+
+<div class="list-card">
+    <div class="list-card__body">
+        {% for agent in agents %}
+            <div class="list-item">
+                <div>
+                    <strong>{{ agent.name }}</strong>
+                    {% if not agent.is_paired %}
+                        <span class="chip" style="background:#fef3c7; color:#92400e;">Awaiting pairing</span>
+                    {% elif agent.is_online %}
+                        <span class="chip" style="background:#dcfce7; color:#166534;">Online</span>
+                    {% else %}
+                        <span class="chip" style="background:#fee2e2; color:#991b1b;">Offline</span>
+                    {% endif %}
+
+                    {% if agent.is_paired and agent.last_seen_at %}
+                        <p class="stat-hint">Last seen {{ agent.last_seen_at|timesince }} ago</p>
+                    {% endif %}
+
+                    {% if not agent.is_paired and agent.pairing_code %}
+                        <p class="stat-hint" style="margin-top:0.5rem;">
+                            Pairing code:
+                            <strong style="font-size:1.25rem; letter-spacing:3px; font-variant-numeric:tabular-nums;">{{ agent.pairing_code }}</strong>
+                            <br>
+                            Enter this in the agent. The code expires
+                            {{ agent.pairing_expires_at|timeuntil }} from now.
+                        </p>
+                    {% endif %}
+                </div>
+
+                <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
+                    {% if agent.is_paired %}
+                        <form method="POST" action="{% url 'checkin:print_agent_test' agent.id %}">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-secondary">Test Print</button>
+                        </form>
+                    {% endif %}
+                    <form method="POST" action="{% url 'checkin:print_agent_repair' agent.id %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-secondary">
+                            {% if agent.is_paired %}Re-pair{% else %}New code{% endif %}
+                        </button>
+                    </form>
+                    <form method="POST" action="{% url 'checkin:print_agent_delete' agent.id %}"
+                          onsubmit="return confirm('Remove {{ agent.name|escapejs }}?');">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-danger">Remove</button>
+                    </form>
+                </div>
+            </div>
+        {% empty %}
+            <p class="stat-hint" style="padding:1rem;">
+                No print agents yet. Add one above, then install the agent next to
+                your printer and enter its pairing code.
+            </p>
+        {% endfor %}
+    </div>
+</div>
+
+{% endblock %}
