@@ -34,6 +34,20 @@ iPad / computer (check-in)  ─►  AnchorPoint (server)  ◄─poll─  this ag
 When a family checks in, their labels print automatically. The pairing code is
 one-time; after pairing, the agent stores a token in `~/.anchorpoint_agent.json`.
 
+### Test the pipeline before the printer is set up
+
+To confirm the agent can reach the server and pull labels — without a working
+printer yet — save labels to a folder instead of printing, and process the queue
+once:
+
+```bash
+python3 anchorpoint_agent.py run --once --save-dir ./test-labels
+```
+
+Do a check-in (or Settings → Print Agents → Test Print), run the command, and
+you should see PNG label files appear in `./test-labels`. Once that works, drop
+the `--save-dir`/`--once` flags to print for real.
+
 ## Run it as a service (Raspberry Pi / systemd)
 
 Create `/etc/systemd/system/anchorpoint-agent.service`:
