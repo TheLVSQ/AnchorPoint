@@ -115,6 +115,10 @@ class PhoneBlastForm(forms.ModelForm):
             "scheduled_for": forms.DateTimeInput(attrs={"type": "datetime-local"}),
         }
 
+    # Browser recordings and common uploads we accept before transcoding to MP3.
+    ALLOWED_AUDIO_EXTENSIONS = (".mp3", ".wav", ".m4a", ".mp4", ".webm", ".ogg", ".oga")
+    MAX_AUDIO_BYTES = 10 * 1024 * 1024  # 10 MB
+
     def __init__(self, *args, **kwargs):
         self.organization_settings = kwargs.pop(
             "organization_settings", OrganizationSettings.load()
@@ -125,6 +129,23 @@ class PhoneBlastForm(forms.ModelForm):
         )
         self.fields["group"].empty_label = None
         self._recipients = []
+
+    def clean_audio_file(self):
+        audio = self.cleaned_data.get("audio_file")
+        if not audio:
+            return audio
+        if audio.size > self.MAX_AUDIO_BYTES:
+            raise forms.ValidationError(
+                "Audio file is too large (max 10 MB). Record a shorter message."
+            )
+        import os
+
+        ext = os.path.splitext(audio.name or "")[1].lower()
+        if ext not in self.ALLOWED_AUDIO_EXTENSIONS:
+            raise forms.ValidationError(
+                "Unsupported audio format. Upload an MP3 or WAV, or record in the browser."
+            )
+        return audio
 
     def clean(self):
         cleaned = super().clean()

@@ -15,10 +15,12 @@ from core.permissions import communications_required
 from .forms import PhoneBlastForm, SmsMessageForm
 from .models import PhoneBlast, PhoneCall, SmsMessage, SmsRecipient
 from .services import (
+    AudioProcessingError,
     TwilioConfigurationError,
     TwilioRequestError,
     deliver_phone_blast,
     deliver_sms_message,
+    transcode_to_mp3,
 )
 
 
@@ -148,6 +150,17 @@ def phone_blast_create(request):
                 if blast.scheduled_for
                 else PhoneBlast.Status.PROCESSING
             )
+            # Normalise the uploaded/recorded audio to MP3 so Twilio's <Play>
+            # can fetch it (browser recordings are WebM/MP4, which Twilio can't play).
+            try:
+                blast.audio_file = transcode_to_mp3(blast.audio_file)
+            except AudioProcessingError as exc:
+                form.add_error("audio_file", str(exc))
+                return render(
+                    request,
+                    "messaging/phone_blast_form.html",
+                    {"form": form, "twilio_ready": twilio_ready},
+                )
             blast.save()
             calls = [
                 PhoneCall(
@@ -225,12 +238,20 @@ def _blast_stats(blast):
         row["status"]: row["count"]
         for row in blast.calls.values("status").annotate(count=Count("id"))
     }
+    answered = counts.get(PhoneCall.Status.COMPLETED, 0)
+    no_answer = counts.get(PhoneCall.Status.NO_ANSWER, 0)
+    failed = counts.get(PhoneCall.Status.FAILED, 0)
+    pending = counts.get(PhoneCall.Status.PENDING, 0)
+    total = answered + no_answer + failed + pending
+    settled = answered + no_answer + failed
     return {
-        "answered": counts.get(PhoneCall.Status.COMPLETED, 0),
-        "no_answer": counts.get(PhoneCall.Status.NO_ANSWER, 0),
-        "failed": counts.get(PhoneCall.Status.FAILED, 0),
-        "pending": counts.get(PhoneCall.Status.PENDING, 0),
-        "total": blast.calls.count(),
+        "answered": answered,
+        "no_answer": no_answer,
+        "failed": failed,
+        "pending": pending,
+        "total": total,
+        "settled": settled,
+        "percent": round(settled / total * 100) if total else 0,
     }
 
 

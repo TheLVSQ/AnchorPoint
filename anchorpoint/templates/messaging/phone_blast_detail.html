@@ -20,6 +20,12 @@
     </p>
 </div>
 
+{% if blast.audio_file %}
+    <audio controls src="{{ blast.audio_file.url }}" style="width:100%;margin-top:1rem;"></audio>
+{% else %}
+    <p class="muted-text" style="margin-top:1rem;">Recording removed (cleaned up after delivery).</p>
+{% endif %}
+
 <div id="blast-stats"
      hx-get="{% url 'messaging:phone_blast_stats' blast.pk %}"
      hx-trigger="load"
@@ -35,6 +41,9 @@
                 <div>
                     <strong>{{ call.person.get_full_name|default:call.phone_number }}</strong>
                     <span class="muted-text">{{ call.phone_number }}</span>
+                    {% if call.status == "failed" and call.error_message %}
+                        <span class="error-text" style="display:block;font-size:0.85rem;">{{ call.error_message }}</span>
+                    {% endif %}
                 </div>
                 <div style="display:flex;align-items:center;gap:0.75rem;">
                     {% if call.completed_at %}

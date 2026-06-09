@@ -75,9 +75,18 @@ Key environment variables (see `.env.production.example`):
 
 ## Known Limitations
 
-1. **Scheduled messages** - Marked as scheduled but no background job to send them
-2. **No Twilio webhooks** - Delivery status not updated after initial send
-3. **Media files served by Django** - OK for small scale, use nginx/CDN for larger deployments
+1. **No SMS delivery webhooks** - Phone calls update status via Twilio StatusCallback, but SMS delivery status is not tracked after the initial send
+2. **Media files served by Django** - OK for small scale, use nginx/CDN for larger deployments
+
+## Scheduled communications & phone-blast audio
+
+The `cron` sidecar (see `docker/docker-compose.yml` + `docker/cron.sh`) runs
+`process_communications` every minute to deliver due scheduled SMS/phone blasts, and
+`cleanup_audio` daily to purge old phone-blast recordings. Scheduled phone blasts need
+`SITE_BASE_URL` (or Organization Settings > Website) so the headless worker can build
+absolute audio + Twilio status-callback URLs. Phone-blast audio (uploaded or recorded
+in-browser via `MediaRecorder`) is transcoded to MP3 with `ffmpeg` so Twilio's `<Play>`
+can fetch it.
 
 ## Common Tasks
 

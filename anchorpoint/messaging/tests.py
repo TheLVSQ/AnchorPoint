@@ -1,6 +1,7 @@
 import base64
 import hashlib
 import hmac
+import os
 import shutil
 import tempfile
 from datetime import datetime, time, timedelta, timezone as dt_timezone
@@ -9,8 +10,10 @@ from urllib.parse import urlencode
 
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.core.management import call_command
 from django.test import TestCase, override_settings
 from django.urls import reverse
+from django.utils import timezone as dj_timezone
 
 from core.models import OrganizationSettings
 from groups.models import Group, GroupMembership
@@ -19,11 +22,13 @@ from people.models import Person
 from .forms import PhoneBlastForm, SmsMessageForm
 from .models import PhoneBlast, PhoneCall, SmsMessage, SmsRecipient
 from .services import (
+    AudioProcessingError,
     TwilioConfigurationError,
     TwilioRequestError,
     TwilioService,
     deliver_phone_blast,
     deliver_sms_message,
+    get_site_base_url,
     is_within_blackout_window,
 )
 
@@ -711,3 +716,269 @@ class PhoneBlastDeliveryEdgeCaseTests(TestCase):
         ):
             deliver_phone_blast(blast, settings_obj=self.settings_obj)
         self.assertEqual(self.person.communication_logs.count(), 0)
+
+
+# ---------------------------------------------------------------------------
+# get_site_base_url resolution
+# ---------------------------------------------------------------------------
+
+class SiteBaseUrlTests(TestCase):
+    def setUp(self):
+        self.settings_obj = OrganizationSettings.load()
+
+    @override_settings(SITE_BASE_URL="https://from-setting.example/", CSRF_TRUSTED_ORIGINS=[])
+    def test_prefers_site_base_url_setting(self):
+        self.assertEqual(get_site_base_url(self.settings_obj), "https://from-setting.example")
+
+    @override_settings(SITE_BASE_URL="", CSRF_TRUSTED_ORIGINS=[])
+    def test_falls_back_to_website(self):
+        self.settings_obj.website = "https://church.example/"
+        self.settings_obj.save()
+        self.assertEqual(get_site_base_url(self.settings_obj), "https://church.example")
+
+    @override_settings(SITE_BASE_URL="", CSRF_TRUSTED_ORIGINS=["https://csrf.example"])
+    def test_falls_back_to_csrf_origin(self):
+        self.settings_obj.website = ""
+        self.settings_obj.save()
+        self.assertEqual(get_site_base_url(self.settings_obj), "https://csrf.example")
+
+    @override_settings(SITE_BASE_URL="", CSRF_TRUSTED_ORIGINS=[])
+    def test_returns_none_when_nothing_configured(self):
+        self.settings_obj.website = ""
+        self.settings_obj.save()
+        self.assertIsNone(get_site_base_url(self.settings_obj))
+
+
+# ---------------------------------------------------------------------------
+# Scheduled delivery via process_communications (the live-bug fix)
+# ---------------------------------------------------------------------------
+
+class ProcessCommunicationsCommandTests(TestCase):
+    def setUp(self):
+        self.temp_media = tempfile.mkdtemp()
+        self.addCleanup(lambda: shutil.rmtree(self.temp_media, ignore_errors=True))
+        media_override = override_settings(MEDIA_ROOT=self.temp_media)
+        media_override.enable()
+        self.addCleanup(media_override.disable)
+        self.settings_obj = OrganizationSettings.load()
+        self.settings_obj.twilio_account_sid = "AC123"
+        self.settings_obj.twilio_auth_token = "token"
+        self.settings_obj.twilio_phone_number = "+15551234567"
+        self.settings_obj.website = "https://church.example"
+        self.settings_obj.save()
+        self.user = get_user_model().objects.create_user(username="sched", password="pw")
+        self.person = Person.objects.create(
+            first_name="Sched", last_name="Target", phone="+15557778888", phone_opt_in=True
+        )
+
+    @override_settings(SITE_BASE_URL="https://church.example")
+    def test_due_scheduled_phone_blast_is_delivered_with_callback(self):
+        audio = SimpleUploadedFile("msg.mp3", b"audio")
+        blast = PhoneBlast.objects.create(
+            created_by=self.user,
+            title="Scheduled Blast",
+            audio_file=audio,
+            status=PhoneBlast.Status.SCHEDULED,
+            scheduled_for=dj_timezone.now() - timedelta(minutes=1),
+        )
+        PhoneCall.objects.create(
+            blast=blast, person=self.person, phone_number=self.person.phone
+        )
+        with patch(
+            "messaging.services.TwilioService.initiate_call", return_value="CA_SCHED"
+        ) as mock_call:
+            call_command("process_communications")
+
+        # The headless path must pass a StatusCallback so calls can settle.
+        self.assertEqual(mock_call.call_count, 1)
+        self.assertEqual(
+            mock_call.call_args.kwargs["status_callback_url"],
+            "https://church.example/communications/phone-blast/webhook/call-status/",
+        )
+        call = blast.calls.first()
+        self.assertEqual(call.call_sid, "CA_SCHED")
+        blast.refresh_from_db()
+        self.assertEqual(blast.status, PhoneBlast.Status.PROCESSING)
+
+    def test_future_scheduled_blast_is_not_delivered_yet(self):
+        audio = SimpleUploadedFile("later.mp3", b"audio")
+        blast = PhoneBlast.objects.create(
+            created_by=self.user,
+            title="Future Blast",
+            audio_file=audio,
+            status=PhoneBlast.Status.SCHEDULED,
+            scheduled_for=dj_timezone.now() + timedelta(hours=2),
+        )
+        PhoneCall.objects.create(
+            blast=blast, person=self.person, phone_number=self.person.phone
+        )
+        with patch(
+            "messaging.services.TwilioService.initiate_call", return_value="CA_X"
+        ) as mock_call:
+            call_command("process_communications")
+        mock_call.assert_not_called()
+        blast.refresh_from_db()
+        self.assertEqual(blast.status, PhoneBlast.Status.SCHEDULED)
+
+
+# ---------------------------------------------------------------------------
+# PhoneBlastForm.clean_audio_file validation
+# ---------------------------------------------------------------------------
+
+class PhoneBlastAudioValidationTests(TestCase):
+    def setUp(self):
+        self.settings_obj = OrganizationSettings.load()
+        self.person = Person.objects.create(
+            first_name="V", last_name="A", phone="+15551110000", phone_opt_in=True
+        )
+        self.group = Group.objects.create(name="Vols", category="volunteer")
+        GroupMembership.objects.create(group=self.group, person=self.person)
+
+    def _form(self, audio):
+        return PhoneBlastForm(
+            data={"title": "T", "group": self.group.pk, "scheduled_for": "", "notes": ""},
+            files={"audio_file": audio},
+            organization_settings=self.settings_obj,
+        )
+
+    def test_rejects_unsupported_extension(self):
+        form = self._form(SimpleUploadedFile("notes.txt", b"hello", content_type="text/plain"))
+        self.assertFalse(form.is_valid())
+        self.assertIn("audio_file", form.errors)
+
+    def test_rejects_oversized_file(self):
+        with patch.object(PhoneBlastForm, "MAX_AUDIO_BYTES", 3):
+            form = self._form(SimpleUploadedFile("big.mp3", b"way too big"))
+            self.assertFalse(form.is_valid())
+            self.assertIn("audio_file", form.errors)
+
+    def test_accepts_valid_audio(self):
+        form = self._form(SimpleUploadedFile("ok.mp3", b"audio-bytes"))
+        self.assertTrue(form.is_valid(), form.errors)
+
+
+# ---------------------------------------------------------------------------
+# cleanup_audio management command
+# ---------------------------------------------------------------------------
+
+class CleanupAudioCommandTests(TestCase):
+    def setUp(self):
+        self.temp_media = tempfile.mkdtemp()
+        self.addCleanup(lambda: shutil.rmtree(self.temp_media, ignore_errors=True))
+        media_override = override_settings(MEDIA_ROOT=self.temp_media)
+        media_override.enable()
+        self.addCleanup(media_override.disable)
+        self.user = get_user_model().objects.create_user(username="cleanup", password="pw")
+
+    def test_purges_aged_blast_audio(self):
+        audio = SimpleUploadedFile("old.mp3", b"audio")
+        blast = PhoneBlast.objects.create(
+            created_by=self.user,
+            title="Old Blast",
+            audio_file=audio,
+            status=PhoneBlast.Status.COMPLETED,
+            completed_at=dj_timezone.now() - timedelta(days=60),
+        )
+        file_path = blast.audio_file.path
+        self.assertTrue(os.path.exists(file_path))
+
+        call_command("cleanup_audio", days=30)
+
+        blast.refresh_from_db()
+        self.assertFalse(blast.audio_file)
+        self.assertFalse(os.path.exists(file_path))
+
+    def test_keeps_recent_blast_audio(self):
+        audio = SimpleUploadedFile("recent.mp3", b"audio")
+        blast = PhoneBlast.objects.create(
+            created_by=self.user,
+            title="Recent Blast",
+            audio_file=audio,
+            status=PhoneBlast.Status.COMPLETED,
+            completed_at=dj_timezone.now() - timedelta(days=1),
+        )
+        call_command("cleanup_audio", days=30)
+        blast.refresh_from_db()
+        self.assertTrue(blast.audio_file)
+
+    def test_removes_orphaned_files(self):
+        orphan_dir = os.path.join(self.temp_media, "communications", "phone_blasts")
+        os.makedirs(orphan_dir, exist_ok=True)
+        orphan_path = os.path.join(orphan_dir, "orphan.mp3")
+        with open(orphan_path, "wb") as fh:
+            fh.write(b"abandoned")
+        self.assertTrue(os.path.exists(orphan_path))
+
+        call_command("cleanup_audio", days=0)
+
+        self.assertFalse(os.path.exists(orphan_path))
+
+    def test_dry_run_keeps_files(self):
+        orphan_dir = os.path.join(self.temp_media, "communications", "phone_blasts")
+        os.makedirs(orphan_dir, exist_ok=True)
+        orphan_path = os.path.join(orphan_dir, "keep.mp3")
+        with open(orphan_path, "wb") as fh:
+            fh.write(b"data")
+        call_command("cleanup_audio", days=0, dry_run=True)
+        self.assertTrue(os.path.exists(orphan_path))
+
+
+# ---------------------------------------------------------------------------
+# Audio transcoding + delivery-visualization polish
+# ---------------------------------------------------------------------------
+
+class TranscodeTests(TestCase):
+    def test_raises_when_ffmpeg_missing(self):
+        from messaging import services
+
+        with patch.object(services.shutil, "which", return_value=None):
+            with self.assertRaises(AudioProcessingError):
+                services.transcode_to_mp3(SimpleUploadedFile("a.webm", b"x"))
+
+
+class DeliveryVisualizationTests(TestCase):
+    def setUp(self):
+        self.temp_media = tempfile.mkdtemp()
+        self.addCleanup(lambda: shutil.rmtree(self.temp_media, ignore_errors=True))
+        media_override = override_settings(MEDIA_ROOT=self.temp_media)
+        media_override.enable()
+        self.addCleanup(media_override.disable)
+        self.user = get_user_model().objects.create_user(username="viz", password="pw")
+        self.user.profile.can_manage_communications = True
+        self.user.profile.save()
+        self.client.force_login(self.user)
+        self.person = Person.objects.create(
+            first_name="Failed", last_name="Caller", phone="+15554443333"
+        )
+        audio = SimpleUploadedFile("blast.mp3", b"audio")
+        self.blast = PhoneBlast.objects.create(
+            created_by=self.user,
+            title="Viz Blast",
+            audio_file=audio,
+            status=PhoneBlast.Status.COMPLETED,
+        )
+
+    def test_detail_shows_error_message_for_failed_call(self):
+        PhoneCall.objects.create(
+            blast=self.blast, person=self.person, phone_number=self.person.phone,
+            status=PhoneCall.Status.FAILED, error_message="Carrier rejected the call",
+        )
+        response = self.client.get(
+            reverse("messaging:phone_blast_detail", args=[self.blast.pk])
+        )
+        self.assertContains(response, "Carrier rejected the call")
+
+    def test_stats_partial_shows_progress_percentage(self):
+        PhoneCall.objects.create(
+            blast=self.blast, person=self.person, phone_number=self.person.phone,
+            status=PhoneCall.Status.COMPLETED,
+        )
+        PhoneCall.objects.create(
+            blast=self.blast, phone_number="+15550009999",
+            status=PhoneCall.Status.PENDING,
+        )
+        response = self.client.get(
+            reverse("messaging:phone_blast_stats", args=[self.blast.pk])
+        )
+        # 1 of 2 settled → 50%
+        self.assertContains(response, "50%")
