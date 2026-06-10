@@ -5,11 +5,16 @@
   <div class="kiosk-title">{{ household.name }}</div>
   <div class="kiosk-subtitle">Select who is checking in today</div>
 
-  <form method="post">
+  <form method="post" id="family-select-form">
     {% csrf_token %}
     {% if form.non_field_errors %}
       <div class="error-text" style="margin-bottom:16px;">{{ form.non_field_errors.0 }}</div>
     {% endif %}
+    <div id="room-error" hidden
+         style="margin-bottom:16px;padding:12px 16px;background:#3b1219;border:1px solid #e5484d;
+                border-radius:10px;color:#ff9592;font-size:15px;font-weight:600;">
+      Please tap a room for everyone you're checking in.
+    </div>
 
     {% for person, eligible in members_with_eligibility %}
       <div style="background:#0d0d20;border:1px solid {% if eligible %}#2a2a44{% else %}#1a1a2a{% endif %};
@@ -36,8 +41,12 @@
             <div style="display:flex;flex-wrap:wrap;gap:8px;">
               {% for room in rooms %}
                 <label style="cursor:pointer;">
+                  {# No `required` here: these radios are hidden, so the browser can't
+                     surface its validation UI and silently blocks submission — including
+                     for members who aren't even selected. Validation happens in JS below
+                     (selected members only) with a server-side backstop in the form. #}
                   <input type="radio" name="room_{{ person.pk }}" value="{{ room.pk }}"
-                         style="display:none;" required>
+                         style="display:none;"{% if rooms|length == 1 %} checked{% endif %}>
                   <span class="room-btn" data-person="{{ person.pk }}" data-room="{{ room.pk }}"
                         style="display:inline-block;padding:8px 16px;border-radius:8px;
                                background:#1a1a30;border:1px solid #333;font-size:14px;
@@ -64,21 +73,47 @@
 </div>
 {% block extra_js %}
 <script>
-  // Highlight selected room buttons
+  function highlightRoom(radio) {
+    const personId = radio.name.split('_')[1];
+    document.querySelectorAll(`.room-btn[data-person="${personId}"]`).forEach(btn => {
+      btn.style.background = '#1a1a30';
+      btn.style.borderColor = '#333';
+      btn.style.color = '#fff';
+    });
+    const selected = document.querySelector(`.room-btn[data-person="${personId}"][data-room="${radio.value}"]`);
+    if (selected) {
+      selected.style.background = '#4f46e5';
+      selected.style.borderColor = '#4f46e5';
+    }
+  }
+
   document.querySelectorAll('input[type="radio"][name^="room_"]').forEach(radio => {
-    radio.addEventListener('change', () => {
-      const personId = radio.name.split('_')[1];
-      document.querySelectorAll(`.room-btn[data-person="${personId}"]`).forEach(btn => {
-        btn.style.background = '#1a1a30';
-        btn.style.borderColor = '#333';
-        btn.style.color = '#fff';
-      });
-      const selected = document.querySelector(`.room-btn[data-person="${personId}"][data-room="${radio.value}"]`);
-      if (selected) {
-        selected.style.background = '#4f46e5';
-        selected.style.borderColor = '#4f46e5';
+    radio.addEventListener('change', () => highlightRoom(radio));
+    // Reflect any pre-checked radio (single-room sessions are auto-selected)
+    if (radio.checked) highlightRoom(radio);
+  });
+
+  // Require a room only for members who are actually selected, with a visible
+  // error — hidden radios can't show the browser's own validation UI.
+  document.getElementById('family-select-form').addEventListener('submit', function (e) {
+    const errorBox = document.getElementById('room-error');
+    let missing = false;
+    document.querySelectorAll('input[type="checkbox"][name^="select_"]:checked').forEach(box => {
+      const personId = box.name.split('_')[1];
+      const radios = document.querySelectorAll(`input[type="radio"][name="room_${personId}"]`);
+      if (radios.length && ![...radios].some(r => r.checked)) {
+        missing = true;
+        const card = box.closest('div[style*="border-radius:12px"]');
+        if (card) card.style.borderColor = '#e5484d';
       }
     });
+    if (missing) {
+      e.preventDefault();
+      errorBox.hidden = false;
+      errorBox.scrollIntoView({behavior: 'smooth', block: 'center'});
+    } else {
+      errorBox.hidden = true;
+    }
   });
 </script>
 {% endblock %}

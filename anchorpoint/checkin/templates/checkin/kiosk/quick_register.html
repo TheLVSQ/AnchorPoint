@@ -7,7 +7,20 @@
 
   <form method="post" id="reg-form">
     {% csrf_token %}
+    {# child_count is a high-water mark of indices ever added — removing a child
+       must NOT decrement it, or the server would bind the wrong prefixes. #}
     <input type="hidden" name="child_count" id="child_count" value="{{ child_forms|length }}">
+
+    {% if parent_form.errors or invalid_children %}
+      <div style="margin-bottom:16px;padding:12px 16px;background:#3b1219;border:1px solid #e5484d;
+                  border-radius:10px;color:#ff9592;font-size:15px;">
+        {% for error in parent_form.non_field_errors %}<div>{{ error }}</div>{% endfor %}
+        {% for field in parent_form %}{% for error in field.errors %}
+          <div>{{ field.label }}: {{ error }}</div>
+        {% endfor %}{% endfor %}
+        {% if invalid_children %}<div>Please complete the highlighted child fields below.</div>{% endif %}
+      </div>
+    {% endif %}
 
     <div style="font-size:14px;color:#666;text-transform:uppercase;letter-spacing:0.06em;
                 margin-bottom:12px;margin-top:8px;">Parent / Guardian</div>
@@ -48,7 +61,7 @@
         <div class="child-section" data-index="{{ forloop.counter0 }}">
           <div style="display:flex;justify-content:space-between;align-items:center;
                       margin-bottom:12px;margin-top:20px;">
-            <div style="font-size:14px;color:#666;text-transform:uppercase;letter-spacing:0.06em;">
+            <div class="child-heading" style="font-size:14px;color:#666;text-transform:uppercase;letter-spacing:0.06em;">
               Child {{ forloop.counter }}
             </div>
             {% if not forloop.first %}
@@ -62,7 +75,9 @@
             <div class="form-group">
               <label>First Name</label>
               <input type="text" name="child_{{ forloop.counter0 }}-first_name"
-                     value="{{ cf.first_name.value|default:'' }}" placeholder="First name">
+                     value="{{ cf.first_name.value|default:'' }}" placeholder="First name"
+                     {% if cf.first_name.errors %}style="border-color:#e5484d;"{% endif %}>
+              {% if cf.first_name.errors %}<div style="color:#ff9592;font-size:13px;margin-top:4px;">{{ cf.first_name.errors.0 }}</div>{% endif %}
             </div>
             <div class="form-group">
               <label>Last Name</label>
@@ -73,7 +88,9 @@
           <div class="form-group">
             <label>Birthdate</label>
             <input type="date" name="child_{{ forloop.counter0 }}-birthdate"
-                   value="{{ cf.birthdate.value|default:'' }}">
+                   value="{{ cf.birthdate.value|default:'' }}"
+                   {% if cf.birthdate.errors %}style="border-color:#e5484d;"{% endif %}>
+            {% if cf.birthdate.errors %}<div style="color:#ff9592;font-size:13px;margin-top:4px;">{{ cf.birthdate.errors.0 }}</div>{% endif %}
           </div>
           <div class="form-group">
             <label>Allergies (optional)</label>
@@ -135,7 +152,7 @@
     var html = `
       <div class="child-section" data-index="${idx}">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;margin-top:20px;">
-          <div style="font-size:14px;color:#666;text-transform:uppercase;letter-spacing:0.06em;">Child ${idx + 1}</div>
+          <div class="child-heading" style="font-size:14px;color:#666;text-transform:uppercase;letter-spacing:0.06em;">Child ${idx + 1}</div>
           <button type="button" class="btn btn-secondary remove-child" style="padding:6px 14px;font-size:13px;" data-index="${idx}">Remove</button>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
@@ -164,9 +181,18 @@
       var btn = e.target.classList.contains('remove-child') ? e.target : e.target.closest('.remove-child');
       var section = btn.closest('.child-section');
       section.remove();
-      document.getElementById('child_count').value = document.querySelectorAll('.child-section').length;
+      // child_count stays at its high-water mark — the server skips missing
+      // prefixes. Only the visible "Child N" numbering is refreshed.
+      renumberChildren();
     }
   });
+
+  function renumberChildren() {
+    document.querySelectorAll('#children-container .child-section').forEach(function(section, i) {
+      var heading = section.querySelector('.child-heading');
+      if (heading) heading.textContent = 'Child ' + (i + 1);
+    });
+  }
 </script>
 {% endblock %}
 {% endblock %}

@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import time, timedelta
 
 from django.test import TestCase
 from django.utils import timezone
@@ -19,10 +19,10 @@ class SessionManagerTests(TestCase):
             configuration=self.config,
             schedule_type=CheckInWindow.TYPE_WEEKLY,
             day_of_week=(now.weekday() + 1) % 7,
-            checkin_opens=(now - timedelta(hours=1)).time(),
-            event_starts=now.time(),
-            checkin_closes=(now + timedelta(hours=1)).time(),
-            event_ends=(now + timedelta(hours=2)).time(),
+            checkin_opens=time(0, 0),
+            event_starts=time(0, 5),
+            checkin_closes=time(23, 50),
+            event_ends=time(23, 55),
         )
 
     def test_creates_session_when_none_exists(self):

@@ -22,25 +22,9 @@
     <a href="{% url 'checkin:kiosk_lookup' %}" class="btn ghost" target="_blank">Open Kiosk</a>
 </div>
 
-<div class="detail-grid">
-    <section class="detail-card">
-        <h2>Summary</h2>
-        <ul class="detail-list">
-            <li>
-                <span>Currently Checked In</span>
-                <strong>{{ checkins.count }}</strong>
-            </li>
-            <li>
-                <span>Total Check-Ins Today</span>
-                {{ session.checkins.count }}
-            </li>
-            <li>
-                <span>Rooms</span>
-                {{ session.rooms.count }}
-            </li>
-        </ul>
-    </section>
+{% include "checkin/session_stats.html" %}
 
+<div class="detail-grid" style="margin-top: 1rem;">
     {% for room_name, room_checkins in rooms_data.items %}
         <section class="detail-card">
             <h2>{{ room_name }}</h2>
