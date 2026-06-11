@@ -50,6 +50,12 @@ ALLOWED_HOSTS = [h.strip() for h in _allowed_hosts.split(",") if h.strip()]
 _csrf_origins = os.getenv("CSRF_TRUSTED_ORIGINS", "")
 CSRF_TRUSTED_ORIGINS = [o.strip() for o in _csrf_origins.split(",") if o.strip()]
 
+# Public base URL (e.g. https://anchorpoint.example.org) used by headless jobs
+# such as the scheduled-communications worker to build absolute audio and
+# Twilio status-callback URLs. Falls back to Organization Settings > Website
+# and CSRF_TRUSTED_ORIGINS when unset (see messaging.services.get_site_base_url).
+SITE_BASE_URL = os.getenv("SITE_BASE_URL", "")
+
 
 # Application definition
 

@@ -8,6 +8,7 @@ from messaging.services import (
     TwilioRequestError,
     deliver_phone_blast,
     deliver_sms_message,
+    get_site_base_url,
 )
 
 
@@ -16,6 +17,10 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         settings_obj = OrganizationSettings.load()
+        # Headless context: no request to build an absolute URL from. Without
+        # this, deliver_phone_blast() can't register a Twilio status callback,
+        # so scheduled calls would never settle out of PENDING.
+        base_url = get_site_base_url(settings_obj)
         now = timezone.now()
         sms_queryset = SmsMessage.objects.filter(
             status=SmsMessage.Status.SCHEDULED,
@@ -36,7 +41,7 @@ class Command(BaseCommand):
 
         for blast in phone_queryset:
             try:
-                deliver_phone_blast(blast, settings_obj=settings_obj)
+                deliver_phone_blast(blast, settings_obj=settings_obj, base_url=base_url)
             except (TwilioConfigurationError, TwilioRequestError) as exc:
                 self.stderr.write(f"Failed to deliver PhoneBlast #{blast.pk}: {exc}")
             else:

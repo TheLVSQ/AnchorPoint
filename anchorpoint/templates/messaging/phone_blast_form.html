@@ -37,9 +37,21 @@
                     {% endif %}
                 </div>
                 <div class="form-field form-field--full">
-                    <label for="{{ form.audio_file.id_for_label }}">Audio File</label>
+                    <label for="{{ form.audio_file.id_for_label }}">Audio Message</label>
+
+                    <div id="recorder" class="recorder" hidden>
+                        <div class="recorder__controls">
+                            <button type="button" id="rec-start" class="btn ghost">● Record</button>
+                            <button type="button" id="rec-stop" class="btn ghost" hidden>■ Stop</button>
+                            <button type="button" id="rec-redo" class="btn ghost" hidden>↺ Re-record</button>
+                            <span id="rec-timer" class="muted-text" aria-live="polite"></span>
+                        </div>
+                        <audio id="rec-preview" controls hidden style="width:100%;margin-top:0.5rem;"></audio>
+                        <p class="help-text">Record straight from your phone, or upload a file below.</p>
+                    </div>
+
                     {{ form.audio_file }}
-                    <p class="help-text">Upload MP3/WAV up to a few minutes long.</p>
+                    <p class="help-text">Upload MP3/WAV (or a browser recording), up to a few minutes / 10 MB.</p>
                     {% if form.audio_file.errors %}
                         <p class="error-text">{{ form.audio_file.errors.0 }}</p>
                     {% endif %}
@@ -71,4 +83,85 @@
         </div>
     </form>
 </section>
+
+<script>
+(function () {
+    // Progressive enhancement: only show the recorder when the browser supports
+    // capturing audio. Otherwise the plain file upload remains the only option.
+    var supported = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia
+        && window.MediaRecorder);
+    var recorder = document.getElementById("recorder");
+    var fileInput = document.getElementById("{{ form.audio_file.id_for_label }}");
+    if (!supported || !recorder || !fileInput) { return; }
+    recorder.hidden = false;
+
+    var startBtn = document.getElementById("rec-start");
+    var stopBtn = document.getElementById("rec-stop");
+    var redoBtn = document.getElementById("rec-redo");
+    var preview = document.getElementById("rec-preview");
+    var timerEl = document.getElementById("rec-timer");
+
+    var MAX_SECONDS = 180; // 3 minute guard
+    var mediaRecorder = null, chunks = [], stream = null;
+    var seconds = 0, timerId = null;
+
+    function fmt(s) {
+        var m = Math.floor(s / 60), r = s % 60;
+        return m + ":" + (r < 10 ? "0" : "") + r;
+    }
+    function tick() {
+        seconds += 1;
+        timerEl.textContent = fmt(seconds);
+        if (seconds >= MAX_SECONDS) { stop(); }
+    }
+    function releaseStream() {
+        if (stream) { stream.getTracks().forEach(function (t) { t.stop(); }); stream = null; }
+    }
+
+    function start() {
+        navigator.mediaDevices.getUserMedia({ audio: true }).then(function (s) {
+            stream = s;
+            chunks = [];
+            mediaRecorder = new MediaRecorder(stream);
+            mediaRecorder.ondataavailable = function (e) {
+                if (e.data && e.data.size > 0) { chunks.push(e.data); }
+            };
+            mediaRecorder.onstop = function () {
+                var type = mediaRecorder.mimeType || "audio/webm";
+                var ext = type.indexOf("mp4") !== -1 ? "m4a"
+                        : type.indexOf("ogg") !== -1 ? "ogg" : "webm";
+                var blob = new Blob(chunks, { type: type });
+                var file = new File([blob], "recording." + ext, { type: type });
+                var dt = new DataTransfer();
+                dt.items.add(file);
+                fileInput.files = dt.files; // submits via the normal multipart form
+                preview.src = URL.createObjectURL(blob);
+                preview.hidden = false;
+                releaseStream();
+            };
+            mediaRecorder.start();
+            seconds = 0; timerEl.textContent = fmt(0);
+            timerId = setInterval(tick, 1000);
+            startBtn.hidden = true; stopBtn.hidden = false; redoBtn.hidden = true;
+            preview.hidden = true;
+        }).catch(function () {
+            timerEl.textContent = "Microphone unavailable — upload a file instead.";
+        });
+    }
+    function stop() {
+        if (timerId) { clearInterval(timerId); timerId = null; }
+        if (mediaRecorder && mediaRecorder.state !== "inactive") { mediaRecorder.stop(); }
+        stopBtn.hidden = true; redoBtn.hidden = false; startBtn.hidden = true;
+    }
+    function redo() {
+        preview.hidden = true; preview.removeAttribute("src");
+        timerEl.textContent = "";
+        startBtn.hidden = false; redoBtn.hidden = true; stopBtn.hidden = true;
+    }
+
+    startBtn.addEventListener("click", start);
+    stopBtn.addEventListener("click", stop);
+    redoBtn.addEventListener("click", redo);
+})();
+</script>
 {% endblock %}

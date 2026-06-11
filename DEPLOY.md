@@ -50,12 +50,27 @@ cd docker
 # Build the image
 docker compose build
 
-# Start in detached mode
+# Start in detached mode (web, db, and the cron scheduler sidecar)
 docker compose up -d
 
 # Check logs
 docker compose logs -f web
 ```
+
+This starts three services: `web` (the app), `db` (PostgreSQL), and `cron` — a
+lightweight scheduler sidecar that delivers **scheduled** SMS/phone blasts every
+minute and purges old phone-blast audio daily. Without it, messages saved with a
+future send time never go out.
+
+```bash
+# Watch the scheduler
+docker compose logs -f cron
+```
+
+> **Set `SITE_BASE_URL`** in `.env.production` (e.g. `https://your.domain`). The
+> cron worker has no incoming request to derive a URL from, so Twilio needs this
+> to fetch phone-blast audio and post call-status callbacks. Phone blasts also
+> require `ffmpeg`, which is bundled in the image.
 
 ## Step 4: Run Database Migrations
 
