@@ -41,10 +41,10 @@
             <div style="display:flex;flex-wrap:wrap;gap:8px;">
               {% for room in rooms %}
                 <label style="cursor:pointer;">
-                  {# No `required` here: these radios are hidden, so the browser can't
-                     surface its validation UI and silently blocks submission — including
-                     for members who aren't even selected. Validation happens in JS below
-                     (selected members only) with a server-side backstop in the form. #}
+                  {% comment %}No `required` here: these radios are hidden, so the browser
+                  can't surface its validation UI and silently blocks submission — including
+                  for members who aren't even selected. Validation happens in JS below
+                  (selected members only) with a server-side backstop in the form.{% endcomment %}
                   <input type="radio" name="room_{{ person.pk }}" value="{{ room.pk }}"
                          style="display:none;"{% if rooms|length == 1 %} checked{% endif %}>
                   <span class="room-btn" data-person="{{ person.pk }}" data-room="{{ room.pk }}"
