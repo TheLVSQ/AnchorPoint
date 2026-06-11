@@ -1,0 +1,23 @@
+# Reference systemd unit for the AnchorPoint print agent.
+#
+# `install.sh` writes a copy of this (with User/paths substituted) to
+# /etc/systemd/system/anchorpoint-agent.service — use this file directly only
+# for manual installs: adjust User and paths, copy it there, then run
+#   sudo systemctl daemon-reload && sudo systemctl enable --now anchorpoint-agent
+
+[Unit]
+Description=AnchorPoint print agent (polls for check-in labels and prints them)
+After=network-online.target cups.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pi
+Environment=ANCHORPOINT_AGENT_CONFIG=/opt/anchorpoint-agent/config.json
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/usr/bin/python3 /opt/anchorpoint-agent/anchorpoint_agent.py run
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

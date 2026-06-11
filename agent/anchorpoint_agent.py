@@ -68,8 +68,7 @@ def cmd_pair(args):
     print("Start printing with:  python3 anchorpoint_agent.py run")
 
 
-LABEL_DPI = 300            # labels are rendered at 300dpi by the server
-LABEL_WIDTH_MM = 62        # Brother QL continuous-roll width
+DEFAULT_MEDIA_WIDTH_MM = 62   # Brother QL continuous-roll width
 
 
 def _png_size(png_bytes):
@@ -81,12 +80,15 @@ def _png_size(png_bytes):
     return width, height
 
 
-def _print_png(png_bytes, printer):
+def _print_png(png_bytes, printer, width_mm=DEFAULT_MEDIA_WIDTH_MM):
     """Send a PNG to the printer via CUPS `lp`. Returns (ok, error_message).
 
     Brother QL printers reject jobs whose page size doesn't fit the loaded
     media ("file size too large"), so compute the physical label size from the
-    image dimensions and pass it explicitly with fit scaling.
+    image dimensions and pass it explicitly with fit scaling. width_mm comes
+    from the server per job (the agent's configured label width); the cut
+    length follows the artwork's aspect ratio so wider media scales up
+    proportionally.
     """
     tmp_path = None
     try:
@@ -98,10 +100,10 @@ def _print_png(png_bytes, printer):
             cmd += ["-d", printer]
         size = _png_size(png_bytes)
         if size:
-            # Round the cut length up a couple of mm so nothing clips.
-            height_mm = max(20, int(size[1] / LABEL_DPI * 25.4) + 2)
+            # Aspect-derived cut length, rounded up a couple of mm so nothing clips.
+            height_mm = max(20, round(width_mm * size[1] / size[0]) + 2)
             cmd += [
-                "-o", f"media=Custom.{LABEL_WIDTH_MM}x{height_mm}mm",
+                "-o", f"media=Custom.{width_mm}x{height_mm}mm",
                 "-o", "print-scaling=fit",
             ]
         cmd.append(tmp_path)
@@ -169,7 +171,8 @@ def cmd_run(args):
                     fh.write(img.content)
                 ok, err = True, ""
             else:
-                ok, err = _print_png(img.content, printer)
+                width_mm = job.get("media_width_mm") or DEFAULT_MEDIA_WIDTH_MM
+                ok, err = _print_png(img.content, printer, width_mm)
 
             _ack(server, headers, job["id"], ok, err)
             label = job.get("description") or job.get("kind")

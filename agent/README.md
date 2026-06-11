@@ -10,16 +10,32 @@ as the printer.
 iPad / computer (check-in)  ─►  AnchorPoint (server)  ◄─poll─  this agent  ─►  printer
 ```
 
-## Requirements
+## Quick install (Raspberry Pi / Debian — recommended)
+
+In AnchorPoint: **Check-In → Print Agents → Add Agent**. The page shows a
+ready-to-paste one-liner containing your pairing code:
+
+```bash
+curl -fsSL https://<your-anchorpoint>/checkin/agent/install.sh | sudo bash -s -- \
+    --server https://<your-anchorpoint> --code <PAIRING_CODE> \
+    --printer-uri ipp://<printer-ip>/ipp/print
+```
+
+That installs CUPS + the agent, creates a driverless queue for a network
+printer, pairs, and starts a systemd service that survives reboots. Full
+fresh-Pi walkthrough (from blank SD card): `docs/checkin-printer-raspberry-pi.md`.
+Label media width is configured per agent on the Print Agents page (default
+62mm Brother roll).
+
+## Manual setup
+
+### Requirements
 
 - Python 3.8+ and `pip install -r requirements.txt` (just `requests`).
 - A printer installed in **CUPS** on this machine. The agent prints with `lp`,
-  so if `lp -d <printer> file.png` works, the agent works. For a Raspberry Pi +
-  Brother QL label printer, follow `docs/checkin-printer-raspberry-pi.md` (CUPS
-  install + driver + queue) — but **stop before the Tailscale section**; you
-  don't need it with this agent.
+  so if `lp -d <printer> file.png` works, the agent works.
 
-## Setup
+### Steps
 
 1. In AnchorPoint: **Settings → Print Agents → Add Agent**. Copy the pairing code.
 2. On this machine:

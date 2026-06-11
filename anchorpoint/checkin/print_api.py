@@ -93,6 +93,7 @@ def next_job(request):
         "kind": job.kind,
         "description": job.description,
         "image_url": f"/checkin/api/print/{job.pk}/image",
+        "media_width_mm": agent.label_width_mm,
     })
 
 

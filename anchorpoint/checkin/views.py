@@ -1,8 +1,9 @@
 import json
 import logging
 import re
+from pathlib import Path
 from django.shortcuts import render, redirect, get_object_or_404
-from django.http import JsonResponse, HttpResponseForbidden
+from django.http import HttpResponse, JsonResponse, HttpResponseForbidden
 from django.views.decorators.http import require_http_methods, require_POST
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -899,6 +900,24 @@ def print_agent_repair(request, agent_id):
 
 @staff_required
 @require_POST
+def print_agent_update(request, agent_id):
+    agent = get_object_or_404(PrintAgent, pk=agent_id)
+    try:
+        width = int(request.POST.get("label_width_mm", ""))
+    except (TypeError, ValueError):
+        messages.error(request, "Label width must be a number of millimetres.")
+        return redirect("checkin:print_agents")
+    if not 20 <= width <= 120:
+        messages.error(request, "Label width must be between 20 and 120 mm.")
+        return redirect("checkin:print_agents")
+    agent.label_width_mm = width
+    agent.save(update_fields=["label_width_mm"])
+    messages.success(request, f"'{agent.name}' set to {width}mm labels.")
+    return redirect("checkin:print_agents")
+
+
+@staff_required
+@require_POST
 def print_agent_delete(request, agent_id):
     agent = get_object_or_404(PrintAgent, pk=agent_id)
     name = agent.name
@@ -917,3 +936,30 @@ def print_agent_test(request, agent_id):
         enqueue_test_label(agent)
         messages.success(request, f"Test label queued for '{agent.name}'.")
     return redirect("checkin:print_agents")
+
+
+def _serve_agent_file(filename, content_type="text/plain"):
+    """Serve a file from the repo's agent/ directory (installer + agent script).
+
+    Public on purpose: these contain no secrets — pairing codes are the secret
+    and are typed in by the person running the installer.
+    """
+    from django.conf import settings as django_settings
+    from django.http import Http404
+
+    path = Path(django_settings.BASE_DIR).parent / "agent" / filename
+    try:
+        content = path.read_text()
+    except OSError:
+        raise Http404(filename)
+    return HttpResponse(content, content_type=content_type)
+
+
+def agent_install_script(request):
+    """`curl -fsSL https://<host>/checkin/agent/install.sh | sudo bash -s -- ...`"""
+    return _serve_agent_file("install.sh", "text/x-shellscript")
+
+
+def agent_script(request):
+    """The print agent itself; downloaded by install.sh onto the Pi."""
+    return _serve_agent_file("anchorpoint_agent.py", "text/x-python")
