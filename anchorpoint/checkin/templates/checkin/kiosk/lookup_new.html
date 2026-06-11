@@ -14,19 +14,29 @@
   {% endif %}
   <form method="get">
     <div class="form-group">
-      <input type="text" name="query" value="{{ query }}"
+      <input type="text" name="query" value="{{ query }}" minlength="2"
              placeholder="Enter last name or phone number"
              style="font-size:20px;" autofocus autocomplete="off">
     </div>
+    {% if form.query.errors %}
+      <div style="color:#ff9592;font-size:14px;margin-bottom:12px;">
+        Please enter at least 2 characters.
+      </div>
+    {% endif %}
     <button type="submit" class="btn btn-primary btn-lg">Search</button>
   </form>
 
-  {% if query %}
+  {% if query and not form.query.errors %}
     <div style="margin-top:28px;">
       {% if households %}
         <div style="font-size:13px;color:#666;margin-bottom:12px;text-transform:uppercase;letter-spacing:0.06em;">
           Results
         </div>
+        {% if results_capped %}
+          <div style="color:#888;font-size:13px;margin-bottom:10px;">
+            Showing the first 25 matches — add more letters to narrow your search.
+          </div>
+        {% endif %}
         {% for household in households %}
           <a href="{% url 'checkin:kiosk_family_select' household.pk %}"
              style="display:block;background:#0d0d20;border:1px solid #2a2a44;border-radius:12px;

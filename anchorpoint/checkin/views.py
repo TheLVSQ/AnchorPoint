@@ -7,7 +7,7 @@ from django.views.decorators.http import require_http_methods, require_POST
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.utils import timezone
-from django.db.models import Q
+from django.db.models import Count, Q
 
 from core.models import OrganizationSettings
 from core.permissions import checkin_admin_required, staff_required
@@ -25,10 +25,11 @@ from .models import (
     Room, PrinterConfiguration, PrintAgent, generate_unique_security_code,
 )
 from .services import PrintService
+from .services.checkin_sms import send_security_code_sms
 from .services.eligibility import get_eligible_members
 from .services.session_manager import get_or_create_session
 from .services.quick_registration import register_new_family
-from .services.print_queue import enqueue_checkin_labels, enqueue_test_label
+from .services.print_queue import enqueue_checkin_labels, enqueue_test_label, get_active_agent
 
 logger = logging.getLogger(__name__)
 
@@ -149,7 +150,9 @@ def kiosk_lookup(request):
     if not session:
         return redirect("checkin:kiosk_unlock")
 
+    MAX_RESULTS = 25
     households = []
+    results_capped = False
     query = ""
     if request.method == "GET" and "query" in request.GET:
         form = KioskLookupForm(request.GET)
@@ -157,14 +160,19 @@ def kiosk_lookup(request):
             query = form.cleaned_data["query"]
             digits = normalize_phone(query)
             if len(digits) >= 7:
-                households = Household.objects.filter(
+                matches = Household.objects.filter(
                     members__normalized_phone__endswith=digits[-10:]
                 ).distinct()
             else:
-                households = (
+                matches = (
                     Household.objects.filter(name__icontains=query)
                     | Household.objects.filter(members__last_name__icontains=query)
                 ).distinct()
+            households = list(matches.order_by("name")[: MAX_RESULTS + 1])
+            results_capped = len(households) > MAX_RESULTS
+            households = households[:MAX_RESULTS]
+        else:
+            query = request.GET.get("query", "")
     else:
         form = KioskLookupForm()
 
@@ -172,6 +180,7 @@ def kiosk_lookup(request):
         "form": form,
         "households": households,
         "query": query,
+        "results_capped": results_capped,
         "session": session,
         "org": org,
     })
@@ -239,15 +248,33 @@ def kiosk_family_select(request, household_id):
                 # Queue labels for the local print agent. No-op if none is
                 # paired (the confirmation page still offers browser printing),
                 # and never block check-in on a printing problem.
+                queued = 0
                 try:
                     ordered = sorted(
                         CheckIn.objects.filter(pk__in=checkin_ids)
                         .select_related("person", "room"),
                         key=lambda c: checkin_ids.index(c.pk),
                     )
-                    enqueue_checkin_labels(ordered, session)
+                    queued = enqueue_checkin_labels(ordered, session)
                 except Exception:
                     logger.exception("Failed to queue print jobs for check-in")
+                # Tell the confirmation page labels are already on their way via
+                # the agent, so it must not also direct-print (duplicate labels).
+                request.session["kiosk_labels_queued"] = queued > 0
+
+                # Text the pickup code to opted-in household adults. Best-effort:
+                # a Twilio problem must never block the check-in line.
+                sms_sent = 0
+                try:
+                    ordered_checkins = CheckIn.objects.filter(
+                        pk__in=checkin_ids
+                    ).select_related("person")
+                    sms_sent = send_security_code_sms(
+                        household, ordered_checkins, security_code, session
+                    )
+                except Exception:
+                    logger.exception("Failed to send check-in code SMS")
+                request.session["kiosk_sms_sent"] = sms_sent > 0
                 return redirect("checkin:kiosk_confirmation")
     else:
         form = FamilyMemberSelectForm(
@@ -272,11 +299,18 @@ def kiosk_confirmation(request):
 
     checkin_ids = request.session.pop("kiosk_checkin_ids", [])
     security_code = request.session.pop("kiosk_security_code", "")
+    labels_queued = request.session.pop("kiosk_labels_queued", False)
+    sms_sent = request.session.pop("kiosk_sms_sent", False)
     checkins = CheckIn.objects.filter(pk__in=checkin_ids).select_related("person", "room")
     org = OrganizationSettings.load()
     session = _get_active_session(request)
 
-    printer_ok = PrintService().print_checkins(checkins, session)
+    if labels_queued:
+        # The print agent already has these labels — direct-printing too would
+        # produce duplicates when both an agent and a printer are configured.
+        printer_ok = True
+    else:
+        printer_ok = PrintService().print_checkins(checkins, session)
 
     return render(request, "checkin/kiosk/confirmation.html", {
         "checkins": checkins,
@@ -284,6 +318,7 @@ def kiosk_confirmation(request):
         "session": session,
         "org": org,
         "printer_ok": printer_ok,
+        "sms_sent": sms_sent,
     })
 
 
@@ -296,15 +331,26 @@ def kiosk_quick_register(request):
 
     if request.method == "POST":
         parent_form = QuickRegistrationForm(request.POST)
-        child_count = int(request.POST.get("child_count", "1"))
+        # child_count is a high-water mark of indices ever added on the page.
+        # Removing a child leaves a gap in the prefixes (child_0, child_2, ...),
+        # so only bind forms for indices actually present in the POST.
+        try:
+            child_count = min(int(request.POST.get("child_count", "1")), 12)
+        except (TypeError, ValueError):
+            child_count = 1
         child_forms = []
         children_valid = True
         for i in range(child_count):
             prefix = f"child_{i}"
+            if f"{prefix}-first_name" not in request.POST:
+                continue
             cf = QuickRegistrationChildForm(request.POST, prefix=prefix)
             child_forms.append(cf)
             if not cf.is_valid():
                 children_valid = False
+        if not child_forms:
+            children_valid = False
+            parent_form.add_error(None, "Add at least one child to register.")
 
         if parent_form.is_valid() and children_valid:
             children_data = []
@@ -332,10 +378,12 @@ def kiosk_quick_register(request):
     else:
         parent_form = QuickRegistrationForm()
         child_forms = [QuickRegistrationChildForm(prefix="child_0")]
+        children_valid = True
 
     return render(request, "checkin/kiosk/quick_register.html", {
         "parent_form": parent_form,
         "child_forms": child_forms,
+        "invalid_children": not children_valid,
         "org": org,
     })
 
@@ -491,6 +539,7 @@ def dashboard(request):
         .prefetch_related("checkins")
         .order_by("checkin_opens")
     )
+    agent = get_active_agent()
 
     return render(
         request,
@@ -498,6 +547,7 @@ def dashboard(request):
         {
             "sessions": sessions,
             "today": today,
+            "agent": agent,
         },
     )
 
@@ -526,6 +576,8 @@ def session_detail(request, session_id):
             "session": session,
             "checkins": checkins,
             "rooms_data": rooms_data,
+            "stats": _session_stats(session),
+            "agent": get_active_agent(),
         },
     )
 
@@ -744,30 +796,68 @@ def printer_test(request, printer_id):
 # =============================================================================
 
 
+def _session_stats(session):
+    """Live counts for a session: totals plus per-room occupancy (one query)."""
+    checked_in = session.checkins.filter(checked_out_at__isnull=True).count()
+    checked_out = session.checkins.filter(checked_out_at__isnull=False).count()
+
+    room_counts = {
+        row["room"]: row["count"]
+        for row in session.checkins.filter(checked_out_at__isnull=True)
+        .values("room")
+        .annotate(count=Count("id"))
+    }
+    rooms = []
+    for room in session.rooms.all().order_by("sort_order", "name"):
+        count = room_counts.get(room.pk, 0)
+        percent = (
+            min(100, round(count / room.capacity * 100)) if room.capacity else None
+        )
+        rooms.append(
+            {
+                "name": room.name,
+                "count": count,
+                "capacity": room.capacity,
+                "percent": percent,
+                "full": room.capacity and count >= room.capacity,
+            }
+        )
+
+    return {
+        "checked_in": checked_in,
+        "checked_out": checked_out,
+        "total": checked_in + checked_out,
+        "unassigned": room_counts.get(None, 0),
+        "rooms": rooms,
+    }
+
+
+@staff_required
+def session_stats(request, session_id):
+    """HTMX partial: live stats block for a session. Polls while check-in is open."""
+    session = get_object_or_404(CheckInSession, pk=session_id)
+    agent = get_active_agent()
+    return render(request, "checkin/session_stats.html", {
+        "session": session,
+        "stats": _session_stats(session),
+        "agent": agent,
+    })
+
+
 @staff_required
 def api_session_stats(request, session_id):
     """Get real-time stats for a session (AJAX). Staff-only — exposes
     attendance counts and per-room occupancy."""
     session = get_object_or_404(CheckInSession, pk=session_id)
-
-    checked_in = session.checkins.filter(checked_out_at__isnull=True).count()
-    checked_out = session.checkins.filter(checked_out_at__isnull=False).count()
-
-    # Room breakdown
-    rooms = []
-    for room in session.rooms.all():
-        count = session.checkins.filter(room=room, checked_out_at__isnull=True).count()
-        rooms.append({
-            "name": room.name,
-            "count": count,
-            "capacity": room.capacity,
-        })
-
+    stats = _session_stats(session)
     return JsonResponse({
-        "checked_in": checked_in,
-        "checked_out": checked_out,
-        "total": checked_in + checked_out,
-        "rooms": rooms,
+        "checked_in": stats["checked_in"],
+        "checked_out": stats["checked_out"],
+        "total": stats["total"],
+        "rooms": [
+            {"name": r["name"], "count": r["count"], "capacity": r["capacity"]}
+            for r in stats["rooms"]
+        ],
     })
 
 
