@@ -23,6 +23,25 @@ services:
       retries: 3
       start_period: 40s
 
+  # Scheduler sidecar: delivers due scheduled SMS/phone blasts every minute and
+  # purges old phone-blast audio daily. Shares the web image, env, and media
+  # volume. Skips the migration entrypoint (web owns migrations).
+  cron:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    restart: unless-stopped
+    entrypoint: ["/app/cron.sh"]
+    volumes:
+      - media_data:/app/anchorpoint/media
+    env_file:
+      - .env.production
+    depends_on:
+      db:
+        condition: service_healthy
+      web:
+        condition: service_healthy
+
   db:
     container_name: anchorpoint-postgres
     image: postgres:16

@@ -7,10 +7,12 @@ ENV PYTHONUNBUFFERED=1
 WORKDIR /app
 
 # Install system dependencies
+# ffmpeg transcodes uploaded/recorded audio to MP3 for Twilio phone blasts.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq-dev \
     fonts-dejavu-core \
     libusb-1.0-0 \
+    ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies
@@ -28,6 +30,10 @@ COPY docker/gunicorn.conf.py ./gunicorn.conf.py
 # Windows.
 COPY docker/entrypoint.sh /app/entrypoint.sh
 RUN sed -i 's/\r$//' /app/entrypoint.sh && chmod +x /app/entrypoint.sh
+
+# Scheduler loop used by the cron sidecar service (see docker-compose.yml).
+COPY docker/cron.sh /app/cron.sh
+RUN sed -i 's/\r$//' /app/cron.sh && chmod +x /app/cron.sh
 
 # Create directories for static and media files
 RUN mkdir -p /app/anchorpoint/staticfiles /app/anchorpoint/media

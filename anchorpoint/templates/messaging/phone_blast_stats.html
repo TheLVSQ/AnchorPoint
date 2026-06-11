@@ -5,6 +5,16 @@
      hx-swap="outerHTML"
      {% endif %}>
 
+    <div style="margin-top:1rem;">
+        <div style="display:flex;justify-content:space-between;font-size:0.85rem;" class="muted-text">
+            <span>{{ stats.settled }} of {{ stats.total }} call{{ stats.total|pluralize }} settled</span>
+            <span>{{ stats.percent }}%</span>
+        </div>
+        <div style="background:#e5e7eb;border-radius:999px;height:0.5rem;overflow:hidden;margin-top:0.25rem;">
+            <div style="background:#16a34a;height:100%;width:{{ stats.percent }}%;transition:width 0.4s ease;"></div>
+        </div>
+    </div>
+
     <div class="detail-grid" style="margin-top:1rem;">
         <section class="detail-card" style="text-align:center;">
             <div style="font-size:2.5rem;font-weight:700;color:#16a34a;">{{ stats.answered }}</div>

@@ -1,11 +1,18 @@
 import base64
 import json
 import logging
+import os
+import shutil
+import subprocess
+import tempfile
+import uuid
 from typing import Tuple
 from urllib import error as urllib_error
 from urllib import parse as urllib_parse
 from urllib import request as urllib_request
 
+from django.conf import settings as django_settings
+from django.core.files.base import ContentFile
 from django.utils import timezone
 
 from core.models import OrganizationSettings
@@ -28,6 +35,99 @@ class TwilioConfigurationError(Exception):
 
 class TwilioRequestError(Exception):
     """Raised when Twilio rejects an API request."""
+
+
+class AudioProcessingError(Exception):
+    """Raised when an uploaded/recorded audio file cannot be transcoded."""
+
+
+def get_site_base_url(settings_obj: OrganizationSettings | None = None) -> str | None:
+    """Return the public base URL for building absolute audio/callback URLs.
+
+    Used by headless contexts (the scheduled-delivery management command) that
+    have no request to derive an absolute URL from. Resolution order:
+
+    1. ``SITE_BASE_URL`` Django setting / env var
+    2. ``OrganizationSettings.website``
+    3. first entry of ``CSRF_TRUSTED_ORIGINS``
+
+    Returns ``None`` (and logs a warning) when nothing is configured.
+    """
+    settings_obj = settings_obj or OrganizationSettings.load()
+    candidates = [
+        getattr(django_settings, "SITE_BASE_URL", "") or "",
+        settings_obj.website or "",
+        (django_settings.CSRF_TRUSTED_ORIGINS or [""])[0],
+    ]
+    for candidate in candidates:
+        candidate = candidate.strip()
+        if candidate:
+            return candidate.rstrip("/")
+    logger.warning(
+        "No site base URL configured (SITE_BASE_URL / Organization Settings > Website "
+        "/ CSRF_TRUSTED_ORIGINS). Scheduled phone blasts cannot register a Twilio "
+        "status callback or absolute audio URL."
+    )
+    return None
+
+
+def transcode_to_mp3(django_file) -> ContentFile:
+    """Transcode an uploaded/recorded audio file to mono MP3 via ffmpeg.
+
+    Browsers record WebM/Opus (Android/Chrome) or MP4/AAC (iOS Safari), neither
+    of which Twilio's ``<Play>`` verb can fetch — it only plays MP3/WAV. We
+    normalise every upload to MP3 so the stored file is always Twilio-playable.
+
+    Returns a ``ContentFile`` named ``<uuid>.mp3``. Raises AudioProcessingError
+    if ffmpeg is missing, errors, or times out.
+    """
+    if shutil.which("ffmpeg") is None:
+        raise AudioProcessingError(
+            "Audio processing is unavailable (ffmpeg is not installed on the server)."
+        )
+
+    in_path = out_path = None
+    try:
+        suffix = os.path.splitext(getattr(django_file, "name", "") or "")[1] or ".bin"
+        with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as in_tmp:
+            for chunk in django_file.chunks():
+                in_tmp.write(chunk)
+            in_path = in_tmp.name
+        out_path = os.path.join(
+            tempfile.gettempdir(), f"anchorpoint-blast-{uuid.uuid4().hex}.mp3"
+        )
+        try:
+            subprocess.run(
+                [
+                    "ffmpeg", "-y", "-i", in_path,
+                    "-ac", "1", "-codec:a", "libmp3lame", "-q:a", "5",
+                    out_path,
+                ],
+                capture_output=True,
+                timeout=60,
+                check=True,
+            )
+        except subprocess.TimeoutExpired as exc:
+            raise AudioProcessingError("Audio processing timed out.") from exc
+        except subprocess.CalledProcessError as exc:
+            detail = (exc.stderr or b"").decode("utf-8", "replace")[-500:]
+            logger.warning("ffmpeg failed transcoding audio: %s", detail)
+            raise AudioProcessingError(
+                "That audio file could not be processed. Please try a different recording."
+            ) from exc
+
+        with open(out_path, "rb") as result:
+            data = result.read()
+        if not data:
+            raise AudioProcessingError("Transcoded audio was empty.")
+        return ContentFile(data, name=f"{uuid.uuid4().hex}.mp3")
+    finally:
+        for path in (in_path, out_path):
+            if path and os.path.exists(path):
+                try:
+                    os.remove(path)
+                except OSError:
+                    pass
 
 
 def is_within_blackout_window(
