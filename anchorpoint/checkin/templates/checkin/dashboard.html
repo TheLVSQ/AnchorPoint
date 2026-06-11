@@ -11,6 +11,7 @@
     <a href="{% url 'checkin:configuration_list' %}" class="btn ghost">Configurations</a>
     <a href="{% url 'checkin:room_list' %}" class="btn ghost">Rooms</a>
     <a href="{% url 'checkin:printer_list' %}" class="btn ghost">Printers</a>
+    <a href="{% url 'checkin:print_agents' %}" class="btn ghost">Print Agents</a>
     {% if agent %}
         {% if agent.is_online %}
             <span class="chip" style="background:#dcfce7;color:#166534;align-self:center;">🖨 {{ agent.name }} online</span>
@@ -69,6 +70,10 @@
         <li>
             <a href="{% url 'checkin:printer_list' %}">Printer Setup</a>
             <span>Configure label printers</span>
+        </li>
+        <li>
+            <a href="{% url 'checkin:print_agents' %}">Print Agents</a>
+            <span>Pair a local print agent for hands-free label printing</span>
         </li>
         <li>
             <a href="{% url 'checkin:kiosk_unlock' %}" target="_blank">Kiosk Mode</a>

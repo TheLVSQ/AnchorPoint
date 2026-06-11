@@ -26,7 +26,9 @@ def get_active_agent():
 
 def _png_bytes(image) -> bytes:
     buf = io.BytesIO()
-    image.save(buf, format="PNG")
+    # Labels are rendered at 300dpi (696px = 62mm). Tag the PNG so printers and
+    # drivers interpret the physical size correctly instead of assuming 72dpi.
+    image.save(buf, format="PNG", dpi=(300, 300))
     return buf.getvalue()
 
 

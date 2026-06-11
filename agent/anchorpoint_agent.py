@@ -68,8 +68,26 @@ def cmd_pair(args):
     print("Start printing with:  python3 anchorpoint_agent.py run")
 
 
+LABEL_DPI = 300            # labels are rendered at 300dpi by the server
+LABEL_WIDTH_MM = 62        # Brother QL continuous-roll width
+
+
+def _png_size(png_bytes):
+    """Width/height in pixels from the PNG IHDR header (no Pillow needed)."""
+    if len(png_bytes) < 24 or png_bytes[:8] != b"\x89PNG\r\n\x1a\n":
+        return None
+    width = int.from_bytes(png_bytes[16:20], "big")
+    height = int.from_bytes(png_bytes[20:24], "big")
+    return width, height
+
+
 def _print_png(png_bytes, printer):
-    """Send a PNG to the printer via CUPS `lp`. Returns (ok, error_message)."""
+    """Send a PNG to the printer via CUPS `lp`. Returns (ok, error_message).
+
+    Brother QL printers reject jobs whose page size doesn't fit the loaded
+    media ("file size too large"), so compute the physical label size from the
+    image dimensions and pass it explicitly with fit scaling.
+    """
     tmp_path = None
     try:
         with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
@@ -78,6 +96,14 @@ def _print_png(png_bytes, printer):
         cmd = ["lp"]
         if printer:
             cmd += ["-d", printer]
+        size = _png_size(png_bytes)
+        if size:
+            # Round the cut length up a couple of mm so nothing clips.
+            height_mm = max(20, int(size[1] / LABEL_DPI * 25.4) + 2)
+            cmd += [
+                "-o", f"media=Custom.{LABEL_WIDTH_MM}x{height_mm}mm",
+                "-o", "print-scaling=fit",
+            ]
         cmd.append(tmp_path)
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
         if result.returncode != 0:
