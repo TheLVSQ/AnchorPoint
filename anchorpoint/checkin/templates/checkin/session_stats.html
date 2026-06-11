@@ -1,0 +1,59 @@
+<div id="session-stats"
+     {% if session.is_open %}
+     hx-get="{% url 'checkin:session_stats' session.pk %}"
+     hx-trigger="every 5s"
+     hx-swap="outerHTML"
+     {% endif %}>
+
+    <div class="detail-grid">
+        <section class="detail-card" style="text-align:center;">
+            <div style="font-size:2.5rem;font-weight:700;color:#16a34a;">{{ stats.checked_in }}</div>
+            <div class="stat-hint">Here Now</div>
+        </section>
+        <section class="detail-card" style="text-align:center;">
+            <div style="font-size:2.5rem;font-weight:700;">{{ stats.total }}</div>
+            <div class="stat-hint">Total Today</div>
+        </section>
+        <section class="detail-card" style="text-align:center;">
+            <div style="font-size:2.5rem;font-weight:700;color:#6b7280;">{{ stats.checked_out }}</div>
+            <div class="stat-hint">Checked Out</div>
+        </section>
+    </div>
+
+    {% if stats.rooms %}
+        <section class="detail-card" style="margin-top:1rem;">
+            <h2>Rooms</h2>
+            {% for room in stats.rooms %}
+                <div style="margin-top:0.75rem;">
+                    <div style="display:flex;justify-content:space-between;font-size:0.9rem;">
+                        <span>{{ room.name }}</span>
+                        <span class="stat-hint">
+                            {{ room.count }}{% if room.capacity %} / {{ room.capacity }}{% endif %}
+                            {% if room.full %}<strong style="color:#dc2626;"> · Full</strong>{% endif %}
+                        </span>
+                    </div>
+                    {% if room.percent is not None %}
+                        <div style="background:#e5e7eb;border-radius:999px;height:0.4rem;overflow:hidden;margin-top:0.25rem;">
+                            <div style="background:{% if room.full %}#dc2626{% else %}#16a34a{% endif %};height:100%;width:{{ room.percent }}%;transition:width 0.4s ease;"></div>
+                        </div>
+                    {% endif %}
+                </div>
+            {% endfor %}
+            {% if stats.unassigned %}
+                <p class="stat-hint" style="margin-top:0.75rem;">{{ stats.unassigned }} checked in without a room</p>
+            {% endif %}
+        </section>
+    {% endif %}
+
+    {% if agent %}
+        <p class="stat-hint" style="margin-top:0.75rem;">
+            Label printing:
+            {% if agent.is_online %}
+                <span class="chip" style="background:#dcfce7;color:#166534;">{{ agent.name }} online</span>
+            {% else %}
+                <span class="chip" style="background:#fee2e2;color:#991b1b;">{{ agent.name }} offline</span>
+            {% endif %}
+        </p>
+    {% endif %}
+
+</div>

@@ -64,6 +64,7 @@ class KioskPinForm(forms.Form):
 class KioskLookupForm(forms.Form):
     query = forms.CharField(
         max_length=100,
+        min_length=2,
         widget=forms.TextInput(attrs={
             "placeholder": "Last name or phone number",
             "autofocus": True,
@@ -78,6 +79,7 @@ class FamilyMemberSelectForm(forms.Form):
     def __init__(self, *args, members_with_eligibility=None, rooms=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.members_with_eligibility = members_with_eligibility or []
+        self.has_rooms = bool(rooms)
         room_choices = [(r.pk, str(r)) for r in (rooms or [])]
 
         for person, eligible in self.members_with_eligibility:
@@ -88,6 +90,22 @@ class FamilyMemberSelectForm(forms.Form):
                 self.fields[f"room_{person.pk}"] = forms.ChoiceField(
                     choices=room_choices, required=False
                 )
+
+    def clean(self):
+        cleaned = super().clean()
+        # Backstop for the kiosk JS: when the session has rooms, every selected
+        # member needs one. (Unselected members' rooms stay optional.)
+        if self.has_rooms:
+            for person, eligible in self.members_with_eligibility:
+                if (
+                    eligible
+                    and cleaned.get(f"select_{person.pk}")
+                    and not cleaned.get(f"room_{person.pk}")
+                ):
+                    self.add_error(
+                        None, f"Please choose a room for {person.first_name}."
+                    )
+        return cleaned
 
     def get_selected(self):
         """Return list of (person_id, room_id) for selected members."""

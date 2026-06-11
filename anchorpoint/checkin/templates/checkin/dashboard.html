@@ -11,6 +11,13 @@
     <a href="{% url 'checkin:configuration_list' %}" class="btn ghost">Configurations</a>
     <a href="{% url 'checkin:room_list' %}" class="btn ghost">Rooms</a>
     <a href="{% url 'checkin:printer_list' %}" class="btn ghost">Printers</a>
+    {% if agent %}
+        {% if agent.is_online %}
+            <span class="chip" style="background:#dcfce7;color:#166534;align-self:center;">🖨 {{ agent.name }} online</span>
+        {% else %}
+            <span class="chip" style="background:#fee2e2;color:#991b1b;align-self:center;">🖨 {{ agent.name }} offline</span>
+        {% endif %}
+    {% endif %}
 </div>
 
 {% if sessions %}

@@ -1,4 +1,4 @@
-from datetime import date, timedelta
+from datetime import date, time, timedelta
 
 from django.test import TestCase
 from django.urls import reverse
@@ -34,10 +34,10 @@ class KioskFlowTests(TestCase):
             configuration=self.config,
             schedule_type=CheckInWindow.TYPE_WEEKLY,
             day_of_week=(now.weekday() + 1) % 7,
-            checkin_opens=(now - timedelta(hours=1)).time(),
-            event_starts=now.time(),
-            checkin_closes=(now + timedelta(hours=1)).time(),
-            event_ends=(now + timedelta(hours=2)).time(),
+            checkin_opens=time(0, 0),
+            event_starts=time(0, 5),
+            checkin_closes=time(23, 50),
+            event_ends=time(23, 55),
         )
 
         self.household = Household.objects.create(name="Johnson Family", phone="555-123-4567")
@@ -174,10 +174,10 @@ class QuickRegistrationViewTests(TestCase):
             configuration=self.config,
             schedule_type=CheckInWindow.TYPE_WEEKLY,
             day_of_week=(now.weekday() + 1) % 7,
-            checkin_opens=(now - timedelta(hours=1)).time(),
-            event_starts=now.time(),
-            checkin_closes=(now + timedelta(hours=1)).time(),
-            event_ends=(now + timedelta(hours=2)).time(),
+            checkin_opens=time(0, 0),
+            event_starts=time(0, 5),
+            checkin_closes=time(23, 50),
+            event_ends=time(23, 55),
         )
         org = OrganizationSettings.load()
         org.kiosk_pin = "1234"
@@ -233,10 +233,10 @@ class StandaloneSessionFallbackTests(TestCase):
         self.session = CheckInSession.objects.create(
             name="Standalone Session",
             date=timezone.localdate(),
-            checkin_opens=(timezone.localtime() - timedelta(hours=1)).time(),
-            checkin_closes=(timezone.localtime() + timedelta(hours=1)).time(),
-            event_starts=timezone.localtime().time(),
-            event_ends=(timezone.localtime() + timedelta(hours=2)).time(),
+            checkin_opens=time(0, 0),
+            checkin_closes=time(23, 50),
+            event_starts=time(0, 5),
+            event_ends=time(23, 55),
             is_active=True,
         )
         self.session.rooms.add(self.room)
@@ -262,10 +262,10 @@ class StandaloneSessionFallbackTests(TestCase):
         stale = CheckInSession.objects.create(
             name="Yesterday",
             date=timezone.localdate() - timedelta(days=1),
-            checkin_opens=(timezone.localtime() - timedelta(hours=1)).time(),
-            checkin_closes=(timezone.localtime() + timedelta(hours=1)).time(),
-            event_starts=timezone.localtime().time(),
-            event_ends=(timezone.localtime() + timedelta(hours=2)).time(),
+            checkin_opens=time(0, 0),
+            checkin_closes=time(23, 50),
+            event_starts=time(0, 5),
+            event_ends=time(23, 55),
             is_active=True,
         )
         kiosk_sess = self.client.session
@@ -301,10 +301,10 @@ class SecurityCodeUniquenessTests(TestCase):
         self.session = CheckInSession.objects.create(
             name="Codes Session",
             date=timezone.localdate(),
-            checkin_opens=(timezone.localtime() - timedelta(hours=1)).time(),
-            checkin_closes=(timezone.localtime() + timedelta(hours=1)).time(),
-            event_starts=timezone.localtime().time(),
-            event_ends=(timezone.localtime() + timedelta(hours=2)).time(),
+            checkin_opens=time(0, 0),
+            checkin_closes=time(23, 50),
+            event_starts=time(0, 5),
+            event_ends=time(23, 55),
             is_active=True,
         )
         self.person = Person.objects.create(first_name="A", last_name="B")
@@ -338,10 +338,10 @@ class SessionStatsAccessControlTests(TestCase):
         self.session = CheckInSession.objects.create(
             name="Stats Session",
             date=timezone.localdate(),
-            checkin_opens=(timezone.localtime() - timedelta(hours=1)).time(),
-            checkin_closes=(timezone.localtime() + timedelta(hours=1)).time(),
-            event_starts=timezone.localtime().time(),
-            event_ends=(timezone.localtime() + timedelta(hours=2)).time(),
+            checkin_opens=time(0, 0),
+            checkin_closes=time(23, 50),
+            event_starts=time(0, 5),
+            event_ends=time(23, 55),
             is_active=True,
         )
         user_model = get_user_model()
