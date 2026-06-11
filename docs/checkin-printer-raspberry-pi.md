@@ -1,138 +1,114 @@
-# Check-In Printing via Raspberry Pi (Pi 3 compatible)
+# Check-In Label Printing on a Raspberry Pi (fresh-Pi guide)
 
-This setup lets AnchorPoint running on a VPS print labels to a local USB/network printer by routing jobs through a Raspberry Pi print server.
+AnchorPoint prints check-in labels through a small **print agent** that runs on
+a Raspberry Pi next to the printer. The agent **polls the server over outbound
+HTTPS** — there is no VPN, no Tailscale, no port forwarding, and the server
+never needs to reach into the church network.
 
-## Why this is needed
+```
+tablet (kiosk)  ─►  AnchorPoint server  ◄─ poll ─  Pi print agent  ─►  label printer
+```
 
-- Your AnchorPoint app runs on a remote server (DigitalOcean VPS).
-- A local printer IP (e.g. `192.168.x.x`) is not reachable from that VPS.
-- A Raspberry Pi on the same local network as the printer can bridge that gap.
+Anyone comfortable flashing an SD card can do this start to finish in ~20
+minutes. No developer needed.
 
-## Recommended architecture
+## What to buy
 
-1. Printer connected to Raspberry Pi (USB or LAN).
-2. Pi runs CUPS with a named queue.
-3. VPS reaches Pi over a secure private network (recommended: Tailscale).
-4. AnchorPoint printer config uses `printer_type=cups` and `host=<cups_queue_name>`.
-5. Print jobs execute in the AnchorPoint container and are sent to CUPS on the Pi.
+- **Raspberry Pi Zero 2 W** (recommended — small, ~$15) or any Pi 3 or newer
+- MicroSD card (8GB+) and a power supply
+- A label printer (see [Supported printers](#supported-printers) — simplest
+  answer: **Brother QL-8xx series** with 62mm continuous rolls, e.g. DK-2205)
 
-## Raspberry Pi requirements
+## Step 1: Flash the SD card
 
-- Raspberry Pi 3 is sufficient for this workload.
-- Raspberry Pi OS Lite (64-bit) recommended.
-- Stable network and static/reserved IP.
+1. Install [Raspberry Pi Imager](https://www.raspberrypi.com/software/) on any computer.
+2. Choose **Raspberry Pi OS Lite** (64-bit, no desktop needed).
+3. Click the gear/"Edit settings" before writing and set:
+   - **Hostname**: e.g. `church-print`
+   - **Username/password**: e.g. `pi` / a real password
+   - **Wi-Fi**: your church network SSID + password
+   - **Enable SSH** (password authentication is fine)
+4. Write the card, put it in the Pi, power it on, give it a minute.
 
-## Step 1: Install CUPS on the Pi
+## Step 2: Create the agent in AnchorPoint
+
+In AnchorPoint go to **Check-In → Print Agents → Add Agent** and name it
+(e.g. "Lobby Printer"). The page shows:
+
+- an 8-character **pairing code** (valid 15 minutes), and
+- a **copy-paste install command** with the code already filled in.
+
+## Step 3: Run the one-command install
+
+From any computer on the same network:
 
 ```bash
-sudo apt update
-sudo apt install -y cups printer-driver-all avahi-daemon
-sudo usermod -aG lpadmin pi
-sudo systemctl enable --now cups
+ssh pi@church-print.local
 ```
 
-Edit CUPS config:
+Paste the command from the Print Agents page, filling in your printer's IP
+address (printable from the printer's own menu, or look in your router's
+device list):
 
 ```bash
-sudo nano /etc/cups/cupsd.conf
+curl -fsSL https://YOUR-ANCHORPOINT/checkin/agent/install.sh | sudo bash -s -- \
+    --server https://YOUR-ANCHORPOINT \
+    --code YOURCODE1 \
+    --printer-uri ipp://PRINTER-IP/ipp/print
 ```
 
-Ensure CUPS listens on the network:
+This installs CUPS and the agent, creates a driverless print queue, pairs with
+the server, and starts a **systemd service** that auto-starts on boot and
+restarts on failure.
 
-```conf
-Port 631
-Listen /run/cups/cups.sock
-```
+## Step 4: Test
 
-And allow access from trusted networks only (adjust CIDR):
+Back on the Print Agents page the agent should show **Online** within a
+minute. Click **Test Print** — a test label should come out. Done: from now on
+kiosk check-ins print automatically.
 
-```conf
-<Location />
-  Order allow,deny
-  Allow 127.0.0.1
-  Allow 192.168.0.0/16
-</Location>
+If your labels are not on a 62mm roll, set **Label width (mm)** for this agent
+on the same page (e.g. 102 for a 4" Zebra roll).
 
-<Location /admin>
-  Order allow,deny
-  Allow 127.0.0.1
-  Allow 192.168.0.0/16
-</Location>
-```
+## Supported printers
 
-Restart:
+The agent prints through CUPS, so the rule is: **the printer must either speak
+IPP over the network (most modern label printers) or have a Linux/CUPS
+driver.** Guidance for purchasing:
+
+| Printer | How | Notes |
+|---|---|---|
+| Brother QL-8xx (QL-810W/820NWB...) | `--printer-uri ipp://<ip>/ipp/print` | The easy path. 62mm continuous roll (DK-2205). **Buy this for new stations.** |
+| Zebra ZD500 / Link-OS | CUPS Zebra (ZPL) driver, USB or network | Add the queue manually (appendix), then `--printer <queue>`. Set the agent's label width to the loaded roll. |
+| Generic/Amazon thermal printers | Varies | Only buy if the listing explicitly mentions Linux/CUPS support or AirPrint/IPP. Otherwise avoid. |
+
+## Day-to-day operations
 
 ```bash
-sudo systemctl restart cups
+journalctl -u anchorpoint-agent -f      # watch labels print, see errors
+sudo systemctl restart anchorpoint-agent
+sudo systemctl status anchorpoint-agent
 ```
 
-## Step 2: Add printer queue on the Pi
+- **Agent shows Offline** — Pi off/lost Wi-Fi, or the service stopped (check status above).
+- **Re-pair** (e.g. after replacing the Pi): Print Agents → **Re-pair** → run the
+  install one-liner again with the new code. Safe to re-run; it updates in place.
+- **Important**: only one agent should be active — if two paired agents are
+  running, jobs alternate between them. Remove old agents from the Print
+  Agents page when you retire their hardware.
 
-Use CUPS UI at `http://<pi-ip>:631/admin` and create a queue.
+## Appendix: manual CUPS queue (USB / non-IPP printers)
 
-Example queue name:
-
-- `brother_ql_820nwb`
-
-Verify queue exists:
+For printers the driverless path can't handle (USB-only Brother, Zebra ZPL):
 
 ```bash
-lpstat -p
+sudo apt install -y printer-driver-all        # or the vendor's .deb driver
+lpinfo -v                                     # find the device URI (usb://...)
+sudo lpadmin -p ChurchLabel -E -v 'usb://...' -m <driver-from-lpinfo -m>
+lp -d ChurchLabel test.png                    # verify CUPS prints
 ```
 
-## Step 3: Private networking between VPS and Pi (recommended)
-
-Use Tailscale on both the VPS and the Pi so the VPS can reach the Pi securely without exposing CUPS publicly.
-
-Install and connect Tailscale on both hosts, then confirm:
-
-```bash
-tailscale status
-```
-
-From VPS:
-
-```bash
-curl http://<pi-tailscale-ip>:631/printers/
-```
-
-## Step 4: Configure AnchorPoint container to use remote CUPS
-
-Set CUPS server for the web container (in Docker env for `web` service):
-
-```env
-CUPS_SERVER=<pi-tailscale-ip>:631
-```
-
-Rebuild/restart web container after env changes.
-
-## Step 5: Configure printer in AnchorPoint UI
-
-In `Check-In > Printers`, create printer with:
-
-- `Name`: human-readable (e.g. `Kids Label Printer`)
-- `Printer Type`: `cups`
-- `Host`: **CUPS queue name** from Pi (e.g. `brother_ql_820nwb`)
-- `Port`: optional/unused for CUPS queue mode
-- `Is Active`: enabled
-- `Is Default`: enabled (if primary)
-
-Then run **Test Print** in the UI.
-
-## Health chip behavior
-
-Kiosk health chip shows:
-
-- configured/not configured
-- online/offline status
-- `last_successful_print_at` timestamp
-
-`last_successful_print_at` updates when test print or check-in print fully succeeds.
-
-## Troubleshooting
-
-- **Printer shows offline**: verify Pi queue name and `lpstat -p` output.
-- **No jobs arriving**: check `CUPS_SERVER` in container env and restart web service.
-- **Job appears in CUPS but not printed**: verify Pi-side driver and local printer connectivity.
-- **Intermittent failures**: use wired Ethernet for Pi/printer where possible.
-
+Then run the install one-liner with `--printer ChurchLabel` instead of
+`--printer-uri`. The reference systemd unit lives at
+[agent/anchorpoint-agent.service](../agent/anchorpoint-agent.service) if you
+need to install the service by hand.

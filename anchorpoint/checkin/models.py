@@ -393,6 +393,9 @@ class PrintAgent(models.Model):
     pairing_expires_at = models.DateTimeField(null=True, blank=True)
     is_active = models.BooleanField(default=True)
     last_seen_at = models.DateTimeField(null=True, blank=True)
+    # Physical label/roll width at this agent's printer. Sent to the agent with
+    # each job so it can size the CUPS page (62 = Brother QL continuous roll).
+    label_width_mm = models.PositiveSmallIntegerField(default=62)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

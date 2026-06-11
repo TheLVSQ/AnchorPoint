@@ -51,9 +51,30 @@
                             Pairing code:
                             <strong style="font-size:1.25rem; letter-spacing:3px; font-variant-numeric:tabular-nums;">{{ agent.pairing_code }}</strong>
                             <br>
-                            Enter this in the agent. The code expires
-                            {{ agent.pairing_expires_at|timeuntil }} from now.
+                            The code expires {{ agent.pairing_expires_at|timeuntil }} from now.
                         </p>
+                        <div class="stat-hint" style="margin-top:0.75rem;">
+                            <strong>Set up a new Raspberry Pi in one command</strong> — SSH into the
+                            Pi and paste (replace <code>PRINTER-IP</code> with your label printer's
+                            IP address, from its settings printout or your router):
+                            <pre style="background:#0d0d20;color:#e2e8f0;border-radius:8px;padding:0.75rem;
+                                        margin-top:0.5rem;white-space:pre-wrap;word-break:break-all;
+                                        font-size:0.8rem;user-select:all;">curl -fsSL {{ request.scheme }}://{{ request.get_host }}{% url 'checkin:agent_install_script' %} | sudo bash -s -- --server {{ request.scheme }}://{{ request.get_host }} --code {{ agent.pairing_code }} --printer-uri ipp://PRINTER-IP/ipp/print</pre>
+                            Already have a CUPS queue on that machine? Use
+                            <code>--printer &lt;queue-name&gt;</code> instead of <code>--printer-uri</code>.
+                        </div>
+                    {% endif %}
+
+                    {% if agent.is_paired %}
+                        <form method="POST" action="{% url 'checkin:print_agent_update' agent.id %}"
+                              style="display:flex; gap:0.5rem; align-items:center; margin-top:0.5rem;">
+                            {% csrf_token %}
+                            <label for="width_{{ agent.id }}" class="stat-hint" style="margin:0;">Label width (mm)</label>
+                            <input id="width_{{ agent.id }}" type="number" name="label_width_mm"
+                                   value="{{ agent.label_width_mm }}" min="20" max="120"
+                                   style="width:5rem;">
+                            <button type="submit" class="btn btn-secondary" style="padding:0.25rem 0.75rem;">Save</button>
+                        </form>
                     {% endif %}
                 </div>
 

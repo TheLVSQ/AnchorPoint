@@ -48,8 +48,13 @@ urlpatterns = [
     path("agents/", views.print_agent_list, name="print_agents"),
     path("agents/new/", views.print_agent_create, name="print_agent_create"),
     path("agents/<int:agent_id>/repair/", views.print_agent_repair, name="print_agent_repair"),
+    path("agents/<int:agent_id>/update/", views.print_agent_update, name="print_agent_update"),
     path("agents/<int:agent_id>/delete/", views.print_agent_delete, name="print_agent_delete"),
     path("agents/<int:agent_id>/test/", views.print_agent_test, name="print_agent_test"),
+
+    # Agent distribution (public — the installer one-liner fetches these)
+    path("agent/install.sh", views.agent_install_script, name="agent_install_script"),
+    path("agent/anchorpoint_agent.py", views.agent_script, name="agent_script"),
 
     # API
     path("api/sessions/<int:session_id>/stats/", views.api_session_stats, name="api_session_stats"),

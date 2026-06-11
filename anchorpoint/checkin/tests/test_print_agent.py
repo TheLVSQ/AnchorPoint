@@ -188,3 +188,88 @@ class AgentManagementTests(TestCase):
         agent.complete_pairing()
         self.client.post(reverse("checkin:print_agent_test", args=[agent.id]))
         self.assertEqual(PrintJob.objects.filter(agent=agent, kind="test").count(), 1)
+
+
+class LabelWidthTests(TestCase):
+    """Per-agent media width: configured in the UI, delivered with each job."""
+
+    def setUp(self):
+        user_model = get_user_model()
+        self.staff = user_model.objects.create_user(username="w", password="pw")
+        self.staff.profile.role = UserProfile.Role.STAFF
+        self.staff.profile.save()
+        self.agent = PrintAgent.objects.create(name="Desk")
+        self.token = self.agent.complete_pairing()
+        self.auth = {"HTTP_AUTHORIZATION": f"Bearer {self.token}"}
+
+    def test_next_job_includes_default_width(self):
+        PrintJob.objects.create(
+            agent=self.agent, image_data=b"\x89PNG-fake", kind="child", description="Kid"
+        )
+        resp = self.client.get(reverse("checkin:print_next"), **self.auth)
+        self.assertEqual(resp.json()["media_width_mm"], 62)
+
+    def test_next_job_includes_configured_width(self):
+        self.agent.label_width_mm = 102
+        self.agent.save()
+        PrintJob.objects.create(
+            agent=self.agent, image_data=b"\x89PNG-fake", kind="child", description="Kid"
+        )
+        resp = self.client.get(reverse("checkin:print_next"), **self.auth)
+        self.assertEqual(resp.json()["media_width_mm"], 102)
+
+    def test_staff_can_update_width(self):
+        self.client.login(username="w", password="pw")
+        resp = self.client.post(
+            reverse("checkin:print_agent_update", args=[self.agent.id]),
+            {"label_width_mm": "102"},
+        )
+        self.assertRedirects(resp, reverse("checkin:print_agents"))
+        self.agent.refresh_from_db()
+        self.assertEqual(self.agent.label_width_mm, 102)
+
+    def test_out_of_range_width_rejected(self):
+        self.client.login(username="w", password="pw")
+        for bad in ("5", "500", "banana", ""):
+            self.client.post(
+                reverse("checkin:print_agent_update", args=[self.agent.id]),
+                {"label_width_mm": bad},
+            )
+            self.agent.refresh_from_db()
+            self.assertEqual(self.agent.label_width_mm, 62)
+
+    def test_update_requires_login(self):
+        resp = self.client.post(
+            reverse("checkin:print_agent_update", args=[self.agent.id]),
+            {"label_width_mm": "102"},
+        )
+        self.assertEqual(resp.status_code, 302)
+        self.agent.refresh_from_db()
+        self.assertEqual(self.agent.label_width_mm, 62)
+
+
+class AgentDistributionTests(TestCase):
+    """The installer + agent script are served by the app for the one-liner."""
+
+    def test_install_script_served(self):
+        resp = self.client.get(reverse("checkin:agent_install_script"))
+        self.assertEqual(resp.status_code, 200)
+        self.assertTrue(resp.content.startswith(b"#!/usr/bin/env bash"))
+        self.assertEqual(resp["Content-Type"], "text/x-shellscript")
+
+    def test_agent_script_served(self):
+        resp = self.client.get(reverse("checkin:agent_script"))
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn(b"def cmd_run", resp.content)
+
+    def test_agents_page_shows_install_command_for_unpaired(self):
+        user_model = get_user_model()
+        staff = user_model.objects.create_user(username="d", password="pw")
+        staff.profile.role = UserProfile.Role.STAFF
+        staff.profile.save()
+        self.client.login(username="d", password="pw")
+        agent = PrintAgent.objects.create(name="New Pi")
+        code = agent.issue_pairing_code()
+        resp = self.client.get(reverse("checkin:print_agents"))
+        self.assertContains(resp, "install.sh")
+        self.assertContains(resp, f"--code {code}")
