@@ -7,8 +7,8 @@
 
   <form method="post" id="reg-form">
     {% csrf_token %}
-    {# child_count is a high-water mark of indices ever added — removing a child
-       must NOT decrement it, or the server would bind the wrong prefixes. #}
+    {% comment %}child_count is a high-water mark of indices ever added — removing a
+    child must NOT decrement it, or the server would bind the wrong prefixes.{% endcomment %}
     <input type="hidden" name="child_count" id="child_count" value="{{ child_forms|length }}">
 
     {% if parent_form.errors or invalid_children %}
