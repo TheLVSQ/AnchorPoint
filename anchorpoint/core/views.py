@@ -5,6 +5,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth import update_session_auth_hash
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
@@ -107,12 +108,18 @@ def dashboard(request):
     if not request.user.is_authenticated:
         return redirect("login")
 
+    from checkin.models import CheckIn
+
     people_count = Person.objects.count()
     recent_people = Person.objects.order_by("-id")[:4]
+    checked_in_today = CheckIn.objects.filter(
+        session__date=timezone.localdate(), checked_out_at__isnull=True
+    ).count()
 
     context = {
         "people_count": people_count,
         "recent_people": recent_people,
+        "checked_in_today": checked_in_today,
     }
     return render(request, "core/dashboard.html", context)
 
@@ -269,18 +276,6 @@ def settings_home(request):
             "description": "Connect a local printer so check-in labels print automatically.",
             "url": "checkin:print_agents",
             "accent": True,
-        },
-        {
-            "title": "People Defaults",
-            "description": "Coming soon: customize statuses, workflows, and intake forms.",
-            "url": None,
-            "accent": False,
-        },
-        {
-            "title": "Events & Registrations",
-            "description": "Coming soon: configure policies, reminders, and embed themes.",
-            "url": None,
-            "accent": False,
         },
     ]
     return render(
