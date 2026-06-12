@@ -151,17 +151,23 @@
             <h3>Family</h3>
             <p class="section-hint">Link this person to a household so they appear in check-in search.</p>
 
+            {% if household_error %}
+                <p class="error-text">{{ household_error }}</p>
+            {% endif %}
             <div class="household-choice">
                 <label class="radio-option">
-                    <input type="radio" name="household_action" value="existing" id="hh_existing">
+                    <input type="radio" name="household_action" value="existing" id="hh_existing"
+                           {% if household_action == "existing" %}checked{% endif %}>
                     <span>Join an existing family</span>
                 </label>
                 <label class="radio-option">
-                    <input type="radio" name="household_action" value="new" id="hh_new">
+                    <input type="radio" name="household_action" value="new" id="hh_new"
+                           {% if household_action == "new" %}checked{% endif %}>
                     <span>Create a new family</span>
                 </label>
                 <label class="radio-option">
-                    <input type="radio" name="household_action" value="skip" id="hh_skip" checked>
+                    <input type="radio" name="household_action" value="skip" id="hh_skip"
+                           {% if household_action == "skip" or not household_action %}checked{% endif %}>
                     <span>Skip for now</span>
                 </label>
             </div>
@@ -172,7 +178,7 @@
                     <select name="household_id" id="household_id">
                         <option value="">— Choose a family —</option>
                         {% for hh in households %}
-                            <option value="{{ hh.pk }}">{{ hh.name }}</option>
+                            <option value="{{ hh.pk }}" {% if hh.pk|stringformat:"s" == selected_household_id %}selected{% endif %}>{{ hh.name }}</option>
                         {% endfor %}
                     </select>
                 </div>
@@ -226,7 +232,10 @@
 </section>
 
 <script>
-document.addEventListener("DOMContentLoaded", function () {
+// Runs immediately (NOT on DOMContentLoaded): the site navigates with
+// hx-boost, which swaps content without firing DOMContentLoaded — wrapping
+// these handlers in it left the family selector permanently hidden.
+(function () {
     const input = document.getElementById("id_profile_photo");
     const preview = document.getElementById("photoPreview");
     if (input && preview) {
@@ -247,17 +256,18 @@ document.addEventListener("DOMContentLoaded", function () {
     const newFields = document.getElementById("household-new-fields");
     const relField = document.getElementById("household-relationship-field");
 
-    if (radios.length) {
-        radios.forEach(function(radio) {
-            radio.addEventListener("change", function() {
-                const val = this.value;
-                if (existingFields) existingFields.style.display = val === "existing" ? "block" : "none";
-                if (newFields) newFields.style.display = val === "new" ? "block" : "none";
-                if (relField) relField.style.display = val === "skip" ? "none" : "block";
-            });
-        });
+    function applyChoice(val) {
+        if (existingFields) existingFields.style.display = val === "existing" ? "block" : "none";
+        if (newFields) newFields.style.display = val === "new" ? "block" : "none";
+        if (relField) relField.style.display = val === "skip" ? "none" : "block";
     }
-});
+    radios.forEach(function (radio) {
+        radio.addEventListener("change", function () { applyChoice(this.value); });
+    });
+    // Reflect whatever is checked on load (e.g. re-render after a validation error)
+    const checked = document.querySelector('input[name="household_action"]:checked');
+    if (checked) applyChoice(checked.value);
+})();
 </script>
 
 {% endblock %}

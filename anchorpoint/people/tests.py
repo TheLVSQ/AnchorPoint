@@ -115,3 +115,112 @@ class PeopleSearchViewTests(TestCase):
     def test_search_no_results_shows_empty_state(self):
         response = self.client.get(reverse("people_search"), {"q": "Zzznobody"})
         self.assertContains(response, "No people found")
+
+
+class PeopleAddFamilyTests(TestCase):
+    """The 'join an existing family' flow on Add Person (was silently broken)."""
+
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(
+            username="famadd", password="pw"
+        )
+        self.user.profile.role = UserProfile.Role.STAFF
+        self.user.profile.save()
+        self.client.force_login(self.user)
+        from households.models import Household
+        self.family = Household.objects.create(name="Greene Family")
+
+    def _person_data(self, **extra):
+        data = {
+            "first_name": "Nora", "last_name": "Greene",
+            "email": "", "phone": "", "birthdate": "", "gender": "",
+            "grade": "", "marital_status": "", "address_line1": "",
+            "address_line2": "", "city": "", "state": "", "postal_code": "",
+            "salvation_date": "", "baptism_date": "", "first_visit_date": "",
+            "allergies": "", "security_notes": "", "status": "guest", "notes": "",
+            "household_action": "skip",
+        }
+        data.update(extra)
+        return data
+
+    def test_join_existing_family_creates_membership(self):
+        from households.models import HouseholdMember
+        response = self.client.post(
+            reverse("people_add"),
+            self._person_data(
+                household_action="existing",
+                household_id=str(self.family.pk),
+                household_relationship="child",
+            ),
+        )
+        self.assertEqual(response.status_code, 302)
+        person = Person.objects.get(first_name="Nora")
+        membership = HouseholdMember.objects.get(person=person)
+        self.assertEqual(membership.household, self.family)
+        self.assertEqual(membership.relationship_type, "child")
+
+    def test_existing_without_selection_creates_nothing(self):
+        response = self.client.post(
+            reverse("people_add"),
+            self._person_data(household_action="existing", household_id=""),
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Choose which family")
+        self.assertFalse(Person.objects.filter(first_name="Nora").exists())
+
+    def test_bogus_household_id_creates_nothing(self):
+        response = self.client.post(
+            reverse("people_add"),
+            self._person_data(household_action="existing", household_id="99999"),
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(Person.objects.filter(first_name="Nora").exists())
+
+    def test_add_form_lists_families_in_selector(self):
+        response = self.client.get(reverse("people_add"))
+        self.assertContains(response, "Greene Family")
+
+
+class PeopleListTileTests(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(
+            username="tiles", password="pw"
+        )
+        self.user.profile.role = UserProfile.Role.STAFF
+        self.user.profile.save()
+        self.client.force_login(self.user)
+
+    def test_tiles_show_age_status_and_family(self):
+        from datetime import date, timedelta
+        from households.models import Household, HouseholdMember
+        person = Person.objects.create(
+            first_name="Iva", last_name="Tiles",
+            birthdate=date.today() - timedelta(days=365 * 9 + 5),
+            status="regular_attendee",
+        )
+        family = Household.objects.create(name="Tiles Family")
+        HouseholdMember.objects.create(household=family, person=person)
+
+        response = self.client.get(reverse("people_list"))
+        self.assertContains(response, "Age 9")
+        self.assertContains(response, "Regular Attendee")  # not regular_attendee
+        self.assertNotContains(response, "regular_attendee")
+        self.assertContains(response, "Tiles Family")
+
+
+class PersonStatusDisplayTests(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(
+            username="statuser", password="pw"
+        )
+        self.user.profile.role = UserProfile.Role.STAFF
+        self.user.profile.save()
+        self.client.force_login(self.user)
+
+    def test_detail_uses_status_display(self):
+        person = Person.objects.create(
+            first_name="Reg", last_name="Ular", status="regular_attendee"
+        )
+        response = self.client.get(reverse("people_detail", args=[person.pk]))
+        self.assertContains(response, "Regular Attendee")
+        self.assertNotContains(response, "regular_attendee")

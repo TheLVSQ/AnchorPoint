@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block content %}
+<a class="ghost-link" href="{% url 'households:family_detail' household.pk %}">&larr; Back to {{ household.name }}</a>
+
+<section class="card">
+    <div class="page-header">
+        <span class="chip">Family</span>
+        <h1>Edit {{ household.name }}</h1>
+    </div>
+
+    <form method="POST" class="person-form">
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+            <div class="message">{{ form.non_field_errors.0 }}</div>
+        {% endif %}
+        <div class="form-grid">
+            {% for field in form %}
+                <div class="form-field {% if field.name == 'name' or field.name == 'address_line1' or field.name == 'address_line2' %}form-field--full{% endif %}">
+                    {{ field.label_tag }}
+                    {{ field }}
+                    {% if field.name == "primary_adult" %}
+                        <p class="help-text">Limited to current members of this family.</p>
+                    {% endif %}
+                    {% for error in field.errors %}<span class="error-text">{{ error }}</span>{% endfor %}
+                </div>
+            {% endfor %}
+        </div>
+        <div class="form-actions" style="margin-top:1rem;">
+            <button type="submit" class="btn">Save</button>
+            <a href="{% url 'households:family_detail' household.pk %}" class="btn ghost">Cancel</a>
+        </div>
+    </form>
+</section>
+{% endblock %}

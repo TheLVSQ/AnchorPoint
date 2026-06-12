@@ -1,7 +1,7 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
-from django.db import IntegrityError
+from django.db import IntegrityError, transaction
 from django.db.models import Q
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -25,10 +25,10 @@ def people_list(request):
         people = (
             Person.objects.filter(
                 Q(first_name__icontains=query) | Q(last_name__icontains=query)
-            ).order_by("last_name", "first_name")
+            ).prefetch_related("households").order_by("last_name", "first_name")
         )
     else:
-        people = Person.objects.all().order_by("last_name", "first_name")
+        people = Person.objects.all().prefetch_related("households").order_by("last_name", "first_name")
 
     page_obj = Paginator(people, 25).get_page(request.GET.get("page"))
     return render(request, "people/people_list.html", {
@@ -39,59 +39,56 @@ def people_list(request):
 
 @staff_required
 def people_add(request):
+    household_error = ""
+    household_action = "skip"
+    selected_household_id = ""
+
     if request.method == "POST":
         form = PersonForm(request.POST, request.FILES)
-        if form.is_valid():
-            person = form.save()
+        household_action = request.POST.get("household_action", "skip")
+        selected_household_id = request.POST.get("household_id", "")
+        relationship_type = request.POST.get("household_relationship", "adult")
 
-            # Handle household assignment
-            household_action = request.POST.get("household_action", "skip")
-            relationship_type = request.POST.get(
-                "household_relationship", "adult"
-            )
+        # Validate the family choice BEFORE creating anything — a bad choice
+        # used to silently produce an unlinked person with a success message.
+        household = None
+        if household_action == "existing":
+            if selected_household_id.isdigit():
+                household = Household.objects.filter(pk=selected_household_id).first()
+            if household is None:
+                household_error = "Choose which family to join (or pick “Skip for now”)."
 
-            if household_action == "existing":
-                household_id = request.POST.get("household_id")
-                if household_id:
-                    try:
-                        household = Household.objects.get(pk=household_id)
-                        HouseholdMember.objects.create(
-                            household=household,
-                            person=person,
-                            relationship_type=relationship_type,
-                        )
-                        messages.success(
-                            request,
-                            f"Person added and linked to {household.name}.",
-                        )
-                    except (Household.DoesNotExist, IntegrityError):
-                        messages.success(
-                            request,
-                            "Person added, but could not link to household.",
-                        )
+        if form.is_valid() and not household_error:
+            with transaction.atomic():
+                person = form.save()
+
+                if household_action == "existing":
+                    HouseholdMember.objects.create(
+                        household=household,
+                        person=person,
+                        relationship_type=relationship_type,
+                    )
+                    messages.success(
+                        request, f"Person added and linked to {household.name}."
+                    )
+                elif household_action == "new":
+                    household_name = request.POST.get("new_household_name", "").strip()
+                    if not household_name:
+                        household_name = f"{person.last_name} Family"
+                    household = Household.objects.create(
+                        name=household_name, primary_adult=person
+                    )
+                    HouseholdMember.objects.create(
+                        household=household,
+                        person=person,
+                        relationship_type=relationship_type,
+                    )
+                    messages.success(
+                        request,
+                        f"Person added and {household.name} household created.",
+                    )
                 else:
                     messages.success(request, "Person added successfully!")
-
-            elif household_action == "new":
-                household_name = request.POST.get(
-                    "new_household_name", ""
-                ).strip()
-                if not household_name:
-                    household_name = f"{person.last_name} Family"
-                household = Household.objects.create(
-                    name=household_name, primary_adult=person
-                )
-                HouseholdMember.objects.create(
-                    household=household,
-                    person=person,
-                    relationship_type=relationship_type,
-                )
-                messages.success(
-                    request,
-                    f"Person added and {household.name} household created.",
-                )
-            else:
-                messages.success(request, "Person added successfully!")
 
             return redirect("people_detail", pk=person.pk)
     else:
@@ -101,6 +98,9 @@ def people_add(request):
     return render(request, "people/people_form.html", {
         "form": form,
         "households": households,
+        "household_action": household_action,
+        "selected_household_id": selected_household_id,
+        "household_error": household_error,
     })
 
 
@@ -308,7 +308,7 @@ def people_search(request):
             Q(first_name__icontains=query) | Q(last_name__icontains=query)
         ).order_by("last_name", "first_name")
     else:
-        people = Person.objects.all().order_by("last_name", "first_name")
+        people = Person.objects.all().prefetch_related("households").order_by("last_name", "first_name")
 
     page_obj = Paginator(people, 25).get_page(request.GET.get("page"))
     return render(request, "people/partials/people_results.html", {
