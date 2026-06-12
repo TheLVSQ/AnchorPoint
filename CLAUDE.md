@@ -155,6 +155,20 @@ Last session focused on:
 7. Fixed phone blast audio URL for Twilio (needs absolute URL)
 8. Created `setup_beta_users` management command
 
+## TODO — Family/People UX (queued 2026-06-12, from VBS testing)
+
+- [ ] **Person form: "Join an existing family" is broken** — selecting it offers no way to pick which family. (Bug, do first.)
+- [ ] **Family management UI** — list/view/edit all households. Direction to evaluate: a dedicated Families page under People (households are already their own model; surfacing them as a Group type conflates two concepts), plus household section on each person's profile. Edit = rename, add/remove members, change roles/primary adult.
+- [ ] **Nightly family-hygiene job (2-3am via cron sidecar)** — detect orphaned households (0 members or no adults) and likely duplicates (same normalized phone/address/last name); write findings to a review queue where admins can merge/edit/delete. Merge needs care: re-point HouseholdMembers, check-ins, event registrations.
+- [ ] **Person status displays raw value** — "regular_attendee" with underscores; templates should use `get_status_display`.
+- [ ] **Address verification on person add** — evaluate: USPS Web Tools API (free, US-only) vs Smarty/Lob (paid, easier). Likely pattern: normalize + autocomplete-on-blur, store verified flag; degrade gracefully when API not configured.
+- [ ] **People page tile view** — show age, family/household name, status chip alongside name/email. At scale: server-side pagination (~50/page) + the existing search as primary navigation; consider an A-Z last-name filter rail.
+
+## Pending operational follow-ups
+
+- [ ] Run on the print Pi: `sudo lpadmin -p ChurchLabel -o CutMedia-default=EndOfPage`, then a Test Print to verify label cutting (waiting on label stock).
+- [ ] Import the real VBS signup CSV when it arrives (`import_signups`, dry-run → review → `--commit --group "VBS 2026"`).
+
 ## TODO (Medium Priority)
 
 - [ ] Add `select_related`/`prefetch_related` to dashboard queries
