@@ -50,6 +50,7 @@ urlpatterns = [
         name="organization_settings",
     ),
     path("people/", include("people.urls")),
+    path("families/", include(("households.urls", "households"), namespace="households")),
     path("groups/", include("groups.urls")),
     path("events/", include("events.urls")),
     path("communications/", include(("messaging.urls", "messaging"), namespace="messaging")),
