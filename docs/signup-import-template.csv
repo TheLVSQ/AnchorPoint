@@ -1,0 +1,4 @@
+parent_first_name,parent_last_name,parent_phone,parent_email,phone_opt_in,child_first_name,child_last_name,child_birthdate,child_grade,child_allergies,custody_notes,unauthorized_pickup
+Sarah,Smith,540-555-0101,sarah@example.com,yes,Emma,,2019-04-12,1,Peanuts,,
+Sarah,Smith,540-555-0101,sarah@example.com,yes,Jack,,2017-09-30,3,,,
+Mike,Jones,(540) 555-0102,,no,Lily,Jones-Carter,06/15/2018,k,,Mom has sole custody,John Carter
