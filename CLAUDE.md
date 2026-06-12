@@ -20,9 +20,8 @@ anchorpoint/
 ├── households/           # Family groupings and relationships
 ├── groups/               # Volunteer teams, check-in classrooms, community groups
 ├── events/               # Events, registrations, attendee matching
-├── attendance/           # Check-in kiosk system
+├── checkin/              # Check-in kiosk system, label printing, print agents
 ├── messaging/            # SMS and phone blast communications (Twilio)
-├── registrations/        # (Scaffolded, minimal implementation)
 ├── templates/            # Global templates
 └── media/                # Uploaded files
 ```
