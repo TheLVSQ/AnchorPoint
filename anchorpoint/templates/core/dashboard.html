@@ -100,7 +100,7 @@
                     <div>
                         <strong>{{ person.first_name }} {{ person.last_name }}</strong>
                         <span>
-                            {{ person.status|title }}
+                            {{ person.get_status_display }}
                             {% if person.email %} · {{ person.email }}{% endif %}
                         </span>
                     </div>

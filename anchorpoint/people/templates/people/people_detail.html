@@ -13,7 +13,7 @@
         <a class="ghost-link" href="{% url 'people_list' %}">&larr; Back to people</a>
         <h1>{{ person.first_name }} {{ person.last_name }}</h1>
         <p class="page-subtitle">
-            {{ person.status|title }}
+            {{ person.get_status_display }}
             {% if person.get_grade_display %}
                 &middot; {{ person.get_grade_display }}
             {% endif %}
@@ -157,7 +157,7 @@
                 {% for household in households %}
                     <div class="household-item">
                         <div>
-                            <strong>{{ household.name }}</strong>
+                            <strong><a href="{% url 'households:family_detail' household.pk %}">{{ household.name }}</a></strong>
                             {% if household.phone %}<p>{{ household.phone }}</p>{% endif %}
                             {% if household.formatted_address %}
                                 <p class="household-address">{{ household.formatted_address|linebreaksbr }}</p>

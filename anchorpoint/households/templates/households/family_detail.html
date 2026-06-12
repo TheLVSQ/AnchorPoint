@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+
+{% block content %}
+<a class="ghost-link" href="{% url 'households:family_list' %}">&larr; Back to Families</a>
+
+<div class="page-header">
+    <span class="chip">Family</span>
+    <h1>{{ household.name }}</h1>
+    <p class="page-subtitle">
+        {% if household.phone %}{{ household.phone }} · {% endif %}
+        {% if household.primary_adult %}Primary adult: {{ household.primary_adult.first_name }} {{ household.primary_adult.last_name }}{% else %}No primary adult set{% endif %}
+    </p>
+</div>
+
+<div class="hero-actions" style="margin-bottom: 2rem;">
+    <a href="{% url 'households:family_edit' household.pk %}" class="btn">Edit Family</a>
+</div>
+
+<div class="detail-grid">
+    <section class="detail-card">
+        <h2>Members</h2>
+        <div class="list-card__body" style="margin-top: 1rem;">
+            {% for membership in memberships %}
+                <div class="list-item">
+                    <div>
+                        <strong>
+                            <a href="{% url 'people_detail' membership.person.pk %}">
+                                {{ membership.person.first_name }} {{ membership.person.last_name }}
+                            </a>
+                            {% if household.primary_adult_id == membership.person.pk %}
+                                <span class="chip" style="background:#fef3c7;color:#92400e;">★ Primary</span>
+                            {% endif %}
+                        </strong>
+                        <span class="muted-text">
+                            {% if membership.person.age is not None %}Age {{ membership.person.age }} · {% endif %}
+                            {{ membership.person.get_status_display }}
+                        </span>
+                    </div>
+                    <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
+                        <form method="POST" action="{% url 'households:family_member_role' household.pk membership.pk %}"
+                              style="display:flex; gap:0.25rem; align-items:center;">
+                            {% csrf_token %}
+                            <select name="relationship_type">
+                                {% for value, label in relationship_choices %}
+                                    <option value="{{ value }}" {% if membership.relationship_type == value %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                            <button type="submit" class="btn ghost">Save</button>
+                        </form>
+                        {% if membership.relationship_type == "adult" and household.primary_adult_id != membership.person.pk %}
+                            <form method="POST" action="{% url 'households:family_set_primary' household.pk %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="person_id" value="{{ membership.person.pk }}">
+                                <button type="submit" class="btn ghost">Make Primary</button>
+                            </form>
+                        {% endif %}
+                        <form method="POST" action="{% url 'households:family_member_remove' household.pk membership.pk %}"
+                              onsubmit="return confirm('Remove {{ membership.person.first_name|escapejs }} from {{ household.name|escapejs }}? Their profile is kept.');">
+                            {% csrf_token %}
+                            <button type="submit" class="btn ghost danger">Remove</button>
+                        </form>
+                    </div>
+                </div>
+            {% empty %}
+                <p class="empty-state">No members — add someone below, or this family is a candidate for deletion.</p>
+            {% endfor %}
+        </div>
+    </section>
+
+    <section class="detail-card">
+        <h2>Add a Member</h2>
+        <p class="stat-hint">Search for an existing person. New people are added from the People page.</p>
+        <form method="GET" style="display:flex; gap:0.5rem; margin:0.75rem 0;">
+            <input type="text" name="member_q" value="{{ member_query }}" placeholder="Search people..." style="flex:1;">
+            <button type="submit" class="btn">Search</button>
+        </form>
+        {% if member_query %}
+            {% for person in candidates %}
+                <form method="POST" action="{% url 'households:family_member_add' household.pk %}"
+                      class="list-item" style="display:flex; justify-content:space-between; align-items:center;">
+                    {% csrf_token %}
+                    <input type="hidden" name="person_id" value="{{ person.pk }}">
+                    <div>
+                        <strong>{{ person.first_name }} {{ person.last_name }}</strong>
+                        <span class="muted-text">{% if person.age is not None %}Age {{ person.age }}{% endif %}</span>
+                    </div>
+                    <div style="display:flex; gap:0.25rem;">
+                        <select name="relationship_type">
+                            {% for value, label in relationship_choices %}
+                                <option value="{{ value }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                        <button type="submit" class="btn">Add</button>
+                    </div>
+                </form>
+            {% empty %}
+                <p class="empty-state">No matches for "{{ member_query }}" outside this family.</p>
+            {% endfor %}
+        {% endif %}
+
+        {% if household.formatted_address %}
+            <h2 style="margin-top:1.5rem;">Address</h2>
+            <p>{{ household.formatted_address|linebreaksbr }}</p>
+        {% endif %}
+    </section>
+</div>
+{% endblock %}
