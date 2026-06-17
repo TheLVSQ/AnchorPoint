@@ -86,7 +86,10 @@
     <h2>Kiosk PIN</h2>
     <p class="stat-hint" style="margin-bottom: 0.75rem;">
         The kiosk PIN is required to unlock the check-in screen on a shared device.
-        Set or change it in Organization Settings.
+        Set or change it in Organization Settings. For a true single-purpose tablet,
+        don't sign the iPad into a staff account — just open the kiosk URL and enter
+        the PIN — and lock it to that screen with iOS <strong>Guided Access</strong>
+        (Settings → Accessibility → Guided Access, then triple-click the side button).
     </p>
     <a href="{% url 'organization_settings' %}#kiosk-pin" class="ghost-link">
         Go to Organization Settings &rarr;

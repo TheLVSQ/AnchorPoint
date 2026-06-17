@@ -1,0 +1,220 @@
+"""Tests for pre-printed check-in (walk-up-and-go) + kiosk lock hardening."""
+
+from datetime import date, time, timedelta
+from unittest import mock
+
+from django.contrib.auth import get_user_model
+from django.test import TestCase
+from django.urls import reverse
+from django.utils import timezone
+
+from checkin.models import (
+    CheckIn, CheckInConfiguration, CheckInWindow, PrintAgent, Room,
+)
+from core.models import OrganizationSettings, UserProfile
+from groups.models import Group, GroupMembership
+from households.models import Household, HouseholdMember
+from people.models import Person
+
+
+def _admin(username="ppadmin"):
+    user = get_user_model().objects.create_user(username=username, password="pw")
+    user.profile.role = UserProfile.Role.ADMIN
+    user.profile.save()
+    return user
+
+
+def _open_window(config):
+    now = timezone.localtime()
+    return CheckInWindow.objects.create(
+        configuration=config,
+        schedule_type=CheckInWindow.TYPE_WEEKLY,
+        day_of_week=(now.weekday() + 1) % 7,
+        checkin_opens=time(0, 0), event_starts=time(0, 5),
+        checkin_closes=time(23, 50), event_ends=time(23, 55),
+    )
+
+
+class PreprintFixture(TestCase):
+    def setUp(self):
+        self.admin = _admin()
+        self.client.force_login(self.admin)
+
+        self.group = Group.objects.create(name="VBS 2026", category="event")
+        self.config = CheckInConfiguration.objects.create(name="VBS")
+        self.config.groups.add(self.group)
+        self.room_a = Room.objects.create(name="Preschool", capacity=20)
+        self.room_b = Room.objects.create(name="Elementary", capacity=20)
+        self.config.rooms.add(self.room_a, self.room_b)
+        _open_window(self.config)
+
+        from checkin.services.session_manager import get_or_create_session
+        self.session = get_or_create_session(self.config, self.config.windows.first())
+
+        # One family with two enrolled kids.
+        self.family = Household.objects.create(name="Walker Family")
+        self.mom = Person.objects.create(first_name="Sue", last_name="Walker",
+                                         birthdate=date(1988, 1, 1))
+        HouseholdMember.objects.create(
+            household=self.family, person=self.mom,
+            relationship_type=HouseholdMember.RelationshipType.ADULT,
+        )
+        self.kids = []
+        for name in ("Ava", "Ben"):
+            kid = Person.objects.create(
+                first_name=name, last_name="Walker",
+                birthdate=date(2017, 6, 1),
+            )
+            HouseholdMember.objects.create(
+                household=self.family, person=kid,
+                relationship_type=HouseholdMember.RelationshipType.CHILD,
+            )
+            GroupMembership.objects.create(group=self.group, person=kid)
+            self.kids.append(kid)
+
+    def _preprint(self, rooms_by_kid):
+        data = {}
+        for kid, room in rooms_by_kid.items():
+            data[f"select_{kid.pk}"] = "on"
+            data[f"room_{kid.pk}"] = str(room.pk)
+        return self.client.post(
+            reverse("checkin:session_preprint", args=[self.session.pk]), data
+        )
+
+
+class PreprintRosterTests(PreprintFixture):
+    def test_roster_lists_enrolled_kids_not_adults(self):
+        resp = self.client.get(reverse("checkin:session_preprint", args=[self.session.pk]))
+        self.assertContains(resp, "Ava Walker")
+        self.assertContains(resp, "Ben Walker")
+        self.assertNotContains(resp, "Sue Walker")  # adult not in the VBS group
+
+    def test_requires_checkin_admin(self):
+        staff = get_user_model().objects.create_user(username="plainstaff", password="pw")
+        staff.profile.role = UserProfile.Role.VOLUNTEER
+        staff.profile.save()
+        self.client.force_login(staff)
+        resp = self.client.get(reverse("checkin:session_preprint", args=[self.session.pk]))
+        self.assertNotEqual(resp.status_code, 200)
+
+    @mock.patch("checkin.views.enqueue_checkin_labels", return_value=3)
+    def test_generate_creates_prestaged_checkins_with_shared_code(self, mock_enqueue):
+        self._preprint({self.kids[0]: self.room_a, self.kids[1]: self.room_b})
+        checkins = CheckIn.objects.filter(session=self.session)
+        self.assertEqual(checkins.count(), 2)
+        for c in checkins:
+            self.assertIsNone(c.arrived_at)          # pre-staged, not arrived
+            self.assertTrue(c.is_expected)
+            self.assertIsNotNone(c.room)
+        codes = {c.security_code for c in checkins}
+        self.assertEqual(len(codes), 1)              # one shared family code
+        mock_enqueue.assert_called_once()            # labels queued once for the family
+
+    @mock.patch("checkin.views.enqueue_checkin_labels", return_value=2)
+    def test_generate_is_idempotent(self, mock_enqueue):
+        self._preprint({self.kids[0]: self.room_a, self.kids[1]: self.room_b})
+        mock_enqueue.reset_mock()
+        # Re-running selects the same kids — already staged, so nothing new.
+        self._preprint({self.kids[0]: self.room_a, self.kids[1]: self.room_b})
+        self.assertEqual(CheckIn.objects.filter(session=self.session).count(), 2)
+        mock_enqueue.assert_not_called()
+
+    @mock.patch("checkin.views.enqueue_checkin_labels", return_value=2)
+    def test_prestaged_not_counted_present(self, _m):
+        self._preprint({self.kids[0]: self.room_a, self.kids[1]: self.room_b})
+        self.assertEqual(self.session.total_checked_in(), 0)  # none present yet
+        from checkin.views import _session_stats
+        stats = _session_stats(self.session)
+        self.assertEqual(stats["checked_in"], 0)
+        self.assertEqual(stats["expected"], 2)
+
+
+class PreprintArrivalTests(PreprintFixture):
+    def setUp(self):
+        super().setUp()
+        org = OrganizationSettings.load()
+        org.kiosk_pin = "1234"
+        org.save()
+        # Pre-stage both kids directly.
+        self.code = "PRE1"
+        for kid, room in ((self.kids[0], self.room_a), (self.kids[1], self.room_b)):
+            CheckIn.objects.create(
+                session=self.session, person=kid, room=room,
+                security_code=self.code, arrived_at=None,
+            )
+        s = self.client.session
+        s["kiosk_authenticated"] = True
+        s["kiosk_session_id"] = self.session.pk
+        s.save()
+
+    @mock.patch("checkin.views.send_security_code_sms", return_value=0)
+    @mock.patch("checkin.views.enqueue_checkin_labels")
+    def test_arrival_sets_arrived_without_reprint(self, mock_enqueue, _sms):
+        resp = self.client.post(
+            reverse("checkin:kiosk_family_select", args=[self.family.pk]),
+            {f"select_{self.kids[0].pk}": "on", f"select_{self.kids[1].pk}": "on"},
+        )
+        self.assertRedirects(resp, reverse("checkin:kiosk_confirmation"))
+        # No new rows; both now present; labels NOT re-queued.
+        self.assertEqual(CheckIn.objects.filter(session=self.session).count(), 2)
+        for c in CheckIn.objects.filter(session=self.session):
+            self.assertIsNotNone(c.arrived_at)
+            self.assertEqual(c.security_code, self.code)  # kept pre-printed code
+        mock_enqueue.assert_not_called()
+        self.assertEqual(self.session.total_checked_in(), 2)
+
+    @mock.patch("checkin.views.send_security_code_sms", return_value=0)
+    @mock.patch("checkin.views.enqueue_checkin_labels", return_value=1)
+    def test_walkin_sibling_shares_family_code_and_prints(self, mock_enqueue, _sms):
+        # A third, not-pre-staged sibling joins at the door.
+        walkin = Person.objects.create(first_name="Cy", last_name="Walker",
+                                       birthdate=date(2019, 3, 3))
+        HouseholdMember.objects.create(
+            household=self.family, person=walkin,
+            relationship_type=HouseholdMember.RelationshipType.CHILD,
+        )
+        GroupMembership.objects.create(group=self.group, person=walkin)
+        self.client.post(
+            reverse("checkin:kiosk_family_select", args=[self.family.pk]),
+            {
+                f"select_{self.kids[0].pk}": "on",
+                f"select_{walkin.pk}": "on",
+                f"room_{walkin.pk}": str(self.room_a.pk),
+            },
+        )
+        walkin_ci = CheckIn.objects.get(session=self.session, person=walkin)
+        self.assertEqual(walkin_ci.security_code, self.code)  # shares family code
+        self.assertIsNotNone(walkin_ci.arrived_at)
+        mock_enqueue.assert_called_once()  # only the walk-in prints
+
+    def test_prestaged_not_checkout_able_until_arrived(self):
+        staff = get_user_model().objects.create_user(username="costaff", password="pw")
+        staff.profile.role = UserProfile.Role.STAFF
+        staff.profile.save()
+        self.client.force_login(staff)
+        resp = self.client.post(
+            reverse("checkin:checkout_lookup", args=[self.session.pk]),
+            {"security_code": self.code},
+        )
+        self.assertContains(resp, "No active check-ins")
+        # After arrival, checkout finds them.
+        CheckIn.objects.filter(session=self.session).update(arrived_at=timezone.now())
+        resp = self.client.post(
+            reverse("checkin:checkout_lookup", args=[self.session.pk]),
+            {"security_code": self.code},
+        )
+        self.assertContains(resp, "Ava")
+
+
+class KioskLockTests(TestCase):
+    def test_lock_logs_out_authenticated_user(self):
+        user = _admin("lockadmin")
+        self.client.force_login(user)
+        s = self.client.session
+        s["kiosk_authenticated"] = True
+        s.save()
+        self.client.get(reverse("checkin:kiosk_lock"))
+        # Subsequent request to a login-required page should redirect to login.
+        resp = self.client.get(reverse("checkin:session_list"))
+        self.assertEqual(resp.status_code, 302)
+        self.assertIn("/login", resp.url)

@@ -76,10 +76,14 @@ class KioskLookupForm(forms.Form):
 class FamilyMemberSelectForm(forms.Form):
     """Dynamic form for selecting family members and rooms at check-in."""
 
-    def __init__(self, *args, members_with_eligibility=None, rooms=None, **kwargs):
+    def __init__(self, *args, members_with_eligibility=None, rooms=None,
+                 prestaged_ids=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.members_with_eligibility = members_with_eligibility or []
         self.has_rooms = bool(rooms)
+        # Pre-staged members arrive with a room already assigned ahead of time,
+        # so they get a select box but no room picker (and no room requirement).
+        self.prestaged_ids = set(prestaged_ids or [])
         room_choices = [(r.pk, str(r)) for r in (rooms or [])]
 
         for person, eligible in self.members_with_eligibility:
@@ -87,18 +91,20 @@ class FamilyMemberSelectForm(forms.Form):
                 self.fields[f"select_{person.pk}"] = forms.BooleanField(
                     required=False, label=str(person)
                 )
-                self.fields[f"room_{person.pk}"] = forms.ChoiceField(
-                    choices=room_choices, required=False
-                )
+                if person.pk not in self.prestaged_ids:
+                    self.fields[f"room_{person.pk}"] = forms.ChoiceField(
+                        choices=room_choices, required=False
+                    )
 
     def clean(self):
         cleaned = super().clean()
         # Backstop for the kiosk JS: when the session has rooms, every selected
-        # member needs one. (Unselected members' rooms stay optional.)
+        # walk-in member needs one. Pre-staged members already have a room.
         if self.has_rooms:
             for person, eligible in self.members_with_eligibility:
                 if (
                     eligible
+                    and person.pk not in self.prestaged_ids
                     and cleaned.get(f"select_{person.pk}")
                     and not cleaned.get(f"room_{person.pk}")
                 ):
@@ -108,7 +114,10 @@ class FamilyMemberSelectForm(forms.Form):
         return cleaned
 
     def get_selected(self):
-        """Return list of (person_id, room_id) for selected members."""
+        """Return list of (person_id, room_id) for selected members.
+
+        Pre-staged members have no room field, so room_id is None (their
+        pre-assigned room is kept by the view)."""
         selected = []
         for person, eligible in self.members_with_eligibility:
             if eligible and self.cleaned_data.get(f"select_{person.pk}"):

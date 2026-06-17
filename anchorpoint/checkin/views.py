@@ -5,6 +5,7 @@ from pathlib import Path
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse, JsonResponse, HttpResponseForbidden
 from django.views.decorators.http import require_http_methods, require_POST
+from django.contrib.auth import logout
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.utils import timezone
@@ -27,7 +28,7 @@ from .models import (
 )
 from .services import PrintService
 from .services.checkin_sms import send_security_code_sms
-from .services.eligibility import get_eligible_members
+from .services.eligibility import get_eligible_members, is_person_eligible
 from .services.session_manager import get_or_create_session
 from .services.quick_registration import register_new_family
 from .services.print_queue import enqueue_checkin_labels, enqueue_test_label, get_active_agent
@@ -206,62 +207,86 @@ def kiosk_family_select(request, household_id):
         members_with_eligibility = [(person, True) for person in members]
     rooms = list(session.rooms.all())
 
+    # Pre-staged check-ins for this family (label printed ahead, not yet here).
+    prestaged = {
+        c.person_id: c
+        for c in session.checkins.filter(
+            person__households=household,
+            arrived_at__isnull=True,
+            checked_out_at__isnull=True,
+        ).select_related("room")
+    }
+    prestaged_ids = set(prestaged.keys())
+
     if request.method == "POST":
         form = FamilyMemberSelectForm(
             request.POST,
             members_with_eligibility=members_with_eligibility,
             rooms=rooms,
+            prestaged_ids=prestaged_ids,
         )
         if form.is_valid():
             selected = form.get_selected()
             if not selected:
                 form.add_error(None, "Please select at least one person.")
             else:
-                security_code = generate_unique_security_code(session)
+                # One code per family: reuse the pre-printed code if this
+                # household already has one, so walk-in siblings share it.
+                security_code = _family_code(session, household)
                 checkin_ids = []
+                to_print_ids = []  # only walk-ins / re-prints; pre-staged already printed
                 for person_id, room_id in selected:
                     person = Person.objects.get(pk=person_id)
                     room = Room.objects.get(pk=room_id) if room_id else None
-                    # Reuse an existing *active* check-in (re-print/move room);
-                    # otherwise create one. A previously checked-out person gets
-                    # a fresh record. Either way the pk is included so the person
-                    # always appears on the confirmation page and labels.
                     checkin = CheckIn.objects.filter(
                         session=session,
                         person=person,
                         checked_out_at__isnull=True,
                     ).first()
                     if checkin:
-                        checkin.room = room
+                        was_expected = checkin.arrived_at is None
+                        if checkin.arrived_at is None:
+                            checkin.arrived_at = timezone.now()
+                        # Keep a pre-staged member's pre-assigned room; only a
+                        # walk-in/re-print submits a room to apply.
+                        if room is not None:
+                            checkin.room = room
                         checkin.security_code = security_code
-                        checkin.save(update_fields=["room", "security_code"])
+                        checkin.save(update_fields=["room", "security_code", "arrived_at"])
+                        # A pre-staged arrival is already printed — don't reprint.
+                        if not was_expected:
+                            to_print_ids.append(checkin.pk)
                     else:
                         checkin = CheckIn.objects.create(
                             session=session,
                             person=person,
                             room=room,
                             security_code=security_code,
+                            arrived_at=timezone.now(),
                         )
+                        to_print_ids.append(checkin.pk)
                     checkin_ids.append(checkin.pk)
 
                 request.session["kiosk_checkin_ids"] = checkin_ids
                 request.session["kiosk_security_code"] = security_code
-                # Queue labels for the local print agent. No-op if none is
-                # paired (the confirmation page still offers browser printing),
-                # and never block check-in on a printing problem.
+                # Queue labels only for walk-ins / re-prints. No-op if no agent
+                # is paired; never block check-in on a printing problem.
                 queued = 0
                 try:
                     ordered = sorted(
-                        CheckIn.objects.filter(pk__in=checkin_ids)
+                        CheckIn.objects.filter(pk__in=to_print_ids)
                         .select_related("person", "room"),
-                        key=lambda c: checkin_ids.index(c.pk),
+                        key=lambda c: to_print_ids.index(c.pk),
                     )
-                    queued = enqueue_checkin_labels(ordered, session)
+                    if ordered:
+                        queued = enqueue_checkin_labels(ordered, session)
                 except Exception:
                     logger.exception("Failed to queue print jobs for check-in")
-                # Tell the confirmation page labels are already on their way via
-                # the agent, so it must not also direct-print (duplicate labels).
-                request.session["kiosk_labels_queued"] = queued > 0
+                # Suppress the confirmation page's browser-print fallback when
+                # labels were queued to the agent OR were already pre-printed
+                # (pure arrival: nothing new to print).
+                prestaged_arrivals = len(checkin_ids) - len(to_print_ids)
+                request.session["kiosk_labels_queued"] = queued > 0 or prestaged_arrivals > 0
 
                 # Text the pickup code to opted-in household adults. Best-effort:
                 # a Twilio problem must never block the check-in line.
@@ -281,12 +306,20 @@ def kiosk_family_select(request, household_id):
         form = FamilyMemberSelectForm(
             members_with_eligibility=members_with_eligibility,
             rooms=rooms,
+            prestaged_ids=prestaged_ids,
         )
+
+    # (person, eligible, prestaged_checkin_or_None) for the template.
+    members_display = [
+        (person, eligible, prestaged.get(person.pk))
+        for person, eligible in members_with_eligibility
+    ]
 
     return render(request, "checkin/kiosk/family_select.html", {
         "household": household,
         "form": form,
         "members_with_eligibility": members_with_eligibility,
+        "members_display": members_display,
         "rooms": rooms,
         "session": session,
         "config": config,
@@ -413,6 +446,10 @@ def kiosk_select_config(request):
 def kiosk_lock(request):
     request.session.pop(KIOSK_SESSION_KEY, None)
     request.session.pop(KIOSK_SESSION_ID_KEY, None)
+    # Also drop any staff login, so a shared tablet can never be left both
+    # PIN-unlocked and authenticated into the full app.
+    if request.user.is_authenticated:
+        logout(request)
     return redirect("checkin:kiosk_unlock")
 
 
@@ -431,9 +468,12 @@ def checkout_lookup(request, session_id):
         form = SecurityCodeLookupForm(request.POST)
         if form.is_valid():
             code = form.cleaned_data["security_code"]
+            # Only people who actually arrived can be checked out — a pre-staged
+            # (printed-but-not-arrived) record must not be checkout-able.
             checkins = CheckIn.objects.filter(
                 session=session,
                 security_code=code,
+                arrived_at__isnull=False,
                 checked_out_at__isnull=True,
             ).select_related("person", "room")
 
@@ -463,6 +503,7 @@ def checkout_confirm(request, session_id):
     checkins = CheckIn.objects.filter(
         id__in=checkin_ids,
         session=session,
+        arrived_at__isnull=False,
         checked_out_at__isnull=True,
     )
 
@@ -600,6 +641,174 @@ def session_list(request):
             "sessions": sessions,
         },
     )
+
+
+def _person_household(person):
+    """The household to group a person under for pre-print (first, or None)."""
+    return person.households.all().first()
+
+
+def _family_code(session, household):
+    """Reuse an active code already assigned to this household's members in the
+    session, so a family keeps ONE pickup code; else mint a fresh unique one."""
+    if household is not None:
+        existing = (
+            session.checkins.filter(
+                person__households=household, checked_out_at__isnull=True
+            )
+            .exclude(security_code="")
+            .first()
+        )
+        if existing:
+            return existing.security_code
+    return generate_unique_security_code(session)
+
+
+@checkin_admin_required
+def session_preprint(request, session_id):
+    """Pre-print labels and pre-assign rooms before an event.
+
+    Creates pre-staged check-ins (arrived_at=None) and queues their labels, so
+    at the door arrival is a single tap on the kiosk (no reprint).
+    """
+    session = get_object_or_404(CheckInSession, pk=session_id)
+    config = session.configuration
+    rooms = list(session.rooms.all())
+
+    # Candidate pool: people eligible for this session's configuration.
+    if config and config.groups.exists():
+        candidate_qs = Person.objects.filter(
+            group_memberships__group__in=config.groups.all()
+        ).distinct()
+    else:
+        candidate_qs = Person.objects.all()
+    candidate_qs = candidate_qs.prefetch_related(
+        "group_memberships", "households"
+    ).order_by("last_name", "first_name")
+
+    if config:
+        config_group_ids = set(config.groups.values_list("id", flat=True))
+        candidates = [
+            p for p in candidate_qs if is_person_eligible(p, config, config_group_ids)
+        ]
+    else:
+        candidates = list(candidate_qs)
+
+    existing = {c.person_id: c for c in session.checkins.select_related("room").all()}
+
+    if request.method == "POST":
+        created, fam_count = _preprint_generate(request, session, candidates, existing)
+        if created:
+            messages.success(
+                request,
+                f"Pre-printed {created} label(s) across {fam_count} "
+                f"famil{'y' if fam_count == 1 else 'ies'}.",
+            )
+        else:
+            messages.info(
+                request,
+                "Nothing to pre-print — pick at least one person who isn't already staged.",
+            )
+        return redirect("checkin:session_preprint", session_id=session.pk)
+
+    # Build household-grouped rows for display.
+    groups = {}
+    for person in candidates:
+        household = _person_household(person)
+        key = household.pk if household else f"solo-{person.pk}"
+        label = household.name if household else f"{person.first_name} {person.last_name} (no family)"
+        groups.setdefault(key, {
+            "label": label,
+            "household_id": household.pk if household else None,
+            "rows": [],
+            "has_staged": False,
+        })
+        c = existing.get(person.pk)
+        if c and c.checked_out_at is None:
+            status = "expected" if c.arrived_at is None else "present"
+        elif c:
+            status = "checked_out"
+        else:
+            status = None
+        if status in ("expected", "present"):
+            groups[key]["has_staged"] = True
+        groups[key]["rows"].append({
+            "person": person,
+            "existing": c,
+            "status": status,
+            "assigned_room": c.room if c else None,
+        })
+
+    return render(request, "checkin/session_preprint.html", {
+        "session": session,
+        "rooms": rooms,
+        "groups": sorted(groups.values(), key=lambda g: g["label"].lower()),
+        "stats": _session_stats(session),
+    })
+
+
+def _preprint_generate(request, session, candidates, existing):
+    """Create pre-staged check-ins for selected, not-yet-staged people and queue
+    their labels. Returns (people_created, households_touched)."""
+    from collections import defaultdict
+
+    by_household = defaultdict(list)
+    for person in candidates:
+        if not request.POST.get(f"select_{person.pk}"):
+            continue
+        current = existing.get(person.pk)
+        if current and current.checked_out_at is None:
+            continue  # already staged or present — idempotent skip
+        household = _person_household(person)
+        key = household.pk if household else f"solo-{person.pk}"
+        room_id = request.POST.get(f"room_{person.pk}") or None
+        by_household[key].append((person, household, room_id))
+
+    created = 0
+    fam_count = 0
+    for _, members in by_household.items():
+        household = members[0][1]
+        code = _family_code(session, household)
+        new_checkins = []
+        for person, _hh, room_id in members:
+            room = Room.objects.filter(pk=room_id).first() if room_id else None
+            checkin = CheckIn.objects.create(
+                session=session, person=person, room=room,
+                security_code=code, arrived_at=None,
+            )
+            new_checkins.append(checkin)
+            created += 1
+        if new_checkins:
+            fam_count += 1
+            try:
+                enqueue_checkin_labels(new_checkins, session)
+            except Exception:
+                logger.exception("Failed to queue pre-print labels")
+    return created, fam_count
+
+
+@checkin_admin_required
+@require_POST
+def session_preprint_reprint(request, session_id, household_id):
+    """Re-queue labels for one household's pre-staged (still-here) check-ins."""
+    session = get_object_or_404(CheckInSession, pk=session_id)
+    checkins = list(
+        session.checkins.filter(
+            person__households__pk=household_id, checked_out_at__isnull=True
+        )
+        .select_related("person", "room")
+        .distinct()
+    )
+    if checkins:
+        try:
+            enqueue_checkin_labels(checkins, session)
+            messages.success(request, f"Re-queued {len(checkins)} label(s).")
+        except Exception:
+            logger.exception("Failed to re-queue pre-print labels")
+            messages.error(request, "Could not queue labels — check the print agent.")
+    else:
+        messages.info(request, "No active pre-staged check-ins for that family.")
+    return redirect("checkin:session_preprint", session_id=session.pk)
 
 
 @staff_required
@@ -798,15 +1007,23 @@ def printer_test(request, printer_id):
 
 
 def _session_stats(session):
-    """Live counts for a session: totals plus per-room occupancy (one query)."""
-    checked_in = session.checkins.filter(checked_out_at__isnull=True).count()
+    """Live counts for a session: totals plus per-room occupancy.
+
+    "Present" = arrived and not checked out. "Expected" = pre-staged (label
+    printed ahead, not arrived yet). Room occupancy counts present people only.
+    """
+    present_q = session.checkins.filter(
+        arrived_at__isnull=False, checked_out_at__isnull=True
+    )
+    checked_in = present_q.count()
     checked_out = session.checkins.filter(checked_out_at__isnull=False).count()
+    expected = session.checkins.filter(
+        arrived_at__isnull=True, checked_out_at__isnull=True
+    ).count()
 
     room_counts = {
         row["room"]: row["count"]
-        for row in session.checkins.filter(checked_out_at__isnull=True)
-        .values("room")
-        .annotate(count=Count("id"))
+        for row in present_q.values("room").annotate(count=Count("id"))
     }
     rooms = []
     for room in session.rooms.all().order_by("sort_order", "name"):
@@ -827,6 +1044,7 @@ def _session_stats(session):
     return {
         "checked_in": checked_in,
         "checked_out": checked_out,
+        "expected": expected,
         "total": checked_in + checked_out,
         "unassigned": room_counts.get(None, 0),
         "rooms": rooms,
