@@ -78,6 +78,16 @@ Key environment variables (see `.env.production.example`):
 1. **No SMS delivery webhooks** - Phone calls update status via Twilio StatusCallback, but SMS delivery status is not tracked after the initial send
 2. **Media files served by Django** - OK for small scale, use nginx/CDN for larger deployments
 
+## Check-in states (`CheckIn.arrived_at`)
+
+A `CheckIn` has three states: **expected** (pre-staged via the session Pre-print page —
+label printed ahead, `arrived_at IS NULL`), **present** (`arrived_at` set, not checked out),
+**checked out**. "Currently here" / room-occupancy / checkout all mean *present*
+(`arrived_at__isnull=False, checked_out_at__isnull=True`). Normal kiosk check-ins set
+`arrived_at` at creation; pre-staged ones get it on the one-tap kiosk arrival (no reprint —
+the label/code were printed ahead). Pre-print pre-assigns rooms and shares one pickup code
+per household.
+
 ## Scheduled communications & phone-blast audio
 
 The `cron` sidecar (see `docker/docker-compose.yml` + `docker/cron.sh`) runs

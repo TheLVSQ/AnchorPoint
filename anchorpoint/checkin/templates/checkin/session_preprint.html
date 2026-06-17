@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block content %}
+
+<a class="ghost-link" href="{% url 'checkin:session_detail' session.pk %}">&larr; Back to {{ session.name }}</a>
+
+<div class="page-header">
+    <span class="chip">Pre-Print</span>
+    <h1>Pre-print labels — {{ session.name }}</h1>
+    <p class="page-subtitle">
+        Assign rooms and print labels ahead of time. Pre-printed kids show as
+        <strong>Expected</strong> until they tap in at the kiosk — one tap, no reprint.
+        {% if stats.expected %} Currently {{ stats.expected }} expected.{% endif %}
+    </p>
+</div>
+
+{% if not rooms %}
+    <div class="highlight-note">This session has no rooms yet. Add rooms to the session before pre-printing.</div>
+{% endif %}
+
+<form method="post">
+    {% csrf_token %}
+    {% for group in groups %}
+        <section class="detail-card" style="margin-bottom:1rem;">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
+                <h2 style="margin:0;">{{ group.label }}</h2>
+                <div style="display:flex; gap:0.5rem; align-items:center;">
+                    {% if rooms %}
+                        <label class="stat-hint" style="margin:0;">Set all rooms:</label>
+                        <select class="bulk-room" data-group="{{ forloop.counter }}">
+                            <option value="">—</option>
+                            {% for room in rooms %}<option value="{{ room.pk }}">{{ room.name }}</option>{% endfor %}
+                        </select>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="list-card__body" style="margin-top:0.75rem;">
+                {% for row in group.rows %}
+                    <div class="list-item">
+                        <div style="display:flex; align-items:center; gap:0.75rem;">
+                            {% if row.status %}
+                                <span class="chip" style="background:{% if row.status == 'expected' %}#fef9c3;color:#854d0e{% elif row.status == 'present' %}#dcfce7;color:#166534{% else %}#e5e7eb;color:#374151{% endif %};">
+                                    {{ row.status|title }}
+                                </span>
+                            {% else %}
+                                <input type="checkbox" name="select_{{ row.person.pk }}"
+                                       id="sel_{{ row.person.pk }}" class="preprint-select" data-group="{{ forloop.parentloop.counter }}"
+                                       style="width:20px;height:20px;">
+                            {% endif %}
+                            <label for="sel_{{ row.person.pk }}">
+                                <strong>{{ row.person.first_name }} {{ row.person.last_name }}</strong>
+                                <span class="muted-text">{% if row.person.age is not None %}Age {{ row.person.age }}{% endif %}</span>
+                            </label>
+                        </div>
+                        <div>
+                            {% if row.status %}
+                                <span class="muted-text">{% if row.assigned_room %}{{ row.assigned_room.name }}{% endif %}</span>
+                            {% elif rooms %}
+                                <select name="room_{{ row.person.pk }}" class="room-select" data-group="{{ forloop.parentloop.counter }}">
+                                    <option value="">— Room —</option>
+                                    {% for room in rooms %}<option value="{{ room.pk }}">{{ room.name }}</option>{% endfor %}
+                                </select>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+            {% if group.has_staged and group.household_id %}
+                <div style="margin-top:0.5rem;">
+                    <button type="submit" form="reprint-{{ forloop.counter }}" class="btn ghost">Reprint this family</button>
+                </div>
+            {% endif %}
+        </section>
+    {% empty %}
+        <p class="empty-state">No eligible people for this session's configuration. Check the configuration's group/age filters.</p>
+    {% endfor %}
+
+    {% if groups %}
+        <div class="form-actions" style="position:sticky; bottom:0; padding:1rem 0; background:var(--surface,#fff);">
+            <button type="submit" class="btn">Generate & Print Selected</button>
+        </div>
+    {% endif %}
+</form>
+
+{% comment %} Per-family reprint forms (kept outside the main form; HTML forbids nesting). {% endcomment %}
+{% for group in groups %}
+    {% if group.has_staged and group.household_id %}
+        <form method="post" id="reprint-{{ forloop.counter }}"
+              action="{% url 'checkin:session_preprint_reprint' session.pk group.household_id %}">
+            {% csrf_token %}
+        </form>
+    {% endif %}
+{% endfor %}
+
+<script>
+(function () {
+    // "Set all rooms" applies a room to every row in that family's group and ticks them.
+    document.querySelectorAll(".bulk-room").forEach(function (sel) {
+        sel.addEventListener("change", function () {
+            var g = sel.getAttribute("data-group");
+            document.querySelectorAll('.room-select[data-group="' + g + '"]').forEach(function (rs) {
+                rs.value = sel.value;
+            });
+            if (sel.value) {
+                document.querySelectorAll('.preprint-select[data-group="' + g + '"]').forEach(function (cb) {
+                    cb.checked = true;
+                });
+            }
+        });
+    });
+})();
+</script>
+{% endblock %}

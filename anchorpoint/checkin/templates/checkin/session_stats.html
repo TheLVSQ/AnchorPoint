@@ -10,6 +10,12 @@
             <div style="font-size:2.5rem;font-weight:700;color:#16a34a;">{{ stats.checked_in }}</div>
             <div class="stat-hint">Here Now</div>
         </section>
+        {% if stats.expected %}
+        <section class="detail-card" style="text-align:center;">
+            <div style="font-size:2.5rem;font-weight:700;color:#ca8a04;">{{ stats.expected }}</div>
+            <div class="stat-hint">Expected</div>
+        </section>
+        {% endif %}
         <section class="detail-card" style="text-align:center;">
             <div style="font-size:2.5rem;font-weight:700;">{{ stats.total }}</div>
             <div class="stat-hint">Total Today</div>
