@@ -280,7 +280,10 @@ class CheckInSession(models.Model):
         return self.checkin_opens <= now.time() <= self.checkin_closes
 
     def total_checked_in(self):
-        return self.checkins.filter(checked_out_at__isnull=True).count()
+        """People physically present right now (arrived and not checked out)."""
+        return self.checkins.filter(
+            arrived_at__isnull=False, checked_out_at__isnull=True
+        ).count()
 
 
 class CheckIn(models.Model):
@@ -295,6 +298,10 @@ class CheckIn(models.Model):
     )
     security_code = models.CharField(max_length=4)
     checked_in_at = models.DateTimeField(auto_now_add=True)
+    # When the person physically arrived. NULL = pre-staged (label printed
+    # ahead of time, not yet here). Set on arrival at the kiosk, or at creation
+    # for a normal same-moment check-in.
+    arrived_at = models.DateTimeField(null=True, blank=True)
     checked_in_by = models.ForeignKey(
         User, on_delete=models.SET_NULL, null=True, blank=True,
         related_name="checked_in_by",
@@ -317,6 +324,24 @@ class CheckIn(models.Model):
     @property
     def is_checked_out(self):
         return self.checked_out_at is not None
+
+    @property
+    def is_expected(self):
+        """Pre-staged: label printed ahead of time, not yet arrived."""
+        return self.arrived_at is None and self.checked_out_at is None
+
+    @property
+    def is_present(self):
+        """Arrived and not checked out."""
+        return self.arrived_at is not None and self.checked_out_at is None
+
+    def arrive(self, user=None):
+        """Mark a pre-staged check-in as physically arrived (idempotent)."""
+        if self.arrived_at is None:
+            self.arrived_at = timezone.now()
+            if user is not None:
+                self.checked_in_by = user
+            self.save(update_fields=["arrived_at", "checked_in_by"])
 
     def checkout(self, user=None):
         """Mark this check-in as checked out."""

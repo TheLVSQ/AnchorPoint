@@ -113,7 +113,9 @@ def dashboard(request):
     people_count = Person.objects.count()
     recent_people = Person.objects.order_by("-id")[:4]
     checked_in_today = CheckIn.objects.filter(
-        session__date=timezone.localdate(), checked_out_at__isnull=True
+        session__date=timezone.localdate(),
+        arrived_at__isnull=False,
+        checked_out_at__isnull=True,
     ).count()
 
     context = {

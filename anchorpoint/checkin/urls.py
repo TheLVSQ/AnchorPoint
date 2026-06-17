@@ -32,6 +32,8 @@ urlpatterns = [
     path("sessions/<int:session_id>/", views.session_detail, name="session_detail"),
     path("sessions/<int:session_id>/edit/", views.session_edit, name="session_edit"),
     path("sessions/<int:session_id>/stats/", views.session_stats, name="session_stats"),
+    path("sessions/<int:session_id>/preprint/", views.session_preprint, name="session_preprint"),
+    path("sessions/<int:session_id>/preprint/<int:household_id>/reprint/", views.session_preprint_reprint, name="session_preprint_reprint"),
 
     # Room management
     path("rooms/", views.room_list, name="room_list"),

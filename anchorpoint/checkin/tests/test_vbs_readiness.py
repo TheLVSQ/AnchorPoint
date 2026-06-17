@@ -380,6 +380,7 @@ class SessionStatsTests(TestCase):
         CheckIn.objects.create(
             session=self.session, person=kid,
             room=self.room, security_code="WXYZ",
+            arrived_at=timezone.now(),
         )
 
     def test_stats_partial_requires_staff(self):
@@ -419,6 +420,7 @@ class SessionStatsTests(TestCase):
             CheckIn.objects.create(
                 session=self.session, person=kid,
                 room=self.room, security_code=f"FU{i}L",
+                arrived_at=timezone.now(),
             )
         self.client.force_login(self.staff)
         response = self.client.get(
