@@ -25,14 +25,16 @@ from events.services import (
 from groups.models import Group, GroupMembership
 from people.models import Person, normalize_phone
 
+# child_birthdate is optional: signup forms often collect grade instead of DOB,
+# and VBS eligibility runs off group/grade anyway.
 REQUIRED_HEADERS = {
-    "parent_first_name", "parent_last_name", "parent_phone",
-    "child_first_name", "child_birthdate",
+    "parent_first_name", "parent_last_name", "parent_phone", "child_first_name",
 }
 DATE_FORMATS = ("%Y-%m-%d", "%m/%d/%Y", "%m/%d/%y")
 TRUTHY = {"yes", "y", "true", "1"}
 GRADE_ALIASES = {
     "prek": "pre-k", "pre k": "pre-k", "preschool": "pre-k",
+    "preschool/prek": "pre-k", "pre-k/preschool": "pre-k", "pk": "pre-k",
     "kindergarten": "k", "kinder": "k",
 }
 VALID_GRADES = {value for value, _ in Person.GRADE_CHOICES}
@@ -180,13 +182,15 @@ def run_import(rows, *, commit=False, group_name="") -> ImportResult:
             for line_no, row in fam_rows:
                 c_first = (row.get("child_first_name") or "").strip()
                 c_last = (row.get("child_last_name") or "").strip() or p_last
-                birthdate = _parse_date(row.get("child_birthdate"))
-                if not c_first or not birthdate:
-                    result.add("skip", f"SKIP row {line_no}: "
-                               + ("missing child name" if not c_first else
-                                  f"bad birthdate {row.get('child_birthdate')!r} (use YYYY-MM-DD or MM/DD/YYYY)"))
+                if not c_first:
+                    result.add("skip", f"SKIP row {line_no}: missing child name")
                     stats["rows_skipped"] += 1
                     continue
+                raw_bd = (row.get("child_birthdate") or "").strip()
+                birthdate = _parse_date(raw_bd)
+                if raw_bd and birthdate is None:
+                    result.add("warn", f"row {line_no}: unrecognized birthdate "
+                                       f"{raw_bd!r} — leaving blank (use YYYY-MM-DD or MM/DD/YYYY)")
 
                 grade = _parse_grade(row.get("child_grade"))
                 if row.get("child_grade", "").strip() and grade is None:
