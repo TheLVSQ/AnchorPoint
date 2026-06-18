@@ -98,6 +98,17 @@ absolute audio + Twilio status-callback URLs. Phone-blast audio (uploaded or rec
 in-browser via `MediaRecorder`) is transcoded to MP3 with `ffmpeg` so Twilio's `<Play>`
 can fetch it.
 
+## Reporting (`reporting/` app)
+
+A small report **registry**: subclass `reporting.reports.Report` (declare `slug`, `name`,
+`columns()`, `get_rows(params)`, optional `param_form_class`) and `@register` it — the generic
+list/detail/CSV-export views at `/reports/` pick it up with no new URLs. Ships with
+`GroupRosterReport` (VBS-style roster by group) and `SessionAttendanceReport`. CSV only for now.
+
+`Person.photo_consent` (default False) = guardian opt-in to photographing a minor / using their
+image. Captured on the person form, kiosk quick-register, and `import_signups` (a `photo_consent`
+column, set on create only); shown on the profile and in reports.
+
 ## Common Tasks
 
 ### Adding a new permission-protected view

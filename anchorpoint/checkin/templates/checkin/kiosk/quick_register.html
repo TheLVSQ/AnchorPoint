@@ -98,6 +98,15 @@
                       rows="2" placeholder="List any allergies">{{ cf.allergies.value|default:'' }}</textarea>
           </div>
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+            <input type="checkbox" name="child_{{ forloop.counter0 }}-photo_consent"
+                   id="photo_{{ forloop.counter0 }}"
+                   style="width:20px;height:20px;accent-color:#4f46e5;"
+                   {% if cf.photo_consent.value %}checked{% endif %}>
+            <label for="photo_{{ forloop.counter0 }}" style="font-size:14px;color:#aaa;cursor:pointer;">
+              OK to photograph &amp; use child's image
+            </label>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
             <input type="checkbox" name="child_{{ forloop.counter0 }}-custody_flag"
                    id="custody_{{ forloop.counter0 }}"
                    style="width:20px;height:20px;accent-color:#4f46e5;"
@@ -161,6 +170,10 @@
         </div>
         <div class="form-group"><label>Birthdate</label><input type="date" name="child_${idx}-birthdate"></div>
         <div class="form-group"><label>Allergies (optional)</label><textarea name="child_${idx}-allergies" rows="2" placeholder="List any allergies"></textarea></div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+          <input type="checkbox" name="child_${idx}-photo_consent" id="photo_${idx}" style="width:20px;height:20px;accent-color:#4f46e5;">
+          <label for="photo_${idx}" style="font-size:14px;color:#aaa;cursor:pointer;">OK to photograph &amp; use child's image</label>
+        </div>
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
           <input type="checkbox" name="child_${idx}-custody_flag" id="custody_${idx}"
                  style="width:20px;height:20px;accent-color:#4f46e5;"

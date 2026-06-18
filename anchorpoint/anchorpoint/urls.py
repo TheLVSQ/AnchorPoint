@@ -55,6 +55,7 @@ urlpatterns = [
     path("events/", include("events.urls")),
     path("communications/", include(("messaging.urls", "messaging"), namespace="messaging")),
     path("checkin/", include(("checkin.urls", "checkin"), namespace="checkin")),
+    path("reports/", include(("reporting.urls", "reporting"), namespace="reporting")),
     path(
         "register/<uuid:registration_token>/",
         event_views.public_event_register,
