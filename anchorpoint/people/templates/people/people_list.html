@@ -15,6 +15,7 @@
            hx-swap="outerHTML">
     <button type="submit">Search</button>
     <a href="{% url 'people_add' %}" style="margin-left: 10px;">Add Person</a>
+    <a href="{% url 'signup_import' %}" style="margin-left: 10px;">Import CSV</a>
 </form>
 
 {% include "people/partials/people_results.html" %}

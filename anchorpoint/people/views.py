@@ -14,7 +14,10 @@ from households.forms import (
 )
 from households.models import Household, HouseholdMember
 from .models import Person
-from .forms import PersonForm
+from .forms import PersonForm, SignupImportForm
+from .services.signup_import import SignupImportError, parse_csv, run_import
+
+IMPORT_SESSION_KEY = "signup_import_pending"
 
 
 @staff_required
@@ -101,6 +104,57 @@ def people_add(request):
         "household_action": household_action,
         "selected_household_id": selected_household_id,
         "household_error": household_error,
+    })
+
+
+@staff_required
+def signup_import(request):
+    """Upload a signup CSV → review a dry-run preview → confirm to commit.
+
+    Preview and commit run the same `run_import` service the management command
+    uses. The parsed CSV text is stashed in the session between the two steps."""
+    form = SignupImportForm()
+    result = None
+    stage = "upload"
+
+    if request.method == "POST" and request.POST.get("action") == "commit":
+        pending = request.session.get(IMPORT_SESSION_KEY)
+        if not pending:
+            messages.error(request, "Your import session expired — please upload the file again.")
+            return redirect("signup_import")
+        try:
+            rows = parse_csv(pending["text"])
+            result = run_import(rows, commit=True, group_name=pending.get("group", ""))
+        except SignupImportError as exc:
+            messages.error(request, str(exc))
+            return redirect("signup_import")
+        request.session.pop(IMPORT_SESSION_KEY, None)
+        stage = "done"
+        messages.success(request, "Import complete.")
+
+    elif request.method == "POST":
+        form = SignupImportForm(request.POST, request.FILES)
+        if form.is_valid():
+            raw = form.cleaned_data["csv_file"].read()
+            try:
+                text = raw.decode("utf-8-sig")
+            except UnicodeDecodeError:
+                text = raw.decode("latin-1")
+            group = form.cleaned_data["group"].strip()
+            try:
+                rows = parse_csv(text)
+                result = run_import(rows, commit=False, group_name=group)
+            except SignupImportError as exc:
+                form.add_error("csv_file", str(exc))
+            else:
+                # Stash for the confirm step (rosters are small; capped at 2 MB).
+                request.session[IMPORT_SESSION_KEY] = {"text": text, "group": group}
+                stage = "preview"
+
+    return render(request, "people/import.html", {
+        "form": form,
+        "result": result,
+        "stage": stage,
     })
 
 

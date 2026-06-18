@@ -19,6 +19,28 @@ US_STATES = [
 ]
 
 
+class SignupImportForm(forms.Form):
+    csv_file = forms.FileField(
+        label="Signup CSV",
+        help_text="One row per child. See docs/signup-import-template.csv for the columns.",
+    )
+    group = forms.CharField(
+        required=False,
+        label="Enroll into group (optional)",
+        help_text='e.g. "VBS 2026" — created if it does not exist. Enrolls every imported child.',
+    )
+
+    MAX_BYTES = 2 * 1024 * 1024  # 2 MB — signup rosters are small
+
+    def clean_csv_file(self):
+        f = self.cleaned_data["csv_file"]
+        if f.size > self.MAX_BYTES:
+            raise forms.ValidationError("File too large (max 2 MB).")
+        if not f.name.lower().endswith(".csv"):
+            raise forms.ValidationError("Please upload a .csv file.")
+        return f
+
+
 class PersonForm(forms.ModelForm):
     state = forms.ChoiceField(
         choices=US_STATES,

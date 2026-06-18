@@ -9,6 +9,7 @@ from datetime import date
 from django.core.management import call_command
 from django.core.management.base import CommandError
 from django.test import TestCase
+from django.urls import reverse
 
 from groups.models import Group, GroupMembership
 from households.models import Household, HouseholdMember
@@ -185,3 +186,51 @@ class ImportSignupsTests(TestCase):
         _run(self._csv(rows), "--commit")
         parent = Person.objects.get(first_name="Sarah")
         self.assertFalse(parent.phone_opt_in)
+
+
+class SignupImportPageTests(TestCase):
+    """The web upload → preview → confirm flow (shares run_import with the CLI)."""
+
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+        from core.models import UserProfile
+        self.user = get_user_model().objects.create_user(username="impweb", password="pw")
+        self.user.profile.role = UserProfile.Role.STAFF
+        self.user.profile.save()
+        self.client.force_login(self.user)
+
+    def _upload(self, action="preview", extra=None):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        content = (
+            "parent_first_name,parent_last_name,parent_phone,child_first_name,child_birthdate\n"
+            "Web,Tester,5405550000,Wynn,2018-04-04\n"
+        ).encode()
+        data = {"action": action, "csv_file": SimpleUploadedFile("signups.csv", content, content_type="text/csv")}
+        if extra:
+            data.update(extra)
+        return self.client.post(reverse("signup_import"), data)
+
+    def test_requires_staff(self):
+        self.client.logout()
+        self.assertEqual(self.client.get(reverse("signup_import")).status_code, 302)
+
+    def test_preview_writes_nothing(self):
+        resp = self._upload(extra={"group": "VBS Web"})
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "Preview")
+        self.assertFalse(Person.objects.filter(first_name="Wynn").exists())  # not yet saved
+
+    def test_confirm_commits(self):
+        self._upload(extra={"group": "VBS Web"})  # stashes in session
+        resp = self.client.post(reverse("signup_import"), {"action": "commit"})
+        self.assertEqual(resp.status_code, 200)
+        self.assertTrue(Person.objects.filter(first_name="Wynn").exists())
+        from groups.models import Group
+        self.assertTrue(Group.objects.filter(name="VBS Web").exists())
+
+    def test_bad_headers_rejected(self):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        bad = SimpleUploadedFile("x.csv", b"name,age\nA,7\n", content_type="text/csv")
+        resp = self.client.post(reverse("signup_import"), {"action": "preview", "csv_file": bad})
+        self.assertContains(resp, "missing required columns")
+        self.assertFalse(Person.objects.exists())
