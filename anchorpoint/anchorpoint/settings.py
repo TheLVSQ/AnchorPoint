@@ -73,6 +73,7 @@ INSTALLED_APPS = [
     "groups",
     "messaging",
     "checkin",
+    "reporting",
 ]
 
 MIDDLEWARE = [

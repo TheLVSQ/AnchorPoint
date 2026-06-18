@@ -49,6 +49,7 @@ class PersonForm(forms.ModelForm):
             "first_visit_date",
             "allergies",
             "security_notes",
+            "photo_consent",
             "status",
             "notes",
         ]

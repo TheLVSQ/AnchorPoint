@@ -142,6 +142,7 @@ class QuickRegistrationChildForm(forms.Form):
     custody_flag = forms.BooleanField(required=False)
     custody_notes = forms.CharField(required=False, widget=forms.Textarea(attrs={"rows": 2}))
     unauthorized_pickup = forms.CharField(required=False, widget=forms.Textarea(attrs={"rows": 2}))
+    photo_consent = forms.BooleanField(required=False)
 
 
 class CheckInSessionForm(forms.ModelForm):

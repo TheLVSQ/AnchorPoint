@@ -224,3 +224,63 @@ class PersonStatusDisplayTests(TestCase):
         response = self.client.get(reverse("people_detail", args=[person.pk]))
         self.assertContains(response, "Regular Attendee")
         self.assertNotContains(response, "regular_attendee")
+
+
+class PhotoConsentTests(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(username="photostaff", password="pw")
+        self.user.profile.role = UserProfile.Role.STAFF
+        self.user.profile.save()
+        self.client.force_login(self.user)
+
+    def test_default_false(self):
+        p = Person.objects.create(first_name="No", last_name="Consent")
+        self.assertFalse(p.photo_consent)
+
+    def test_person_form_sets_consent(self):
+        from people.forms import PersonForm
+        form = PersonForm(data={
+            "first_name": "Pic", "last_name": "Kid", "status": "guest",
+            "photo_consent": "on",
+        })
+        self.assertTrue(form.is_valid(), form.errors)
+        person = form.save()
+        self.assertTrue(person.photo_consent)
+
+    def test_detail_shows_consent_state(self):
+        p = Person.objects.create(first_name="Yes", last_name="Photo", photo_consent=True)
+        resp = self.client.get(reverse("people_detail", args=[p.pk]))
+        self.assertContains(resp, "Granted")
+
+
+class ImportPhotoConsentTests(TestCase):
+    def _csv(self, consent_value):
+        import csv, tempfile, os
+        headers = [
+            "parent_first_name", "parent_last_name", "parent_phone", "parent_email",
+            "phone_opt_in", "child_first_name", "child_last_name", "child_birthdate",
+            "child_grade", "child_allergies", "custody_notes", "unauthorized_pickup",
+            "photo_consent",
+        ]
+        fh = tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False, newline="", encoding="utf-8")
+        w = csv.DictWriter(fh, fieldnames=headers)
+        w.writeheader()
+        w.writerow({
+            "parent_first_name": "Pam", "parent_last_name": "Optin", "parent_phone": "5405559999",
+            "child_first_name": "Kid", "child_birthdate": "2018-01-01", "photo_consent": consent_value,
+        })
+        fh.close()
+        self.addCleanup(lambda: os.unlink(fh.name))
+        return fh.name
+
+    def test_import_sets_consent_when_yes(self):
+        from django.core.management import call_command
+        import io
+        call_command("import_signups", self._csv("yes"), "--commit", stdout=io.StringIO())
+        self.assertTrue(Person.objects.get(first_name="Kid").photo_consent)
+
+    def test_import_consent_false_by_default(self):
+        from django.core.management import call_command
+        import io
+        call_command("import_signups", self._csv("no"), "--commit", stdout=io.StringIO())
+        self.assertFalse(Person.objects.get(first_name="Kid").photo_consent)

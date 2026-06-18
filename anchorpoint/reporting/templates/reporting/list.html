@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card">
+    <div class="page-header">
+        <span class="chip">Reports</span>
+        <h1>Reports</h1>
+        <p class="page-subtitle">Pull rosters and attendance with full detail, and export to CSV.</p>
+    </div>
+
+    <div class="quick-actions">
+        {% for report in reports %}
+            <article class="quick-card">
+                <div>
+                    <p class="quick-label">Report</p>
+                    <h3>{{ report.name }}</h3>
+                    <p>{{ report.description }}</p>
+                </div>
+                <a class="ghost-link" href="{% url 'reporting:detail' report.slug %}">Open report →</a>
+            </article>
+        {% empty %}
+            <p class="empty-state">No reports registered.</p>
+        {% endfor %}
+    </div>
+</section>
+{% endblock %}

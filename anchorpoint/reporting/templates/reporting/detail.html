@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block content %}
+<a class="ghost-link" href="{% url 'reporting:list' %}">&larr; All reports</a>
+
+<div class="page-header">
+    <span class="chip">Report</span>
+    <h1>{{ report.name }}</h1>
+    <p class="page-subtitle">{{ report.description }}</p>
+</div>
+
+{% if form %}
+    <section class="card" style="margin-bottom:1.5rem;">
+        <form method="get" style="display:flex; gap:0.75rem; align-items:flex-end; flex-wrap:wrap;">
+            {% for field in form %}
+                <div class="form-field">
+                    {{ field.label_tag }}
+                    {{ field }}
+                    {% for error in field.errors %}<span class="error-text">{{ error }}</span>{% endfor %}
+                </div>
+            {% endfor %}
+            <button type="submit" class="btn">Run</button>
+        </form>
+    </section>
+{% endif %}
+
+{% if table_rows is not None %}
+    <section class="card">
+        <div class="list-card__header">
+            <div>
+                <span class="chip">{{ row_count }} row{{ row_count|pluralize }}</span>
+                <h2>Results</h2>
+                {% if truncated %}<p class="stat-hint">Showing first {{ preview_limit }} — the CSV export includes all {{ row_count }}.</p>{% endif %}
+            </div>
+            <a class="btn" href="{% url 'reporting:export' report.slug %}{% if export_qs %}?{{ export_qs }}{% endif %}">Export CSV</a>
+        </div>
+        <div style="overflow-x:auto;">
+            <table class="data-table" style="width:100%; border-collapse:collapse;">
+                <thead>
+                    <tr>
+                        {% for header in headers %}
+                            <th style="text-align:left; padding:8px 12px; border-bottom:2px solid #e5e7eb; white-space:nowrap;">{{ header }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for cells in table_rows %}
+                        <tr>
+                            {% for cell in cells %}
+                                <td style="padding:8px 12px; border-bottom:1px solid #f1f1f4;">{{ cell }}</td>
+                            {% endfor %}
+                        </tr>
+                    {% empty %}
+                        <tr><td colspan="{{ headers|length }}" class="empty-state">No matching records.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+{% endif %}
+{% endblock %}
