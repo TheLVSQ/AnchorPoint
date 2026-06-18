@@ -216,6 +216,14 @@ class Command(BaseCommand):
                         if changed:
                             child.save(update_fields=changed)
 
+                    # Photo/likeness consent: only set on newly created children,
+                    # never overwrite an existing person's recorded preference.
+                    if child_existing is None:
+                        raw = (row.get("photo_consent") or "").strip().lower()
+                        if raw in TRUTHY:
+                            child.photo_consent = True
+                            child.save(update_fields=["photo_consent"])
+
                     if child_existing:
                         stats["children_matched"] += 1
                         self.stdout.write(f"   MATCHED child  → existing #{child.pk} ({child})")

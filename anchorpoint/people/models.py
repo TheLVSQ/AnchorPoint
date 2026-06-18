@@ -85,6 +85,12 @@ class Person(models.Model):
     first_visit_date = models.DateField(blank=True, null=True)
     allergies = models.TextField(blank=True, null=True)
     security_notes = models.TextField(blank=True, null=True)
+    # Guardian opt-in to photographing a minor / using their image in promo
+    # materials. Default False = no consent on record (only use when True).
+    photo_consent = models.BooleanField(
+        default=False,
+        help_text="Guardian permits photos / use of this person's image (relevant for minors).",
+    )
     # Custody/security tracking (only relevant for minors)
     custody_flag = models.BooleanField(default=False)
     custody_notes = models.TextField(blank=True)

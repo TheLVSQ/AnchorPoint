@@ -220,6 +220,14 @@
                     {% for error in form.security_notes.errors %}<span class="error-text">{{ error }}</span>{% endfor %}
                 </div>
                 <div class="form-field form-field--full">
+                    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                        {{ form.photo_consent }}
+                        Photo / likeness permission
+                    </label>
+                    <span class="section-hint">For minors, check only if the parent/guardian has opted in to photos / use of the child's image.</span>
+                    {% for error in form.photo_consent.errors %}<span class="error-text">{{ error }}</span>{% endfor %}
+                </div>
+                <div class="form-field form-field--full">
                     {{ form.notes.label_tag }}
                     {{ form.notes }}
                     {% for error in form.notes.errors %}<span class="error-text">{{ error }}</span>{% endfor %}
