@@ -124,13 +124,22 @@ class ImportSignupsTests(TestCase):
         # Report still shows the full plan
         self.assertIn("CREATE parent", out)
 
-    def test_bad_birthdate_skips_row_not_batch(self):
+    def test_unparseable_birthdate_warns_but_still_imports(self):
+        # birthdate is optional now; an unrecognized one warns and imports blank
+        # rather than dropping the child.
         rows = _family_rows()
         rows[0]["child_birthdate"] = "tomorrow-ish"
         out = _run(self._csv(rows), "--commit")
-        self.assertIn("SKIP row", out)
-        self.assertFalse(Person.objects.filter(first_name="Emma").exists())
+        self.assertIn("unrecognized birthdate", out)
+        emma = Person.objects.get(first_name="Emma")
+        self.assertIsNone(emma.birthdate)
         self.assertTrue(Person.objects.filter(first_name="Jack").exists())
+
+    def test_missing_birthdate_is_allowed(self):
+        rows = _family_rows()
+        rows[0]["child_birthdate"] = ""
+        _run(self._csv(rows), "--commit")
+        self.assertTrue(Person.objects.filter(first_name="Emma").exists())
 
     def test_group_enrollment_idempotent(self):
         path = self._csv(_family_rows())
