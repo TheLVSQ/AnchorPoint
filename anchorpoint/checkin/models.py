@@ -421,6 +421,18 @@ class PrintAgent(models.Model):
     # Physical label/roll width at this agent's printer. Sent to the agent with
     # each job so it can size the CUPS page (62 = Brother QL continuous roll).
     label_width_mm = models.PositiveSmallIntegerField(default=62)
+    # Degrees to rotate the (landscape) artwork before printing at this agent.
+    # 0 for a wide die-cut label (e.g. 76mm Zebra); 90/270 to stand the design
+    # up so it fits within a narrower continuous roll (e.g. 62mm Brother QL).
+    ROTATION_CHOICES = [
+        (0, "None (wide label, e.g. 76mm Zebra)"),
+        (90, "90° — fit a narrow roll (e.g. 62mm Brother)"),
+        (270, "270° — narrow roll, other way up"),
+        (180, "180° — upside down"),
+    ]
+    label_rotation = models.PositiveSmallIntegerField(
+        default=0, choices=ROTATION_CHOICES
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
