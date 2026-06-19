@@ -73,6 +73,12 @@
                             <input id="width_{{ agent.id }}" type="number" name="label_width_mm"
                                    value="{{ agent.label_width_mm }}" min="20" max="120"
                                    style="width:5rem;">
+                            <label for="rot_{{ agent.id }}" class="stat-hint" style="margin:0;">Rotation</label>
+                            <select id="rot_{{ agent.id }}" name="label_rotation">
+                                {% for value, label in agent.ROTATION_CHOICES %}
+                                    <option value="{{ value }}" {% if agent.label_rotation == value %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
                             <button type="submit" class="btn btn-secondary" style="padding:0.25rem 0.75rem;">Save</button>
                         </form>
                     {% endif %}

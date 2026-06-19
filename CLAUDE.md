@@ -192,6 +192,7 @@ Last session focused on:
 
 - [x] Label cutting between labels: the print agent now passes `-o CutMedia=EndOfPage` per job (only on queues that expose CutMedia — a no-op elsewhere), so cutting no longer depends on the queue default. `install.sh` still sets `CutMedia-default=EndOfPage` on the resolved printer as belt-and-suspenders. To apply on an already-running Pi: update the agent (`curl -fsSL <host>/checkin/agent/install.sh | sudo bash -s -- ...` or re-pull `anchorpoint_agent.py` + `systemctl restart`); the immediate manual equivalent is `sudo lpadmin -p <queue> -o CutMedia-default=EndOfPage`.
 - [ ] Import the real VBS signup CSV when it arrives (`import_signups`, dry-run → review → `--commit --group "VBS 2026"`).
+- [ ] **Printer-agnostic landscape labels (shipped):** labels now render as a canonical **76×51mm (3"×2") landscape** design (`label_generator.LABEL_WIDTH=898`). Each agent has a `label_rotation` (Print Agents page). Print as-is on a wide die-cut label; rotate 90°/270° to stand it up on a narrow continuous roll. **Config after deploy:** Zebra ZD500 (3"×2" die-cut) → width **76mm**, rotation **0°**; Brother QL-820NWB (62mm roll) → rotation **90°** + width **51mm** (true match, may need 51mm custom width accepted by the driver) **or** keep **62mm** width (prints ~62×93mm, proportional but larger). Until the Brother agent is reconfigured it will print the landscape art scaled into 62mm (smaller). Verify orientation on hardware — flip 90↔270 if it feeds upside-relative.
 
 ## TODO (Medium Priority)
 
