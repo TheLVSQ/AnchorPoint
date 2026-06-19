@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block content %}
+<a class="ghost-link" href="{% url 'households:family_detail' household.pk %}">&larr; Back to {{ household.name }}</a>
+
+<div class="page-header">
+    <span class="chip" style="background:#fee2e2;color:#991b1b;">Delete Family</span>
+    <h1>Delete {{ household.name }}?</h1>
+</div>
+
+{% if members %}
+    <div class="detail-card" style="border:2px solid #f59e0b; background:#fffbeb; margin-bottom:1.5rem;">
+        <h2>This family still has {{ members|length }} member{{ members|length|pluralize }}</h2>
+        <p class="stat-hint">
+            A family can't be deleted while anyone is in it. For each person below,
+            either <strong>move</strong> them to another family or <strong>delete</strong>
+            their profile. Once the family is empty you can delete it.
+        </p>
+
+        <div class="list-card__body" style="margin-top:1rem;">
+            {% for membership in members %}
+                <div class="list-item" style="align-items:flex-start;">
+                    <div>
+                        <strong>
+                            <a href="{% url 'people_detail' membership.person.pk %}">
+                                {{ membership.person.first_name }} {{ membership.person.last_name }}
+                            </a>
+                        </strong>
+                        {% if household.primary_adult_id == membership.person.pk %}
+                            <span class="chip" style="background:#fef3c7;color:#92400e;">★ Primary</span>
+                        {% endif %}
+                        <span class="muted-text">
+                            {% if membership.person.age is not None %}Age {{ membership.person.age }} · {% endif %}
+                            {{ membership.get_relationship_type_display }}
+                        </span>
+                    </div>
+                    <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
+                        {% if other_families %}
+                            <form method="POST" action="{% url 'households:family_delete' household.pk %}"
+                                  style="display:flex; gap:0.25rem; align-items:center;">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="move">
+                                <input type="hidden" name="member_pk" value="{{ membership.pk }}">
+                                <select name="target_household">
+                                    <option value="">Move to…</option>
+                                    {% for fam in other_families %}
+                                        <option value="{{ fam.pk }}">{{ fam.name }}</option>
+                                    {% endfor %}
+                                </select>
+                                <button type="submit" class="btn ghost">Move</button>
+                            </form>
+                        {% else %}
+                            <span class="muted-text">No other family to move to</span>
+                        {% endif %}
+                        <form method="POST" action="{% url 'households:family_delete' household.pk %}"
+                              onsubmit="return confirm('Permanently delete {{ membership.person.first_name|escapejs }} {{ membership.person.last_name|escapejs }}? This removes their profile, check-in history, group memberships and message logs. This cannot be undone.');">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="delete_person">
+                            <input type="hidden" name="member_pk" value="{{ membership.pk }}">
+                            <button type="submit" class="btn ghost danger">Delete person</button>
+                        </form>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="hero-actions">
+        <a href="{% url 'households:family_detail' household.pk %}" class="btn ghost">Cancel</a>
+        <button class="btn" disabled style="opacity:0.5; cursor:not-allowed;">Delete family (empty it first)</button>
+    </div>
+{% else %}
+    <div class="detail-card" style="margin-bottom:1.5rem;">
+        <p>This family has no members. Deleting it removes the family record only — no people are affected.</p>
+    </div>
+    <div class="hero-actions">
+        <a href="{% url 'households:family_detail' household.pk %}" class="btn ghost">Cancel</a>
+        <form method="POST" action="{% url 'households:family_delete' household.pk %}"
+              onsubmit="return confirm('Delete {{ household.name|escapejs }}? This cannot be undone.');">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="delete_family">
+            <button type="submit" class="btn danger">Delete family</button>
+        </form>
+    </div>
+{% endif %}
+{% endblock %}

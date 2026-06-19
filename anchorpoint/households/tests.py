@@ -165,3 +165,98 @@ class FamilyPagesTests(TestCase):
         )
         self.family.refresh_from_db()
         self.assertEqual(self.family.primary_adult, self.mom)
+
+
+class FamilyDeleteTests(TestCase):
+    def setUp(self):
+        self.user = _staff("delstaff")
+        self.client.force_login(self.user)
+        self.mom = Person.objects.create(first_name="Sue", last_name="Walker")
+        self.kid = Person.objects.create(first_name="Tess", last_name="Walker")
+        self.family = Household.objects.create(name="Walker Family", primary_adult=self.mom)
+        HouseholdMember.objects.create(
+            household=self.family, person=self.mom,
+            relationship_type=HouseholdMember.RelationshipType.ADULT,
+        )
+        HouseholdMember.objects.create(
+            household=self.family, person=self.kid,
+            relationship_type=HouseholdMember.RelationshipType.CHILD,
+        )
+        self.url = reverse("households:family_delete", args=[self.family.pk])
+
+    def test_detail_has_delete_link(self):
+        resp = self.client.get(reverse("households:family_detail", args=[self.family.pk]))
+        self.assertContains(resp, self.url)
+
+    def test_confirm_page_lists_members_and_blocks(self):
+        resp = self.client.get(self.url)
+        self.assertContains(resp, "still has 2 members")
+        self.assertContains(resp, "Tess")
+        self.assertContains(resp, "empty it first")  # final delete disabled
+
+    def test_delete_blocked_while_members_remain(self):
+        resp = self.client.post(self.url, {"action": "delete_family"})
+        self.assertEqual(resp.status_code, 302)
+        self.assertTrue(Household.objects.filter(pk=self.family.pk).exists())
+
+    def test_move_member_to_other_family(self):
+        other = Household.objects.create(name="Stone Family")
+        kid_membership = HouseholdMember.objects.get(household=self.family, person=self.kid)
+        self.client.post(self.url, {
+            "action": "move", "member_pk": str(kid_membership.pk),
+            "target_household": str(other.pk),
+        })
+        self.assertFalse(
+            HouseholdMember.objects.filter(household=self.family, person=self.kid).exists()
+        )
+        self.assertTrue(
+            HouseholdMember.objects.filter(household=other, person=self.kid).exists()
+        )
+        self.assertTrue(Person.objects.filter(pk=self.kid.pk).exists())  # person kept
+
+    def test_moving_primary_clears_primary(self):
+        other = Household.objects.create(name="Stone Family")
+        mom_membership = HouseholdMember.objects.get(household=self.family, person=self.mom)
+        self.client.post(self.url, {
+            "action": "move", "member_pk": str(mom_membership.pk),
+            "target_household": str(other.pk),
+        })
+        self.family.refresh_from_db()
+        self.assertIsNone(self.family.primary_adult)
+
+    def test_delete_person_removes_profile_and_membership(self):
+        kid_membership = HouseholdMember.objects.get(household=self.family, person=self.kid)
+        self.client.post(self.url, {
+            "action": "delete_person", "member_pk": str(kid_membership.pk),
+        })
+        self.assertFalse(Person.objects.filter(pk=self.kid.pk).exists())
+        self.assertFalse(HouseholdMember.objects.filter(pk=kid_membership.pk).exists())
+
+    def test_deleting_primary_person_clears_primary(self):
+        mom_membership = HouseholdMember.objects.get(household=self.family, person=self.mom)
+        self.client.post(self.url, {
+            "action": "delete_person", "member_pk": str(mom_membership.pk),
+        })
+        self.family.refresh_from_db()
+        self.assertIsNone(self.family.primary_adult)
+
+    def test_delete_succeeds_once_empty(self):
+        self.family.memberships.all().delete()
+        self.family.primary_adult = None
+        self.family.save()
+        resp = self.client.post(self.url, {"action": "delete_family"})
+        self.assertRedirects(resp, reverse("households:family_list"))
+        self.assertFalse(Household.objects.filter(pk=self.family.pk).exists())
+
+    def test_empty_confirm_page_offers_delete(self):
+        self.family.memberships.all().delete()
+        self.family.primary_adult = None
+        self.family.save()
+        resp = self.client.get(self.url)
+        self.assertContains(resp, "no members")
+        self.assertNotContains(resp, "empty it first")
+
+    def test_requires_staff(self):
+        self.client.logout()
+        resp = self.client.get(self.url)
+        self.assertRedirects(resp, "/login/", fetch_redirect_response=False)
