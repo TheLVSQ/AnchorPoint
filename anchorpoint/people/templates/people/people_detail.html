@@ -32,6 +32,53 @@
 
 <div class="detail-grid">
 
+    {% if show_emergency %}
+    <section class="detail-card detail-card--full" style="border:2px solid #f59e0b; background:#fffbeb;">
+        <h2 style="display:flex; align-items:center; gap:8px;">
+            <span class="chip chip--warning">Minor</span> Emergency Contact
+        </h2>
+        {% if guardians %}
+            <div style="display:flex; flex-wrap:wrap; gap:1rem;">
+                {% for g in guardians %}
+                    <div style="flex:1 1 240px; border:1px solid #fde68a; border-radius:10px; padding:0.75rem 1rem; background:#fff;">
+                        <strong><a href="{% url 'people_detail' g.person.pk %}">{{ g.person.first_name }} {{ g.person.last_name }}</a></strong>
+                        {% if g.is_primary %}<span class="chip">Primary</span>{% endif %}
+                        <p style="margin:0.4rem 0 0; font-size:1.2rem;">
+                            {% if g.person.phone %}
+                                <a href="tel:{{ g.person.phone }}">{{ g.person.phone }}</a>
+                            {% else %}
+                                <span class="muted-text">No phone on file</span>
+                            {% endif %}
+                        </p>
+                        {% if g.person.email %}<p class="stat-hint" style="margin:0.2rem 0 0;">{{ g.person.email }}</p>{% endif %}
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p class="empty-state">No guardian linked to this child's family yet. Add one under Family Connections below.</p>
+        {% endif %}
+
+        <ul class="detail-list" style="margin-top:1rem;">
+            <li>
+                <span>Allergies</span>
+                {% if person.allergies %}<strong style="color:#991b1b;">{{ person.allergies }}</strong>{% else %}None noted{% endif %}
+            </li>
+            {% if person.custody_flag or person.custody_notes %}
+            <li>
+                <span>Custody alert</span>
+                <div class="highlight-note">{{ person.custody_notes|default:"Custody flag set — see security notes." }}</div>
+            </li>
+            {% endif %}
+            {% if person.unauthorized_pickup %}
+            <li>
+                <span>Do NOT release to</span>
+                <div class="highlight-note">{{ person.unauthorized_pickup }}</div>
+            </li>
+            {% endif %}
+        </ul>
+    </section>
+    {% endif %}
+
     <section class="detail-card">
         <h2>Profile Snapshot</h2>
         <ul class="detail-list">
