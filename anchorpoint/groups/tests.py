@@ -51,6 +51,28 @@ class GroupDetailViewTests(TestCase):
         # staff_required redirects to the app's own login page.
         self.assertRedirects(response, "/login/", fetch_redirect_response=False)
 
+    def test_detail_shows_member_count(self):
+        for first in ("Ann", "Bob", "Cy"):
+            GroupMembership.objects.create(
+                group=self.group,
+                person=Person.objects.create(first_name=first, last_name="Vol"),
+            )
+        response = self.client.get(reverse("groups:detail", args=[self.group.pk]))
+        self.assertContains(response, "3 individuals in this group")
+
+    def test_member_count_is_singular_for_one(self):
+        GroupMembership.objects.create(
+            group=self.group,
+            person=Person.objects.create(first_name="Solo", last_name="Vol"),
+        )
+        response = self.client.get(reverse("groups:detail", args=[self.group.pk]))
+        self.assertContains(response, "1 individual in this group")
+
+    def test_search_bar_precedes_member_list(self):
+        # The Add Members search must render before the member list.
+        body = self.client.get(reverse("groups:detail", args=[self.group.pk])).content.decode()
+        self.assertLess(body.index("member-search-results"), body.index('id="member-list"'))
+
 
 class GroupEditViewTests(TestCase):
     def setUp(self):
