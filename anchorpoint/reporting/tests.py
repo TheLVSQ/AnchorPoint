@@ -56,11 +56,63 @@ class GroupRosterReportTests(TestCase):
         )
         GroupMembership.objects.create(group=self.group, person=self.kid)
 
+    def _enroll(self, first):
+        p = Person.objects.create(first_name=first, last_name="Reed")
+        HouseholdMember.objects.create(
+            household=self.fam, person=p,
+            relationship_type=HouseholdMember.RelationshipType.CHILD,
+        )
+        GroupMembership.objects.create(group=self.group, person=p)
+        return p
+
     def test_detail_preview_shows_kid(self):
         resp = self.client.get(reverse("reporting:detail", args=["group-roster"]),
                                {"group": self.group.pk})
         self.assertContains(resp, "Remy")
         self.assertContains(resp, "Bees")
+
+    def test_column_selection_limits_csv(self):
+        resp = self.client.get(
+            reverse("reporting:export", args=["group-roster"]),
+            {"group": self.group.pk, "cols": ["first_name", "last_name"]},
+        )
+        body = resp.content.decode()
+        header = body.splitlines()[0]
+        self.assertEqual(header.strip(), "First Name,Last Name")
+        self.assertNotIn("Guardian Phone", body)
+        self.assertNotIn("Photo OK", body)
+
+    def test_sort_orders_rows(self):
+        self._enroll("Aaron")  # should sort before "Remy"
+        asc = self.client.get(
+            reverse("reporting:export", args=["group-roster"]),
+            {"group": self.group.pk, "sort": "first_name", "dir": "asc"},
+        ).content.decode().splitlines()
+        data_first = [ln.split(",")[0] for ln in asc[1:]]
+        self.assertEqual(data_first, ["Aaron", "Remy"])
+
+        desc = self.client.get(
+            reverse("reporting:export", args=["group-roster"]),
+            {"group": self.group.pk, "sort": "first_name", "dir": "desc"},
+        ).content.decode().splitlines()
+        data_first = [ln.split(",")[0] for ln in desc[1:]]
+        self.assertEqual(data_first, ["Remy", "Aaron"])
+
+    def test_detail_export_link_bypasses_hx_boost(self):
+        resp = self.client.get(reverse("reporting:detail", args=["group-roster"]),
+                               {"group": self.group.pk})
+        # The download link must opt out of hx-boost or htmx renders the CSV inline.
+        self.assertContains(resp, 'hx-boost="false"')
+
+    def test_invalid_cols_falls_back_to_all(self):
+        # Unknown column keys are ignored and selection falls back to all,
+        # so the report still renders rather than coming back empty.
+        resp = self.client.get(
+            reverse("reporting:detail", args=["group-roster"]),
+            {"group": self.group.pk, "cols": ["bogus"]},
+        )
+        self.assertContains(resp, "Remy")
+        self.assertContains(resp, "Guardian Phone")
 
     def test_csv_export_has_headers_and_data(self):
         resp = self.client.get(reverse("reporting:export", args=["group-roster"]),
