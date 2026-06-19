@@ -314,6 +314,12 @@ class AgentDistributionTests(TestCase):
         self.assertTrue(resp.content.startswith(b"#!/usr/bin/env bash"))
         self.assertEqual(resp["Content-Type"], "text/x-shellscript")
 
+    def test_install_script_includes_wifi_fallback(self):
+        # The comitup WiFi fallback must stay baked into the installer.
+        body = self.client.get(reverse("checkin:agent_install_script")).content
+        self.assertIn(b"comitup", body)
+        self.assertIn(b"--no-wifi-fallback", body)
+
     def test_agent_script_served(self):
         resp = self.client.get(reverse("checkin:agent_script"))
         self.assertEqual(resp.status_code, 200)
