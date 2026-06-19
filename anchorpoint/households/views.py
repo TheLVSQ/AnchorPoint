@@ -86,6 +86,83 @@ def family_edit(request, pk):
     })
 
 
+@staff_required
+def family_delete(request, pk):
+    """Delete a family — but only once it has no members. Remaining people must
+    first be moved to another family or deleted outright (an orphaned family is
+    not a valid end state). The confirmation page offers both resolutions per
+    member; the final delete is blocked server-side while any member remains."""
+    household = get_object_or_404(
+        Household.objects.select_related("primary_adult"), pk=pk
+    )
+
+    if request.method == "POST":
+        action = request.POST.get("action", "")
+
+        if action == "move":
+            membership = get_object_or_404(
+                HouseholdMember, pk=request.POST.get("member_pk", ""), household=household
+            )
+            target_id = request.POST.get("target_household", "")
+            target = (
+                Household.objects.exclude(pk=household.pk).filter(pk=target_id).first()
+                if target_id.isdigit()
+                else None
+            )
+            if target is None:
+                messages.error(request, "Choose a family to move them to.")
+            else:
+                person = membership.person
+                HouseholdMember.objects.get_or_create(
+                    household=target,
+                    person=person,
+                    defaults={"relationship_type": membership.relationship_type},
+                )
+                membership.delete()
+                if household.primary_adult_id == person.pk:
+                    household.primary_adult = None
+                    household.save(update_fields=["primary_adult"])
+                messages.success(request, f"{person} moved to {target.name}.")
+            return redirect("households:family_delete", pk=pk)
+
+        if action == "delete_person":
+            membership = get_object_or_404(
+                HouseholdMember, pk=request.POST.get("member_pk", ""), household=household
+            )
+            person = membership.person
+            name = str(person)
+            # Person.delete() cascades to their household memberships, check-ins,
+            # group memberships and comms logs; primary_adult FK is SET_NULL.
+            person.delete()
+            messages.success(request, f"{name} was permanently deleted.")
+            return redirect("households:family_delete", pk=pk)
+
+        if action == "delete_family":
+            if household.memberships.exists():
+                messages.error(
+                    request,
+                    "This family still has members. Move or delete each person first.",
+                )
+                return redirect("households:family_delete", pk=pk)
+            name = household.name
+            household.delete()
+            messages.success(request, f"{name} was deleted.")
+            return redirect("households:family_list")
+
+        messages.error(request, "Unknown action.")
+        return redirect("households:family_delete", pk=pk)
+
+    members = household.memberships.select_related("person").order_by(
+        "relationship_type", "person__last_name", "person__first_name"
+    )
+    other_families = Household.objects.exclude(pk=household.pk).order_by("name")
+    return render(request, "households/family_confirm_delete.html", {
+        "household": household,
+        "members": members,
+        "other_families": other_families,
+    })
+
+
 def _limit_primary_adult_choices(form, household):
     """Primary adult must be one of the family's current members."""
     form.fields["primary_adult"].queryset = Person.objects.filter(
