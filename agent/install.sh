@@ -65,16 +65,17 @@ if [[ -n "$PRINTER_URI" ]]; then
     lpadmin -p "$QUEUE_NAME" -E -v "$PRINTER_URI" -m everywhere
     cupsenable "$QUEUE_NAME" || true
     cupsaccept "$QUEUE_NAME" || true
-    # Brother QL roll printers: cut after every label, or batches come out as
-    # one long uncut strip. Harmless no-op for printers without the option.
-    if lpoptions -p "$QUEUE_NAME" -l 2>/dev/null | grep -q "^CutMedia"; then
-        lpadmin -p "$QUEUE_NAME" -o CutMedia-default=EndOfPage
-        echo "    (enabled cut-after-each-label)"
-    fi
     PRINTER="$QUEUE_NAME"
 fi
 if [[ -z "$PRINTER" ]]; then
     echo "NOTE: no --printer-uri/--printer given; the agent will use the system default printer."
+elif lpoptions -p "$PRINTER" -l 2>/dev/null | grep -q "^CutMedia"; then
+    # Brother QL roll printers: cut after every label, or batches come out as
+    # one long uncut strip. Set the queue default for any printing path; the
+    # agent also passes this per job, so cutting works even on queues we didn't
+    # create here. Harmless no-op for printers without the option.
+    lpadmin -p "$PRINTER" -o CutMedia-default=EndOfPage
+    echo "==> Enabled cut-after-each-label on '$PRINTER'."
 fi
 
 echo "==> Pairing with $SERVER..."
