@@ -77,13 +77,13 @@ class LabelGeneratorTests(DjangoSimpleTestCase):
         # 2 child labels + 1 pickup tag
         self.assertEqual(len(images), 3)
 
-    def test_child_label_width_is_696(self):
+    def test_child_label_is_landscape_898x600(self):
         images = LabelGenerator.build_label_set([_make_checkin_mock()], _make_session())
-        self.assertEqual(images[0].width, 696)
+        self.assertEqual(images[0].size, (898, 600))  # 76mm x 51mm
 
-    def test_pickup_tag_width_is_696(self):
+    def test_pickup_tag_is_landscape_898x600(self):
         images = LabelGenerator.build_label_set([_make_checkin_mock()], _make_session())
-        self.assertEqual(images[-1].width, 696)
+        self.assertEqual(images[-1].size, (898, 600))
 
     def test_returns_pil_images(self):
         from PIL import Image

@@ -1,9 +1,12 @@
 """
 Label Generator
 
-Generates PIL images for thermal printer labels at 696px wide (62mm at 300 DPI),
-sized for a 62mm continuous roll (Brother QL): each label is ~62x51mm so names
-are readable at a glance from a lanyard or shirt sticker.
+Generates PIL images for thermal printer labels at 898px wide (76mm at 300 DPI)
+× 600px tall (~51mm) — a printer-agnostic 3"x2" landscape design. It prints
+full-width on a 76mm die-cut label (e.g. Zebra ZD500) and, rotated 90° by the
+print queue, fits within a 62mm continuous roll (Brother QL) as a 51x76mm
+portrait. Rotation is per-agent (PrintAgent.label_rotation); the artwork itself
+is always rendered landscape.
 
 - Child label: one per checked-in child
 - Pickup tag: one per check-in group, parent carries this
@@ -15,8 +18,8 @@ from PIL import Image, ImageDraw, ImageFont
 
 logger = logging.getLogger(__name__)
 
-LABEL_WIDTH = 696    # 62mm at 300 DPI — Brother QL required resolution
-CHILD_HEIGHT = 600   # ~51mm cut length
+LABEL_WIDTH = 898    # 76mm at 300 DPI — 3"x2" landscape, the canonical design
+CHILD_HEIGHT = 600   # ~51mm
 PICKUP_HEIGHT = 600
 MARGIN = 28
 

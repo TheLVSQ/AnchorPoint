@@ -24,10 +24,15 @@ def get_active_agent():
     )
 
 
-def _png_bytes(image) -> bytes:
+def _png_bytes(image, rotation=0) -> bytes:
+    # Artwork is rendered landscape (898px = 76mm wide); rotate per the agent's
+    # label_rotation so a narrow continuous roll (e.g. 62mm Brother) gets the
+    # design stood up, while a wide die-cut label (76mm Zebra) prints it as-is.
+    if rotation:
+        image = image.rotate(rotation, expand=True)
     buf = io.BytesIO()
-    # Labels are rendered at 300dpi (696px = 62mm). Tag the PNG so printers and
-    # drivers interpret the physical size correctly instead of assuming 72dpi.
+    # Tag the PNG at 300dpi so printers/drivers interpret the physical size
+    # correctly instead of assuming 72dpi.
     image.save(buf, format="PNG", dpi=(300, 300))
     return buf.getvalue()
 
@@ -59,7 +64,7 @@ def enqueue_checkin_labels(checkins, session) -> int:
         jobs.append(
             PrintJob(
                 agent=agent,
-                image_data=_png_bytes(image),
+                image_data=_png_bytes(image, agent.label_rotation),
                 kind=kind,
                 description=description,
             )
@@ -89,7 +94,7 @@ def enqueue_test_label(agent) -> PrintJob:
     )
     return PrintJob.objects.create(
         agent=agent,
-        image_data=_png_bytes(img),
+        image_data=_png_bytes(img, agent.label_rotation),
         kind="test",
         description="Test print",
     )

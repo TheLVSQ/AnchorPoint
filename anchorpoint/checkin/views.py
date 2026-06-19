@@ -1129,9 +1129,20 @@ def print_agent_update(request, agent_id):
     if not 20 <= width <= 120:
         messages.error(request, "Label width must be between 20 and 120 mm.")
         return redirect("checkin:print_agents")
+    try:
+        rotation = int(request.POST.get("label_rotation", agent.label_rotation))
+    except (TypeError, ValueError):
+        rotation = agent.label_rotation
+    if rotation not in dict(PrintAgent.ROTATION_CHOICES):
+        rotation = 0
     agent.label_width_mm = width
-    agent.save(update_fields=["label_width_mm"])
-    messages.success(request, f"'{agent.name}' set to {width}mm labels.")
+    agent.label_rotation = rotation
+    agent.save(update_fields=["label_width_mm", "label_rotation"])
+    messages.success(
+        request,
+        f"'{agent.name}' set to {width}mm labels"
+        + (f", rotated {rotation}°." if rotation else "."),
+    )
     return redirect("checkin:print_agents")
 
 

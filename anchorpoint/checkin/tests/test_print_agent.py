@@ -154,6 +154,45 @@ class EnqueueTests(TestCase):
             self.assertTrue(bytes(job.image_data).startswith(b"\x89PNG"))
 
 
+class LabelRotationTests(TestCase):
+    """Landscape artwork rotated per agent so one design fits both a wide
+    die-cut label (no rotation) and a narrow continuous roll (rotated 90°)."""
+
+    def setUp(self):
+        self.session = _session()
+        self.person = Person.objects.create(first_name="Kid", last_name="One")
+
+    def _checkin(self):
+        return CheckIn.objects.create(
+            session=self.session, person=self.person, security_code="ABCD"
+        )
+
+    def _child_png_size(self, agent):
+        from io import BytesIO
+        from PIL import Image
+        enqueue_checkin_labels([self._checkin()], self.session)
+        job = PrintJob.objects.filter(agent=agent, kind="child").first()
+        return Image.open(BytesIO(bytes(job.image_data))).size  # (w, h)
+
+    def test_canonical_artwork_is_landscape(self):
+        agent = PrintAgent.objects.create(name="Zebra")  # rotation defaults to 0
+        agent.complete_pairing()
+        w, h = self._child_png_size(agent)
+        self.assertEqual((w, h), (898, 600))  # 76mm x 51mm, wider than tall
+
+    def test_rotation_90_stands_the_label_up(self):
+        agent = PrintAgent.objects.create(name="Brother", label_rotation=90)
+        agent.complete_pairing()
+        w, h = self._child_png_size(agent)
+        self.assertEqual((w, h), (600, 898))  # rotated to portrait for the roll
+
+    def test_label_generator_renders_landscape(self):
+        from checkin.services.label_generator import LabelGenerator
+        images = LabelGenerator.build_label_set([self._checkin()], self.session)
+        for img in images:
+            self.assertEqual(img.size, (898, 600))
+
+
 class AgentManagementTests(TestCase):
     def setUp(self):
         user_model = get_user_model()
@@ -246,6 +285,24 @@ class LabelWidthTests(TestCase):
         self.assertEqual(resp.status_code, 302)
         self.agent.refresh_from_db()
         self.assertEqual(self.agent.label_width_mm, 62)
+
+    def test_staff_can_set_rotation(self):
+        self.client.login(username="w", password="pw")
+        self.client.post(
+            reverse("checkin:print_agent_update", args=[self.agent.id]),
+            {"label_width_mm": "62", "label_rotation": "90"},
+        )
+        self.agent.refresh_from_db()
+        self.assertEqual(self.agent.label_rotation, 90)
+
+    def test_invalid_rotation_falls_back_to_zero(self):
+        self.client.login(username="w", password="pw")
+        self.client.post(
+            reverse("checkin:print_agent_update", args=[self.agent.id]),
+            {"label_width_mm": "62", "label_rotation": "45"},
+        )
+        self.agent.refresh_from_db()
+        self.assertEqual(self.agent.label_rotation, 0)
 
 
 class AgentDistributionTests(TestCase):
