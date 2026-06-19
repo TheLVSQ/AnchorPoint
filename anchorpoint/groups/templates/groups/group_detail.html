@@ -41,9 +41,8 @@
 
 <section class="detail-card">
     <h2>Members</h2>
-    {% include "groups/group_member_list.html" %}
 
-    <div style="margin-top:1.5rem;">
+    <div style="margin-bottom:1.5rem;">
         <h3 style="margin-bottom:0.5rem;">Add Members</h3>
         <input type="text"
                name="q"
@@ -56,6 +55,8 @@
         <div id="member-search-results"
              style="max-width:400px;border:1px solid var(--gray-200);border-radius:6px;margin-top:0.25rem;"></div>
     </div>
+
+    {% include "groups/group_member_list.html" %}
 </section>
 
 {% endblock %}

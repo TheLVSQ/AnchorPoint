@@ -1,4 +1,7 @@
 <div id="member-list">
+    <p class="stat-hint" style="margin-bottom:0.75rem;">
+        {{ memberships|length }} individual{{ memberships|length|pluralize }} in this group
+    </p>
     <div class="list-card__body">
         {% for membership in memberships %}
             <div class="list-item">
@@ -20,7 +23,7 @@
                 </form>
             </div>
         {% empty %}
-            <p class="empty-state">No members yet. Search below to add people.</p>
+            <p class="empty-state">No members yet. Search above to add people.</p>
         {% endfor %}
     </div>
 </div>
