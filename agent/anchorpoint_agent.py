@@ -69,6 +69,37 @@ def cmd_pair(args):
 
 
 DEFAULT_MEDIA_WIDTH_MM = 62   # Brother QL continuous-roll width
+DEFAULT_CUT_MEDIA = "EndOfPage"   # cut after every label (Brother QL roll)
+
+# Cache per printer so we don't shell out to lpoptions for every job.
+_cut_support_cache = {}
+
+
+def _printer_supports_cut(printer):
+    """True if the CUPS queue exposes a CutMedia option.
+
+    Brother QL roll printers do (and default to NOT cutting between labels, so
+    batches come out as one strip unless we ask). Rollo/Zebra-style printers
+    typically don't expose it — we only pass the cut option where it's
+    understood, so it's a harmless no-op everywhere else. Cached per printer.
+    """
+    key = printer or ""
+    if key in _cut_support_cache:
+        return _cut_support_cache[key]
+    supported = False
+    try:
+        cmd = ["lpoptions"]
+        if printer:
+            cmd += ["-p", printer]
+        cmd += ["-l"]
+        out = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+        supported = any(
+            line.startswith("CutMedia") for line in out.stdout.splitlines()
+        )
+    except Exception:  # noqa: BLE001 - if we can't tell, don't pass the option
+        supported = False
+    _cut_support_cache[key] = supported
+    return supported
 
 
 def _png_size(png_bytes):
@@ -80,7 +111,8 @@ def _png_size(png_bytes):
     return width, height
 
 
-def _print_png(png_bytes, printer, width_mm=DEFAULT_MEDIA_WIDTH_MM):
+def _print_png(png_bytes, printer, width_mm=DEFAULT_MEDIA_WIDTH_MM,
+               cut_media=DEFAULT_CUT_MEDIA):
     """Send a PNG to the printer via CUPS `lp`. Returns (ok, error_message).
 
     Brother QL printers reject jobs whose page size doesn't fit the loaded
@@ -89,6 +121,12 @@ def _print_png(png_bytes, printer, width_mm=DEFAULT_MEDIA_WIDTH_MM):
     from the server per job (the agent's configured label width); the cut
     length follows the artwork's aspect ratio so wider media scales up
     proportionally.
+
+    Each label is its own job, so we ask the printer to cut at the end of the
+    page (cut_media, default "EndOfPage") — otherwise Brother QL roll queues
+    print a whole pre-print batch as one uncut strip. Only passed when the
+    queue actually exposes CutMedia, so it's a no-op on printers without it.
+    Set cut_media to "" / None to disable.
     """
     tmp_path = None
     try:
@@ -106,6 +144,8 @@ def _print_png(png_bytes, printer, width_mm=DEFAULT_MEDIA_WIDTH_MM):
                 "-o", f"media=Custom.{width_mm}x{height_mm}mm",
                 "-o", "print-scaling=fit",
             ]
+        if cut_media and _printer_supports_cut(printer):
+            cmd += ["-o", f"CutMedia={cut_media}"]
         cmd.append(tmp_path)
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
         if result.returncode != 0:
@@ -127,6 +167,9 @@ def cmd_run(args):
     printer = args.printer or config.get("printer")
     save_dir = args.save_dir
     once = args.once
+    # Cut after each label unless explicitly disabled (--no-cut, or
+    # "cut_media": "" in the config). Default "EndOfPage".
+    cut_media = "" if args.no_cut else config.get("cut_media", DEFAULT_CUT_MEDIA)
     headers = {"Authorization": f"Bearer {token}"}
 
     if save_dir:
@@ -172,7 +215,7 @@ def cmd_run(args):
                 ok, err = True, ""
             else:
                 width_mm = job.get("media_width_mm") or DEFAULT_MEDIA_WIDTH_MM
-                ok, err = _print_png(img.content, printer, width_mm)
+                ok, err = _print_png(img.content, printer, width_mm, cut_media)
 
             _ack(server, headers, job["id"], ok, err)
             label = job.get("description") or job.get("kind")
@@ -214,6 +257,8 @@ def main():
                        help="Debug: save label PNGs to this folder instead of printing")
     p_run.add_argument("--once", action="store_true",
                        help="Process pending jobs then exit (don't keep polling)")
+    p_run.add_argument("--no-cut", dest="no_cut", action="store_true",
+                       help="Don't ask the printer to cut between labels")
     p_run.set_defaults(func=cmd_run)
 
     args = parser.parse_args()

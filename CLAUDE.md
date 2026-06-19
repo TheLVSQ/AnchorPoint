@@ -190,7 +190,7 @@ Last session focused on:
 
 ## Pending operational follow-ups
 
-- [ ] Run on the print Pi: `sudo lpadmin -p ChurchLabel -o CutMedia-default=EndOfPage`, then a Test Print to verify label cutting (waiting on label stock).
+- [x] Label cutting between labels: the print agent now passes `-o CutMedia=EndOfPage` per job (only on queues that expose CutMedia — a no-op elsewhere), so cutting no longer depends on the queue default. `install.sh` still sets `CutMedia-default=EndOfPage` on the resolved printer as belt-and-suspenders. To apply on an already-running Pi: update the agent (`curl -fsSL <host>/checkin/agent/install.sh | sudo bash -s -- ...` or re-pull `anchorpoint_agent.py` + `systemctl restart`); the immediate manual equivalent is `sudo lpadmin -p <queue> -o CutMedia-default=EndOfPage`.
 - [ ] Import the real VBS signup CSV when it arrives (`import_signups`, dry-run → review → `--commit --group "VBS 2026"`).
 
 ## TODO (Medium Priority)
