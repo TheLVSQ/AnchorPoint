@@ -177,6 +177,39 @@ def people_detail(request, pk):
     )
     existing_household_form = HouseholdMembershipForm(person=person)
     new_household_form = HouseholdQuickCreateForm(initial={"primary_adult": person.pk})
+
+    # Emergency-contact card: for a minor (or an age-unknown child member of a
+    # family), surface their guardians' phone numbers up top. Guardians are the
+    # adults across this person's households, primary adult first, de-duped.
+    guardians = []
+    seen = set()
+    own_relationships = set()
+    for hh in households:
+        members = sorted(
+            hh.memberships.all(),
+            key=lambda m: m.person_id != hh.primary_adult_id,
+        )
+        for membership in members:
+            if membership.person_id == person.pk:
+                own_relationships.add(membership.relationship_type)
+                continue
+            if (
+                membership.relationship_type == HouseholdMember.RelationshipType.ADULT
+                and membership.person_id not in seen
+            ):
+                seen.add(membership.person_id)
+                guardians.append({
+                    "person": membership.person,
+                    "is_primary": membership.person_id == hh.primary_adult_id,
+                })
+    child_relationships = {
+        HouseholdMember.RelationshipType.CHILD,
+        HouseholdMember.RelationshipType.STUDENT,
+    }
+    show_emergency = person.is_minor is True or (
+        person.is_minor is None and bool(own_relationships & child_relationships)
+    )
+
     context = {
         "person": person,
         "households": households,
@@ -184,6 +217,8 @@ def people_detail(request, pk):
         "communication_logs": communication_logs,
         "existing_household_form": existing_household_form,
         "new_household_form": new_household_form,
+        "guardians": guardians,
+        "show_emergency": show_emergency,
     }
     return render(request, "people/people_detail.html", context)
 
