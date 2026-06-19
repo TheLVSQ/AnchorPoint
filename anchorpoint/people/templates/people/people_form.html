@@ -51,6 +51,11 @@
                     {% for error in form.status.errors %}<span class="error-text">{{ error }}</span>{% endfor %}
                 </div>
                 <div class="form-field">
+                    {{ form.gender.label_tag }}
+                    {{ form.gender }}
+                    {% for error in form.gender.errors %}<span class="error-text">{{ error }}</span>{% endfor %}
+                </div>
+                <div class="form-field">
                     {{ form.grade.label_tag }}
                     {{ form.grade }}
                     {% for error in form.grade.errors %}<span class="error-text">{{ error }}</span>{% endfor %}

@@ -253,6 +253,103 @@ class PhotoConsentTests(TestCase):
         self.assertContains(resp, "Granted")
 
 
+class GenderFieldTests(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(username="genderstaff", password="pw")
+        self.user.profile.role = UserProfile.Role.STAFF
+        self.user.profile.save()
+        self.client.force_login(self.user)
+
+    def test_add_form_renders_gender_field(self):
+        resp = self.client.get(reverse("people_add"))
+        self.assertContains(resp, 'name="gender"')
+
+    def test_edit_persists_gender(self):
+        person = Person.objects.create(first_name="Gen", last_name="Der")
+        data = {
+            "first_name": "Gen", "last_name": "Der", "email": "", "phone": "",
+            "birthdate": "", "gender": "female", "grade": "", "marital_status": "",
+            "address_line1": "", "address_line2": "", "city": "", "state": "",
+            "postal_code": "", "salvation_date": "", "baptism_date": "",
+            "first_visit_date": "", "allergies": "", "security_notes": "",
+            "status": "guest", "notes": "",
+        }
+        resp = self.client.post(reverse("people_edit", args=[person.pk]), data)
+        self.assertEqual(resp.status_code, 302)
+        person.refresh_from_db()
+        self.assertEqual(person.gender, "female")
+
+    def test_detail_shows_gender_display(self):
+        person = Person.objects.create(first_name="Gen", last_name="Der", gender="male")
+        resp = self.client.get(reverse("people_detail", args=[person.pk]))
+        self.assertContains(resp, "Male")
+
+
+class EmergencyContactTests(TestCase):
+    """A minor's detail page surfaces their guardians' phone numbers up top."""
+
+    def setUp(self):
+        from datetime import date, timedelta
+        from households.models import Household, HouseholdMember
+
+        self.user = get_user_model().objects.create_user(username="ecstaff", password="pw")
+        self.user.profile.role = UserProfile.Role.STAFF
+        self.user.profile.save()
+        self.client.force_login(self.user)
+
+        self.fam = Household.objects.create(name="Hart Family")
+        self.parent = Person.objects.create(
+            first_name="Dana", last_name="Hart", phone="+15405551234",
+            email="dana@example.com",
+        )
+        self.fam.primary_adult = self.parent
+        self.fam.save()
+        HouseholdMember.objects.create(
+            household=self.fam, person=self.parent,
+            relationship_type=HouseholdMember.RelationshipType.ADULT,
+        )
+        self.kid = Person.objects.create(
+            first_name="Quinn", last_name="Hart",
+            birthdate=date.today() - timedelta(days=365 * 8),
+        )
+        HouseholdMember.objects.create(
+            household=self.fam, person=self.kid,
+            relationship_type=HouseholdMember.RelationshipType.CHILD,
+        )
+
+    def test_minor_page_shows_guardian_phone_prominently(self):
+        resp = self.client.get(reverse("people_detail", args=[self.kid.pk]))
+        self.assertContains(resp, "Emergency Contact")
+        self.assertContains(resp, "Dana Hart")
+        self.assertContains(resp, "+15405551234")
+        self.assertContains(resp, "Primary")
+
+    def test_adult_page_has_no_emergency_card(self):
+        resp = self.client.get(reverse("people_detail", args=[self.parent.pk]))
+        self.assertNotContains(resp, "Emergency Contact")
+
+    def test_age_unknown_child_member_still_shows_card(self):
+        from households.models import HouseholdMember
+        kid = Person.objects.create(first_name="Sam", last_name="Hart")  # no birthdate
+        HouseholdMember.objects.create(
+            household=self.fam, person=kid,
+            relationship_type=HouseholdMember.RelationshipType.CHILD,
+        )
+        resp = self.client.get(reverse("people_detail", args=[kid.pk]))
+        self.assertContains(resp, "Emergency Contact")
+        self.assertContains(resp, "+15405551234")
+
+    def test_minor_without_guardian_shows_prompt(self):
+        from datetime import date, timedelta
+        lone = Person.objects.create(
+            first_name="Lone", last_name="Kid",
+            birthdate=date.today() - timedelta(days=365 * 7),
+        )
+        resp = self.client.get(reverse("people_detail", args=[lone.pk]))
+        self.assertContains(resp, "Emergency Contact")
+        self.assertContains(resp, "No guardian linked")
+
+
 class ImportPhotoConsentTests(TestCase):
     def _csv(self, consent_value):
         import csv, tempfile, os
