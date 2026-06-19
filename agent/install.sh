@@ -13,6 +13,9 @@
 #   3. Optionally creates a driverless CUPS queue for a network printer
 #   4. Pairs the agent with your AnchorPoint server
 #   5. Installs + starts a systemd service so it survives reboots
+#   6. Installs the comitup WiFi fallback (skip with --no-wifi-fallback): if the
+#      Pi can't reach a known network it broadcasts its own 'comitup-<id>' AP so
+#      you can join a new venue's WiFi from a phone. Needs a reboot to activate.
 
 set -euo pipefail
 
@@ -23,19 +26,23 @@ PRINTER=""
 QUEUE_NAME="ChurchLabel"
 INSTALL_DIR="/opt/anchorpoint-agent"
 SERVICE_NAME="anchorpoint-agent"
+WIFI_FALLBACK=1
+# Pinned comitup repo-source package (adds davesteele's apt repo + signing key).
+COMITUP_APT_SOURCE_URL="https://davesteele.github.io/comitup/deb/davesteele-comitup-apt-source_1.3_all.deb"
 
 usage() {
-    grep "^#" "$0" | head -16
+    grep "^#" "$0" | head -19
     exit 1
 }
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        --server)      SERVER="$2"; shift 2 ;;
-        --code)        CODE="$2"; shift 2 ;;
-        --printer-uri) PRINTER_URI="$2"; shift 2 ;;
-        --printer)     PRINTER="$2"; shift 2 ;;
-        --queue-name)  QUEUE_NAME="$2"; shift 2 ;;
+        --server)           SERVER="$2"; shift 2 ;;
+        --code)             CODE="$2"; shift 2 ;;
+        --printer-uri)      PRINTER_URI="$2"; shift 2 ;;
+        --printer)          PRINTER="$2"; shift 2 ;;
+        --queue-name)       QUEUE_NAME="$2"; shift 2 ;;
+        --no-wifi-fallback) WIFI_FALLBACK=0; shift ;;
         *) echo "Unknown option: $1"; usage ;;
     esac
 done
@@ -47,6 +54,36 @@ SERVER="${SERVER%/}"
 # The agent runs as the user who invoked sudo (falls back to 'pi').
 RUN_USER="${SUDO_USER:-pi}"
 id "$RUN_USER" >/dev/null 2>&1 || { echo "ERROR: user '$RUN_USER' not found. Re-run with sudo from a normal user."; exit 1; }
+
+# Install the comitup WiFi-bootstrap fallback. Non-fatal: any failure here just
+# skips the fallback — the print agent itself is already installed. Hands WiFi
+# to NetworkManager (comitup's backend) and needs a reboot to activate, which we
+# deliberately DON'T do here (a reboot mid curl|bash would sever the SSH run).
+setup_wifi_fallback() {
+    if dpkg -s comitup >/dev/null 2>&1; then
+        echo "==> WiFi fallback (comitup) already installed — skipping."
+        return 0
+    fi
+    echo "==> Installing WiFi fallback (comitup)..."
+    local deb="/tmp/davesteele-comitup-apt-source.deb"
+    if ! curl -fsSL "$COMITUP_APT_SOURCE_URL" -o "$deb"; then
+        echo "   WARNING: couldn't fetch the comitup repo package — skipping WiFi fallback."
+        return 0
+    fi
+    dpkg -i --force-all "$deb" >/dev/null 2>&1 || true
+    rm -f "$deb"
+    apt-get update -qq || true
+    if ! apt-get install -y -qq comitup >/dev/null 2>&1; then
+        echo "   WARNING: comitup install failed — skipping WiFi fallback (the print agent is fine)."
+        return 0
+    fi
+    # Let NetworkManager own the interfaces; mask the legacy/conflicting managers.
+    rm -f /etc/network/interfaces
+    systemctl mask dnsmasq.service systemd-resolved.service dhcpcd.service wpa-supplicant.service >/dev/null 2>&1 || true
+    systemctl enable NetworkManager.service >/dev/null 2>&1 || true
+    WIFI_FALLBACK_DONE=1
+    echo "    comitup installed. Reboot to activate it."
+}
 
 echo "==> Installing packages (CUPS + Python requests)..."
 export DEBIAN_FRONTEND=noninteractive
@@ -107,13 +144,23 @@ systemctl daemon-reload
 systemctl enable --now "$SERVICE_NAME"
 
 sleep 3
-if systemctl is-active --quiet "$SERVICE_NAME"; then
-    echo ""
-    echo "✓ Print agent installed and running."
-    echo "  Now open AnchorPoint > Check-In > Print Agents and click 'Test Print'."
-    echo "  Watch logs any time with:  journalctl -u $SERVICE_NAME -f"
-else
+if ! systemctl is-active --quiet "$SERVICE_NAME"; then
     echo ""
     echo "✗ The service did not start. Check:  journalctl -u $SERVICE_NAME -n 50"
     exit 1
+fi
+
+if [[ "$WIFI_FALLBACK" == "1" ]]; then
+    setup_wifi_fallback || true
+fi
+
+echo ""
+echo "✓ Print agent installed and running."
+echo "  Now open AnchorPoint > Check-In > Print Agents and click 'Test Print'."
+echo "  Watch logs any time with:  journalctl -u $SERVICE_NAME -f"
+if [[ "${WIFI_FALLBACK_DONE:-0}" == "1" ]]; then
+    echo ""
+    echo "  WiFi fallback (comitup) installed — REBOOT to activate:  sudo reboot"
+    echo "  At a venue with no known WiFi the Pi makes a 'comitup-<id>' hotspot;"
+    echo "  connect to it and open http://10.41.0.1 to add a network."
 fi
