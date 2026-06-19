@@ -8,22 +8,39 @@
     <p class="page-subtitle">{{ report.description }}</p>
 </div>
 
-{% if form %}
-    <section class="card" style="margin-bottom:1.5rem;">
-        <form method="get" style="display:flex; gap:0.75rem; align-items:flex-end; flex-wrap:wrap;">
-            {% for field in form %}
-                <div class="form-field">
-                    {{ field.label_tag }}
-                    {{ field }}
-                    {% for error in field.errors %}<span class="error-text">{{ error }}</span>{% endfor %}
-                </div>
-            {% endfor %}
-            <button type="submit" class="btn">Run</button>
-        </form>
-    </section>
-{% endif %}
+<section class="card" style="margin-bottom:1.5rem;">
+    <form method="get">
+        {% if form %}
+            <div style="display:flex; gap:0.75rem; align-items:flex-end; flex-wrap:wrap; margin-bottom:1rem;">
+                {% for field in form %}
+                    <div class="form-field">
+                        {{ field.label_tag }}
+                        {{ field }}
+                        {% for error in field.errors %}<span class="error-text">{{ error }}</span>{% endfor %}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
 
-{% if table_rows is not None %}
+        <fieldset style="border:1px solid #e5e7eb; border-radius:10px; padding:0.75rem 1rem; margin:0 0 1rem;">
+            <legend class="stat-hint" style="padding:0 0.4rem;">Columns to include</legend>
+            <div style="display:flex; flex-wrap:wrap; gap:0.5rem 1.25rem;">
+                {% for col in available_columns %}
+                    <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:0.9rem;">
+                        <input type="checkbox" name="cols" value="{{ col.key }}" {% if col.checked %}checked{% endif %}>
+                        {{ col.header }}
+                    </label>
+                {% endfor %}
+            </div>
+        </fieldset>
+
+        <button type="submit" class="btn">Run report</button>
+    </form>
+</section>
+
+{% if no_columns %}
+    <div class="highlight-note">Select at least one column to include.</div>
+{% elif table_rows is not None %}
     <section class="card">
         <div class="list-card__header">
             <div>
@@ -31,14 +48,22 @@
                 <h2>Results</h2>
                 {% if truncated %}<p class="stat-hint">Showing first {{ preview_limit }} — the CSV export includes all {{ row_count }}.</p>{% endif %}
             </div>
-            <a class="btn" href="{% url 'reporting:export' report.slug %}{% if export_qs %}?{{ export_qs }}{% endif %}">Export CSV</a>
+            {# hx-boost="false" so this is a real navigation and the browser downloads
+               the file (Content-Disposition) instead of htmx swapping the CSV into the page. #}
+            <a class="btn" hx-boost="false" download
+               href="{% url 'reporting:export' report.slug %}{% if export_qs %}?{{ export_qs }}{% endif %}">Export CSV</a>
         </div>
         <div style="overflow-x:auto;">
             <table class="data-table" style="width:100%; border-collapse:collapse;">
                 <thead>
                     <tr>
-                        {% for header in headers %}
-                            <th style="text-align:left; padding:8px 12px; border-bottom:2px solid #e5e7eb; white-space:nowrap;">{{ header }}</th>
+                        {% for h in headers %}
+                            <th style="text-align:left; padding:8px 12px; border-bottom:2px solid #e5e7eb; white-space:nowrap;">
+                                <a href="?{{ h.sort_qs }}" class="ghost-link" style="display:inline-flex; gap:4px; align-items:center;">
+                                    {{ h.header }}
+                                    {% if h.active %}<span>{% if h.dir == "desc" %}▼{% else %}▲{% endif %}</span>{% else %}<span style="opacity:0.3;">↕</span>{% endif %}
+                                </a>
+                            </th>
                         {% endfor %}
                     </tr>
                 </thead>
