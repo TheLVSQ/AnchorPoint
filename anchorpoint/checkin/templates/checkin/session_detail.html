@@ -17,7 +17,8 @@
 </div>
 
 <div class="hero-actions" style="margin-bottom: 2rem;">
-    <a href="{% url 'checkin:checkout_lookup' session.pk %}" class="btn">Checkout</a>
+    <a href="{% url 'checkin:checkin_manager' session.pk %}" class="btn">Check-in Manager</a>
+    <a href="{% url 'checkin:checkout_lookup' session.pk %}" class="btn ghost">Checkout</a>
     <a href="{% url 'checkin:session_preprint' session.pk %}" class="btn ghost">Pre-print Labels</a>
     <a href="{% url 'checkin:session_edit' session.pk %}" class="btn ghost">Edit Session</a>
     <a href="{% url 'checkin:kiosk_lookup' %}" class="btn ghost" target="_blank">Open Kiosk</a>
