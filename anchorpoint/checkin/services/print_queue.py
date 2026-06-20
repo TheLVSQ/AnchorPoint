@@ -7,7 +7,15 @@ the LAN polls for them and prints. The server never talks to the printer.
 import io
 import logging
 
-from .label_generator import LabelGenerator, _font
+from .label_generator import (
+    CHILD_HEIGHT,
+    FONT_BOLD,
+    FONT_REGULAR,
+    LABEL_WIDTH,
+    LabelGenerator,
+    _centered,
+    _font,
+)
 from ..models import PrintAgent, PrintJob
 
 logger = logging.getLogger(__name__)
@@ -75,23 +83,19 @@ def enqueue_checkin_labels(checkins, session) -> int:
 
 
 def enqueue_test_label(agent) -> PrintJob:
-    """Queue a simple test label (used by the Settings 'Test Print' button)."""
+    """Queue a test label (Settings 'Test Print' button).
+
+    Rendered at the same canonical landscape size as real labels so it rotates
+    and scales identically — otherwise its aspect ratio prints with a long blank
+    run on a rotated continuous roll.
+    """
     from PIL import Image, ImageDraw
 
-    img = Image.new("RGB", (696, 200), "white")
+    img = Image.new("RGB", (LABEL_WIDTH, CHILD_HEIGHT), "white")
     draw = ImageDraw.Draw(img)
-    draw.text(
-        (24, 50),
-        "AnchorPoint",
-        fill="black",
-        font=_font("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 44),
-    )
-    draw.text(
-        (24, 110),
-        "Print agent test ✓",
-        fill="#555555",
-        font=_font("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 28),
-    )
+    _centered(draw, "AnchorPoint", _font(FONT_BOLD, 110), 150)
+    _centered(draw, "Print agent test", _font(FONT_REGULAR, 60), 320, fill="#333333")
+    _centered(draw, "OK ✓", _font(FONT_BOLD, 90), 430)
     return PrintJob.objects.create(
         agent=agent,
         image_data=_png_bytes(img, agent.label_rotation),
