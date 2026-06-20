@@ -14,10 +14,12 @@ from households.forms import (
 )
 from households.models import Household, HouseholdMember
 from .models import Person
-from .forms import PersonForm, SignupImportForm
+from .forms import PersonForm, RockImportForm, SignupImportForm
 from .services.signup_import import SignupImportError, parse_csv, run_import
+from .services import rock_import as rock
 
 IMPORT_SESSION_KEY = "signup_import_pending"
+ROCK_IMPORT_SESSION_KEY = "rock_import_pending"
 
 
 @staff_required
@@ -152,6 +154,55 @@ def signup_import(request):
                 stage = "preview"
 
     return render(request, "people/import.html", {
+        "form": form,
+        "result": result,
+        "stage": stage,
+    })
+
+
+@staff_required
+def rock_import_view(request):
+    """Migrate a Rock RMS person-export CSV: upload → dry-run preview → commit.
+
+    Shares run_rock_import with the management command. The parsed CSV text is
+    stashed in the (DB-backed) session between preview and commit."""
+    form = RockImportForm()
+    result = None
+    stage = "upload"
+
+    if request.method == "POST" and request.POST.get("action") == "commit":
+        pending = request.session.get(ROCK_IMPORT_SESSION_KEY)
+        if not pending:
+            messages.error(request, "Your import session expired — please upload the file again.")
+            return redirect("rock_import")
+        try:
+            rows = rock.parse_csv(pending["text"])
+            result = rock.run_rock_import(rows, commit=True)
+        except rock.RockImportError as exc:
+            messages.error(request, str(exc))
+            return redirect("rock_import")
+        request.session.pop(ROCK_IMPORT_SESSION_KEY, None)
+        stage = "done"
+        messages.success(request, "Rock import complete.")
+
+    elif request.method == "POST":
+        form = RockImportForm(request.POST, request.FILES)
+        if form.is_valid():
+            raw = form.cleaned_data["csv_file"].read()
+            try:
+                text = raw.decode("utf-8-sig")
+            except UnicodeDecodeError:
+                text = raw.decode("latin-1")
+            try:
+                rows = rock.parse_csv(text)
+                result = rock.run_rock_import(rows, commit=False)
+            except rock.RockImportError as exc:
+                form.add_error("csv_file", str(exc))
+            else:
+                request.session[ROCK_IMPORT_SESSION_KEY] = {"text": text}
+                stage = "preview"
+
+    return render(request, "people/rock_import.html", {
         "form": form,
         "result": result,
         "stage": stage,

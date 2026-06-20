@@ -5,6 +5,7 @@ import io
 from datetime import date
 
 from django.test import TestCase
+from django.urls import reverse
 
 from households.models import Household, HouseholdMember
 from people.models import Person
@@ -143,6 +144,62 @@ class RockImportTests(TestCase):
         self.assertEqual(sam.allergies, "")
         self.assertFalse(sam.custody_flag)
 
+    def test_merges_existing_person_without_rock_id(self):
+        # An existing record (e.g. from the earlier VBS import) with no Rock id
+        # must be matched (by name+birthdate), not duplicated, and gets claimed.
+        existing = Person.objects.create(first_name="Leo", last_name="Ruiz",
+                                         birthdate=date(2017, 5, 1))
+        result = run_rock_import(parse_csv(_csv(FAMILY)), commit=True)
+        self.assertEqual(Person.objects.filter(first_name="Leo").count(), 1)
+        existing.refresh_from_db()
+        self.assertEqual(existing.external_id, "rock:11")
+        self.assertEqual(existing.allergies, "Peanuts")   # blank field filled
+        self.assertGreaterEqual(result.stats["people_matched"], 1)
+
     def test_bad_headers_raise(self):
         with self.assertRaises(RockImportError):
             parse_csv("name,age\nA,7\n")
+
+
+class RockImportPageTests(TestCase):
+    """The web upload → preview → commit flow (shares run_rock_import)."""
+
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+        from core.models import UserProfile
+        self.user = get_user_model().objects.create_user(username="rockstaff", password="pw")
+        self.user.profile.role = UserProfile.Role.STAFF
+        self.user.profile.save()
+        self.client.force_login(self.user)
+
+    def _upload(self, action="preview"):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        content = _csv(FAMILY).encode()
+        return self.client.post(
+            reverse("rock_import"),
+            {"action": action, "csv_file": SimpleUploadedFile("rock.csv", content, content_type="text/csv")},
+        )
+
+    def test_requires_staff(self):
+        self.client.logout()
+        self.assertEqual(self.client.get(reverse("rock_import")).status_code, 302)
+
+    def test_preview_writes_nothing(self):
+        resp = self._upload()
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "Preview")
+        self.assertEqual(Person.objects.count(), 0)
+
+    def test_confirm_commits(self):
+        self._upload()  # stashes in session
+        resp = self.client.post(reverse("rock_import"), {"action": "commit"})
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(Person.objects.count(), 2)
+        self.assertTrue(Household.objects.filter(external_id="rock-fam:100").exists())
+
+    def test_bad_headers_rejected(self):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        bad = SimpleUploadedFile("x.csv", b"name,age\nA,7\n", content_type="text/csv")
+        resp = self.client.post(reverse("rock_import"), {"action": "preview", "csv_file": bad})
+        self.assertContains(resp, "missing required columns")
+        self.assertFalse(Person.objects.exists())
