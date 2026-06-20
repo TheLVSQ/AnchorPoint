@@ -10,7 +10,11 @@
 # What it does (idempotent — safe to re-run):
 #   1. Installs CUPS + python3-requests
 #   2. Downloads the agent to /opt/anchorpoint-agent/
-#   3. Optionally creates a driverless CUPS queue for a network printer
+#   3. Optionally creates a CUPS queue for the printer:
+#        --printer-uri ipp://IP/ipp/print   network (driverless)
+#        --printer-usb [--driver zebra]      auto-detect a USB printer; --driver
+#                                            picks a matching PPD (else driverless)
+#        --printer EXISTING-QUEUE            use a queue you already made
 #   4. Pairs the agent with your AnchorPoint server
 #   5. Installs + starts a systemd service so it survives reboots
 #   6. Installs the comitup WiFi fallback (skip with --no-wifi-fallback): if the
@@ -23,6 +27,8 @@ SERVER=""
 CODE=""
 PRINTER_URI=""
 PRINTER=""
+PRINTER_USB=0
+DRIVER_MATCH=""
 QUEUE_NAME="ChurchLabel"
 INSTALL_DIR="/opt/anchorpoint-agent"
 SERVICE_NAME="anchorpoint-agent"
@@ -31,7 +37,7 @@ WIFI_FALLBACK=1
 COMITUP_APT_SOURCE_URL="https://davesteele.github.io/comitup/deb/davesteele-comitup-apt-source_1.3_all.deb"
 
 usage() {
-    grep "^#" "$0" | head -19
+    grep "^#" "$0" | head -23
     exit 1
 }
 
@@ -40,6 +46,8 @@ while [[ $# -gt 0 ]]; do
         --server)           SERVER="$2"; shift 2 ;;
         --code)             CODE="$2"; shift 2 ;;
         --printer-uri)      PRINTER_URI="$2"; shift 2 ;;
+        --printer-usb)      PRINTER_USB=1; shift ;;
+        --driver)           DRIVER_MATCH="$2"; shift 2 ;;
         --printer)          PRINTER="$2"; shift 2 ;;
         --queue-name)       QUEUE_NAME="$2"; shift 2 ;;
         --no-wifi-fallback) WIFI_FALLBACK=0; shift ;;
@@ -104,8 +112,34 @@ if [[ -n "$PRINTER_URI" ]]; then
     cupsaccept "$QUEUE_NAME" || true
     PRINTER="$QUEUE_NAME"
 fi
+if [[ "$PRINTER_USB" == "1" && -z "$PRINTER" ]]; then
+    echo "==> Detecting USB printer..."
+    USB_URI="$(lpinfo -v 2>/dev/null | awk '$2 ~ /^usb:/ {print $2; exit}')"
+    if [[ -z "$USB_URI" ]]; then
+        echo "ERROR: --printer-usb given but no USB printer found (plugged in and powered on?)."
+        echo "       Devices CUPS can see:"
+        lpinfo -v 2>/dev/null | sed 's/^/         /'
+        exit 1
+    fi
+    PPD_ARG="-m everywhere"
+    if [[ -n "$DRIVER_MATCH" ]]; then
+        PPD="$(lpinfo -m 2>/dev/null | grep -i -- "$DRIVER_MATCH" | head -1 | awk '{print $1}')"
+        if [[ -n "$PPD" ]]; then
+            PPD_ARG="-m $PPD"
+            echo "    Driver: $PPD"
+        else
+            echo "    WARNING: no installed driver matched '$DRIVER_MATCH'; using driverless."
+        fi
+    fi
+    echo "==> Creating USB CUPS queue '$QUEUE_NAME' -> $USB_URI..."
+    # shellcheck disable=SC2086
+    lpadmin -p "$QUEUE_NAME" -E -v "$USB_URI" $PPD_ARG
+    cupsenable "$QUEUE_NAME" || true
+    cupsaccept "$QUEUE_NAME" || true
+    PRINTER="$QUEUE_NAME"
+fi
 if [[ -z "$PRINTER" ]]; then
-    echo "NOTE: no --printer-uri/--printer given; the agent will use the system default printer."
+    echo "NOTE: no --printer-uri/--printer-usb/--printer given; the agent will use the system default printer."
 elif lpoptions -p "$PRINTER" -l 2>/dev/null | grep -q "^CutMedia"; then
     # Brother QL roll printers: cut after every label, or batches come out as
     # one long uncut strip. Set the queue default for any printing path; the

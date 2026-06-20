@@ -60,8 +60,9 @@
                             <pre style="background:#0d0d20;color:#e2e8f0;border-radius:8px;padding:0.75rem;
                                         margin-top:0.5rem;white-space:pre-wrap;word-break:break-all;
                                         font-size:0.8rem;user-select:all;">curl -fsSL {{ request.scheme }}://{{ request.get_host }}{% url 'checkin:agent_install_script' %} | sudo bash -s -- --server {{ request.scheme }}://{{ request.get_host }} --code {{ agent.pairing_code }} --printer-uri ipp://PRINTER-IP/ipp/print</pre>
-                            Already have a CUPS queue on that machine? Use
-                            <code>--printer &lt;queue-name&gt;</code> instead of <code>--printer-uri</code>.
+                            <strong>USB printer?</strong> Drop <code>--printer-uri …</code> and use
+                            <code>--printer-usb</code> (add <code>--driver zebra</code> for a Zebra). Already
+                            have a CUPS queue? Use <code>--printer &lt;queue-name&gt;</code>.
                         </div>
                     {% endif %}
 
