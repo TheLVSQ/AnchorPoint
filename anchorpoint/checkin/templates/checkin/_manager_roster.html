@@ -1,0 +1,71 @@
+{% load static %}
+<div id="manager-roster"
+     hx-get="{% url 'checkin:checkin_manager_roster' session.id %}"
+     hx-trigger="every 15s"
+     hx-swap="outerHTML">
+
+    <div class="stat-row" style="display:flex; gap:1rem; flex-wrap:wrap; margin-bottom:1rem;">
+        <div class="card" style="padding:0.75rem 1.25rem;">
+            <div style="font-size:2rem; font-weight:700;">{{ stats.checked_in }}</div>
+            <div class="stat-hint">Checked in now</div>
+        </div>
+        {% if stats.expected %}
+        <div class="card" style="padding:0.75rem 1.25rem;">
+            <div style="font-size:2rem; font-weight:700;">{{ stats.expected }}</div>
+            <div class="stat-hint">Expected (not arrived)</div>
+        </div>
+        {% endif %}
+        <div class="card" style="padding:0.75rem 1.25rem;">
+            <div style="font-size:2rem; font-weight:700;">{{ stats.checked_out }}</div>
+            <div class="stat-hint">Checked out</div>
+        </div>
+        <div class="card" style="padding:0.75rem 1.25rem; align-self:center;">
+            {% if agent and agent.is_online %}
+                <span class="chip" style="background:#dcfce7;color:#166534;">Printer online</span>
+            {% else %}
+                <span class="chip" style="background:#fee2e2;color:#991b1b;">Printer offline</span>
+            {% endif %}
+        </div>
+    </div>
+
+    {% regroup present by room as room_groups %}
+    {% for group in room_groups %}
+        <section class="detail-card" style="margin-bottom:1rem;">
+            <h2>{{ group.grouper.name|default:"Unassigned" }} <span class="chip">{{ group.list|length }}</span></h2>
+            <div style="overflow-x:auto;">
+                <table class="data-table" style="width:100%; border-collapse:collapse;">
+                    <thead>
+                        <tr>
+                            <th style="text-align:left; padding:6px 10px;">Name</th>
+                            <th style="text-align:left; padding:6px 10px;">Grade</th>
+                            <th style="text-align:left; padding:6px 10px;">Code</th>
+                            <th style="text-align:right; padding:6px 10px;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for c in group.list %}
+                            <tr>
+                                <td style="padding:6px 10px;">
+                                    <strong>{{ c.person.first_name }} {{ c.person.last_name }}</strong>
+                                    {% if c.person.allergies %}<span title="Allergy" style="color:#b91c1c;">✚</span>{% endif %}
+                                    {% if c.person.custody_flag or c.person.custody_notes %}<span title="Custody/security">🛡</span>{% endif %}
+                                </td>
+                                <td style="padding:6px 10px;">{{ c.person.get_grade_display|default:"—" }}</td>
+                                <td style="padding:6px 10px; font-family:ui-monospace,Menlo,monospace;">{{ c.security_code }}</td>
+                                <td style="padding:6px 10px; text-align:right; white-space:nowrap;">
+                                    <a class="btn ghost" href="{% url 'people_detail' c.person.pk %}">Detail</a>
+                                    <form method="post" action="{% url 'checkin:checkin_reprint' session.id c.id %}" style="display:inline;">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn ghost">Reprint</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    {% empty %}
+        <p class="empty-state">No one is checked in yet.</p>
+    {% endfor %}
+</div>

@@ -52,6 +52,17 @@ def is_checkin_admin(user):
     return profile.role in ("admin", "staff", "volunteer_admin")
 
 
+def is_checkin_team(user):
+    """Anyone on the check-in team — any authenticated role (incl. plain
+    volunteers). Used for the live check-in manager that volunteers staff."""
+    if not user.is_authenticated:
+        return False
+    if user.is_superuser:
+        return True
+    profile = _get_user_profile(user)
+    return profile.role in ("admin", "staff", "volunteer_admin", "volunteer") if profile else False
+
+
 def has_communications_access(user):
     """Check if user can manage SMS and phone blasts."""
     if not user.is_authenticated:
@@ -99,6 +110,21 @@ def staff_required(view_func):
             from django.shortcuts import redirect
             return redirect("login")
         if not is_staff_or_above(request.user):
+            return HttpResponseForbidden(
+                "You do not have permission to access this page."
+            )
+        return view_func(request, *args, **kwargs)
+    return wrapper
+
+
+def checkin_team_required(view_func):
+    """Decorator allowing any check-in team member (incl. plain volunteers)."""
+    @wraps(view_func)
+    def wrapper(request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            from django.shortcuts import redirect
+            return redirect("login")
+        if not is_checkin_team(request.user):
             return HttpResponseForbidden(
                 "You do not have permission to access this page."
             )

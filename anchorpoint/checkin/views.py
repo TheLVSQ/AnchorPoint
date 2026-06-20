@@ -12,7 +12,7 @@ from django.utils import timezone
 from django.db.models import Count, Q
 
 from core.models import OrganizationSettings
-from core.permissions import checkin_admin_required, staff_required
+from core.permissions import checkin_admin_required, checkin_team_required, staff_required
 from households.models import Household
 from people.models import Person, normalize_phone
 
@@ -1079,6 +1079,56 @@ def api_session_stats(request, session_id):
             for r in stats["rooms"]
         ],
     })
+
+
+def _present_checkins(session):
+    """Children currently present (arrived, not checked out), room then name."""
+    return (
+        session.checkins
+        .filter(arrived_at__isnull=False, checked_out_at__isnull=True)
+        .select_related("person", "room")
+        .order_by("room__sort_order", "person__last_name", "person__first_name")
+    )
+
+
+@checkin_team_required
+def checkin_manager(request, session_id):
+    """Live check-in manager for volunteers: who's currently checked in (name +
+    grade + room), with per-child reprint and a link to each child's detail."""
+    session = get_object_or_404(CheckInSession, pk=session_id)
+    return render(request, "checkin/manager.html", {
+        "session": session,
+        "stats": _session_stats(session),
+        "present": _present_checkins(session),
+        "agent": get_active_agent(),
+    })
+
+
+@checkin_team_required
+def checkin_manager_roster(request, session_id):
+    """HTMX partial: present-roster + counts, polled live by the manager page."""
+    session = get_object_or_404(CheckInSession, pk=session_id)
+    return render(request, "checkin/_manager_roster.html", {
+        "session": session,
+        "stats": _session_stats(session),
+        "present": _present_checkins(session),
+        "agent": get_active_agent(),
+    })
+
+
+@checkin_team_required
+@require_POST
+def checkin_reprint(request, session_id, checkin_id):
+    """Re-queue a single child's label (+ pickup tag) to the active print agent."""
+    session = get_object_or_404(CheckInSession, pk=session_id)
+    checkin = get_object_or_404(
+        session.checkins.select_related("person"), pk=checkin_id
+    )
+    if enqueue_checkin_labels([checkin], session):
+        messages.success(request, f"Reprinting {checkin.person.first_name}'s label.")
+    else:
+        messages.error(request, "No print agent is online — can't reprint right now.")
+    return redirect("checkin:checkin_manager", session_id=session_id)
 
 
 # =============================================================================

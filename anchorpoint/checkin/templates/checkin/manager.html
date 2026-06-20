@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block content %}
+<a class="ghost-link" href="{% url 'checkin:session_detail' session.id %}">&larr; Session</a>
+
+<div class="page-header">
+    <span class="chip">Check-in Manager</span>
+    <h1>{{ session.name }}</h1>
+    <p class="page-subtitle">{{ session.date|date:"l, M j" }} · live roster</p>
+</div>
+
+{% include "checkin/_manager_roster.html" %}
+{% endblock %}
