@@ -394,6 +394,11 @@ class AgentDistributionTests(TestCase):
         self.assertIn(b"comitup", body)
         self.assertIn(b"--no-wifi-fallback", body)
 
+    def test_install_script_supports_usb_printer(self):
+        # One-liner USB setup must stay in the installer (no manual pre-steps).
+        body = self.client.get(reverse("checkin:agent_install_script")).content
+        self.assertIn(b"--printer-usb", body)
+
     def test_agent_script_served(self):
         resp = self.client.get(reverse("checkin:agent_script"))
         self.assertEqual(resp.status_code, 200)
