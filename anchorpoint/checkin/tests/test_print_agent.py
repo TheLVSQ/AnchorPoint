@@ -1,5 +1,5 @@
 import json
-from datetime import time, timedelta
+from datetime import date, time, timedelta
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
@@ -9,6 +9,7 @@ from django.utils import timezone
 from checkin.models import CheckIn, CheckInSession, PrintAgent, PrintJob, hash_agent_token
 from checkin.services.print_queue import enqueue_checkin_labels
 from core.models import UserProfile
+from households.models import Household, HouseholdMember
 from people.models import Person
 
 
@@ -208,6 +209,62 @@ class LabelRotationTests(TestCase):
         agent.save()
         job = enqueue_test_label(agent)
         self.assertEqual(Image.open(BytesIO(bytes(job.image_data))).size, (600, 898))
+
+
+class LabelContentTests(TestCase):
+    """New minor-label fields: grade, allergy text, custody shield, VBS phone."""
+
+    def setUp(self):
+        self.session = _session()
+        self.fam = Household.objects.create(name="Ruiz Family")
+        self.mom = Person.objects.create(
+            first_name="Maria", last_name="Ruiz", phone="+15405550123"
+        )
+        self.fam.primary_adult = self.mom
+        self.fam.save()
+        HouseholdMember.objects.create(
+            household=self.fam, person=self.mom,
+            relationship_type=HouseholdMember.RelationshipType.ADULT,
+        )
+        self.kid = Person.objects.create(
+            first_name="Leo", last_name="Ruiz", grade="3", allergies="Peanuts",
+            custody_flag=True, custody_notes="Court order on file",
+            birthdate=date(2017, 5, 1),
+        )
+        HouseholdMember.objects.create(
+            household=self.fam, person=self.kid,
+            relationship_type=HouseholdMember.RelationshipType.CHILD,
+        )
+
+    def _checkin(self):
+        return CheckIn.objects.create(
+            session=self.session, person=self.kid, security_code="ABCD"
+        )
+
+    def test_session_emergency_phone_defaults_false(self):
+        self.assertFalse(self.session.print_emergency_phone)
+
+    def test_guardian_phone_resolves_primary_adult(self):
+        from checkin.services.label_generator import _guardian_phone
+        self.assertEqual(_guardian_phone(self.kid), "+15405550123")
+
+    def test_guardian_phone_empty_without_household(self):
+        from checkin.services.label_generator import _guardian_phone
+        loner = Person.objects.create(first_name="No", last_name="Family")
+        self.assertEqual(_guardian_phone(loner), "")
+
+    def test_full_minor_label_renders_landscape(self):
+        # Grade + allergy text + custody shield all present — renders cleanly.
+        from checkin.services.label_generator import _make_child_label
+        img = _make_child_label(self._checkin(), self.session)
+        self.assertEqual(img.size, (898, 600))
+
+    def test_vbs_label_with_phone_renders(self):
+        from checkin.services.label_generator import _make_child_label
+        self.session.print_emergency_phone = True
+        self.session.save()
+        img = _make_child_label(self._checkin(), self.session)
+        self.assertEqual(img.size, (898, 600))
 
 
 class AgentManagementTests(TestCase):

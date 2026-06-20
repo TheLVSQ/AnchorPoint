@@ -17,22 +17,29 @@ from checkin.services.print_service import PrintService
 from people.models import Person
 
 
-def _make_session():
+def _make_session(print_emergency_phone=False):
     """Lightweight mock session for label generation."""
     session = MagicMock(spec=CheckInSession)
     session.name = "Sunday Service"
     session.date = date(2026, 5, 11)
+    session.print_emergency_phone = print_emergency_phone
     return session
 
 
 def _make_checkin_mock(first_name="Alice", last_name="Smith", room_name="Room 1",
-                       security_code="ABCD", allergies="", custody_flag=False):
+                       security_code="ABCD", allergies="", custody_flag=False,
+                       grade="", grade_display="", custody_notes="", is_minor=False):
     """Mock CheckIn with all fields needed for label generation."""
     person = MagicMock(spec=Person)
     person.first_name = first_name
     person.last_name = last_name
     person.allergies = allergies
     person.custody_flag = custody_flag
+    person.custody_notes = custody_notes
+    person.grade = grade
+    person.is_minor = is_minor
+    person.get_grade_display = lambda: grade_display
+    person.households = MagicMock()
 
     room = MagicMock(spec=Room)
     room.name = room_name
