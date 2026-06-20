@@ -5,6 +5,7 @@ urlpatterns = [
     path("", views.people_list, name="people_list"),
     path("add/", views.people_add, name="people_add"),
     path("import/", views.signup_import, name="signup_import"),
+    path("import/rock/", views.rock_import_view, name="rock_import"),
     path("lookup/", views.people_lookup, name="people_lookup"),
     path("search/", views.people_search, name="people_search"),
     path("<int:pk>/", views.people_detail, name="people_detail"),

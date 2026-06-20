@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block content %}
+<a class="ghost-link" href="{% url 'people_list' %}">&larr; Back to People</a>
+
+<section class="card">
+    <div class="page-header">
+        <span class="chip">Migrate</span>
+        <h1>Import from Rock RMS</h1>
+        <p class="page-subtitle">
+            Export all people from Rock and save it as a <strong>CSV</strong>, then upload it here.
+            People are grouped into families by Rock's family id, and existing records are
+            matched (by Rock id, email, name+birthdate, or phone) so nothing is duplicated.
+            You'll see a preview before anything is saved.
+        </p>
+    </div>
+
+    {% if stage == "upload" or stage == "preview" %}
+        <form method="post" enctype="multipart/form-data" class="person-form">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="preview">
+            <div class="form-grid">
+                <div class="form-field form-field--full">
+                    {{ form.csv_file.label_tag }}
+                    {{ form.csv_file }}
+                    <span class="section-hint">{{ form.csv_file.help_text }}</span>
+                    {% for error in form.csv_file.errors %}<span class="error-text">{{ error }}</span>{% endfor %}
+                </div>
+            </div>
+            <div class="form-actions" style="margin-top:1rem;">
+                <button type="submit" class="btn">Preview import</button>
+            </div>
+        </form>
+    {% endif %}
+</section>
+
+{% if result %}
+    <section class="card" style="margin-top:1.5rem;">
+        <div class="list-card__header">
+            <div>
+                {% if stage == "done" %}
+                    <span class="chip" style="background:#dcfce7;color:#166534;">Imported</span>
+                    <h2>Migration complete</h2>
+                {% else %}
+                    <span class="chip" style="background:#fef9c3;color:#854d0e;">Preview — nothing saved yet</span>
+                    <h2>Review before importing</h2>
+                {% endif %}
+            </div>
+        </div>
+
+        <ul class="detail-list" style="margin:0.5rem 0 1rem;">
+            <li><span>Families</span><strong>{{ result.families_count }}</strong></li>
+            <li><span>People created / matched</span><strong>{{ result.stats.people_created }} / {{ result.stats.people_matched }}</strong></li>
+            <li><span>Adults / children</span><strong>{{ result.stats.adults }} / {{ result.stats.children }}</strong></li>
+            <li><span>Rows skipped</span><strong>{{ result.stats.skipped }}</strong></li>
+        </ul>
+        <p class="stat-hint">
+            "Matched" = merged into an existing person (no duplicate). "Skipped" = Rock system
+            records, deceased, or stock accounts.
+        </p>
+
+        {% if stage == "preview" %}
+            <form method="post" style="margin-top:1.25rem;display:flex;gap:0.75rem;align-items:center;">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="commit">
+                <button type="submit" class="btn">Confirm &amp; import — {{ result.stats.people_created }} new, {{ result.stats.people_matched }} merged</button>
+                <a href="{% url 'rock_import' %}" class="btn ghost">Cancel</a>
+            </form>
+        {% elif stage == "done" %}
+            <div style="margin-top:1.25rem;display:flex;gap:0.75rem;">
+                <a href="{% url 'people_list' %}" class="btn">View People</a>
+                <a href="{% url 'households:family_list' %}" class="btn ghost">View Families</a>
+            </div>
+        {% endif %}
+    </section>
+{% endif %}
+{% endblock %}
