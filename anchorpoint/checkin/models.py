@@ -249,6 +249,9 @@ class CheckInSession(models.Model):
 
     rooms = models.ManyToManyField(Room, blank=True)
     is_active = models.BooleanField(default=True)
+    # Print the guardian's emergency phone on minors' labels. Off for standard
+    # check-in; turn on for VBS/off-site events where staff may need to call.
+    print_emergency_phone = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     created_by = models.ForeignKey(
         User, on_delete=models.SET_NULL, null=True, blank=True,

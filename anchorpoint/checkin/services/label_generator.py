@@ -41,6 +41,11 @@ def _text_width(draw: ImageDraw.ImageDraw, text: str, font) -> float:
     return bbox[2] - bbox[0]
 
 
+def _text_height(draw, text, font) -> float:
+    bbox = draw.textbbox((0, 0), text, font=font)
+    return bbox[3] - bbox[1]
+
+
 def _fit_font(draw, text, font_path, max_width, start_size, min_size=24):
     """Largest font (from start_size down) that renders text within max_width."""
     size = start_size
@@ -55,55 +60,113 @@ def _centered(draw, text, font, y, fill="black"):
     draw.text(((LABEL_WIDTH - _text_width(draw, text, font)) / 2, y), text, fill=fill, font=font)
 
 
+def _centered_line(draw, text, font, y, fill="black", gap=10):
+    """Draw centered text at y; return the y just below it (for stacking)."""
+    _centered(draw, text, font, y, fill=fill)
+    return y + _text_height(draw, text, font) + gap
+
+
+def _draw_custody_shield(draw, cx, top, height=64, fill="#b91c1c"):
+    """Draw a filled shield with a white '!' at center-x `cx`. Drawn (not a
+    glyph) so it renders on any printer regardless of available fonts."""
+    w = height * 0.82
+    half = w / 2
+    pts = [
+        (cx - half, top),
+        (cx + half, top),
+        (cx + half, top + height * 0.52),
+        (cx, top + height),
+        (cx - half, top + height * 0.52),
+    ]
+    draw.polygon(pts, fill=fill)
+    bang = _font(FONT_BOLD, int(height * 0.6))
+    bw = _text_width(draw, "!", bang)
+    bh = _text_height(draw, "!", bang)
+    draw.text((cx - bw / 2, top + height * 0.16 - 2), "!", fill="white", font=bang)
+
+
+def _guardian_phone(person):
+    """Best guardian phone for a (minor) person: the household's primary adult,
+    else the first adult member. Empty string if none."""
+    household = person.households.all().first()
+    if household is None:
+        return ""
+    adult = household.primary_adult
+    if adult is None or not adult.phone:
+        membership = (
+            household.memberships.filter(relationship_type="adult")
+            .select_related("person")
+            .first()
+        )
+        adult = membership.person if membership else None
+    return (adult.phone if adult and adult.phone else "") or ""
+
+
 def _make_child_label(checkin, session) -> Image.Image:
-    """Generate a child check-in label as a PIL Image."""
+    """Generate a child check-in label as a PIL Image.
+
+    Layout (top→bottom, vertically stacked): first name (large), last name +
+    grade, room with allergy(✚)/custody(shield) marks, allergy text, security
+    code (large), optional emergency phone (VBS), session/date footer.
+    """
+    person = checkin.person
     img = Image.new("RGB", (LABEL_WIDTH, CHILD_HEIGHT), "white")
     draw = ImageDraw.Draw(img)
     usable = LABEL_WIDTH - 2 * MARGIN
 
-    first = checkin.person.first_name
-    last = checkin.person.last_name
+    first = person.first_name
+    last = person.last_name
     room = checkin.room.name if checkin.room else "—"
     code = checkin.security_code
+    has_allergy = bool(person.allergies)
+    has_custody = bool(person.custody_flag or person.custody_notes)
 
-    # First name — huge, centred; last name beneath it
-    first_font = _fit_font(draw, first, FONT_BOLD, usable, 150, min_size=60)
-    _centered(draw, first, first_font, 16)
-    last_font = _fit_font(draw, last, FONT_BOLD, usable, 64, min_size=32)
-    _centered(draw, last, last_font, 186, fill="black")
+    # First name — large; last name (+ grade) beneath.
+    y = _centered_line(draw, first, _fit_font(draw, first, FONT_BOLD, usable, 124, 56), 8, gap=16)
+    grade = person.get_grade_display() if person.grade else ""
+    last_line = f"{last}   ·   {grade}" if grade else last
+    y = _centered_line(draw, last_line, _fit_font(draw, last_line, FONT_BOLD, usable, 64, 30), y, gap=10)
 
-    # Room — centred, with alert icons (allergy ✚ / custody ⚠) beside it
-    icons = []
-    if checkin.person.allergies:
-        icons.append("✚")
-    if checkin.person.custody_flag:
-        icons.append("⚠")
-    room_line = room if not icons else f"{room}   {'  '.join(icons)}"
-    room_font = _fit_font(draw, room_line, FONT_BOLD, usable, 54, min_size=30)
-    room_w = _text_width(draw, room_line, room_font)
-    room_x = (LABEL_WIDTH - room_w) / 2
-    if icons:
-        # Draw the room text and the red icon block separately so icons pop.
-        plain = room + "   "
-        draw.text((room_x, 280), plain, fill="black", font=room_font)
-        draw.text(
-            (room_x + _text_width(draw, plain, room_font), 280),
-            "  ".join(icons),
-            fill="#dc2626",
-            font=room_font,
-        )
+    # Room, with allergy ✚ and a drawn custody shield beside it.
+    room_font = _fit_font(draw, room, FONT_BOLD, usable - 160, 56, 30)
+    allergy_mark = "✚  " if has_allergy else ""
+    room_text = f"{allergy_mark}{room}"
+    rh = _text_height(draw, room_text, room_font)
+    shield_w = (rh * 0.82 + 18) if has_custody else 0
+    block_w = _text_width(draw, room_text, room_font) + shield_w
+    x = (LABEL_WIDTH - block_w) / 2
+    if allergy_mark:
+        aw = _text_width(draw, allergy_mark, room_font)
+        draw.text((x, y), allergy_mark, fill="#b91c1c", font=room_font)
+        draw.text((x + aw, y), room, fill="black", font=room_font)
     else:
-        draw.text((room_x, 280), room_line, fill="black", font=room_font)
+        draw.text((x, y), room, fill="black", font=room_font)
+    if has_custody:
+        _draw_custody_shield(draw, x + block_w - shield_w / 2 - 4, y, height=rh)
+    y += rh + 12
 
-    # Security code — big, centred near the bottom
-    code_font = _fit_font(draw, code, FONT_BOLD, usable, 120, min_size=60)
-    _centered(draw, code, code_font, 380)
+    # Allergy detail text (red) — only when present.
+    if has_allergy:
+        allergy_text = f"Allergy: {person.allergies}".replace("\n", " ")
+        y = _centered_line(
+            draw, allergy_text, _fit_font(draw, allergy_text, FONT_BOLD, usable, 40, 22),
+            y, fill="#b91c1c", gap=12,
+        )
 
-    # Session / date — bottom strip
+    # Security code — large.
+    y = _centered_line(draw, code, _fit_font(draw, code, FONT_BOLD, usable, 104, 56), y + 4, gap=8)
+
+    # Emergency phone — minors only, and only when the session opts in (VBS).
+    if session and getattr(session, "print_emergency_phone", False) and person.is_minor:
+        phone = _guardian_phone(person)
+        if phone:
+            _centered_line(draw, f"Call: {phone}", _fit_font(draw, phone, FONT_BOLD, usable, 40, 24), y, gap=6)
+
+    # Session / date — fixed footer.
     if session:
         session_line = f"{session.name}  ·  {session.date.strftime('%b')} {session.date.day}"
-        meta_font = _fit_font(draw, session_line, FONT_BOLD, usable, 36, min_size=24)
-        _centered(draw, session_line, meta_font, CHILD_HEIGHT - 72, fill="black")
+        meta_font = _fit_font(draw, session_line, FONT_BOLD, usable, 34, 22)
+        _centered(draw, session_line, meta_font, CHILD_HEIGHT - 44, fill="black")
 
     return img
 
