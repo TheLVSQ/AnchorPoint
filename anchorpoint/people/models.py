@@ -45,6 +45,9 @@ class Person(models.Model):
 
     first_name = models.CharField(max_length=150)
     last_name = models.CharField(max_length=150)
+    # Stable id from an external system (e.g. "rock:1234") so migrations/imports
+    # are idempotent — match on this before falling back to name/email/phone.
+    external_id = models.CharField(max_length=100, blank=True, default="", db_index=True)
     email = models.EmailField(blank=True, null=True, db_index=True)
     phone = models.CharField(max_length=50, blank=True, null=True)
     normalized_phone = models.CharField(

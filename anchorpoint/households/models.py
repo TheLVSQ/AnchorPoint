@@ -3,6 +3,10 @@ from django.db import models
 
 class Household(models.Model):
     name = models.CharField(max_length=255)
+    # Stable id from an external system (e.g. "rock-fam:1234") so imports group
+    # by the real family, not by name — two unrelated "Smith Family" records must
+    # not merge. Blank for households created in-app.
+    external_id = models.CharField(max_length=100, blank=True, default="", db_index=True)
     phone = models.CharField(max_length=50, blank=True, null=True)
     address_line1 = models.CharField(max_length=255, blank=True, null=True)
     address_line2 = models.CharField(max_length=255, blank=True, null=True)
