@@ -192,6 +192,23 @@ class LabelRotationTests(TestCase):
         for img in images:
             self.assertEqual(img.size, (898, 600))
 
+    def test_test_label_matches_canonical_size(self):
+        # The Test Print label must use the same size/aspect as real labels so
+        # it rotates without a long blank run on a continuous roll.
+        from io import BytesIO
+        from PIL import Image
+        from checkin.services.print_queue import enqueue_test_label
+
+        agent = PrintAgent.objects.create(name="Zebra")
+        agent.complete_pairing()
+        job = enqueue_test_label(agent)
+        self.assertEqual(Image.open(BytesIO(bytes(job.image_data))).size, (898, 600))
+
+        agent.label_rotation = 90
+        agent.save()
+        job = enqueue_test_label(agent)
+        self.assertEqual(Image.open(BytesIO(bytes(job.image_data))).size, (600, 898))
+
 
 class AgentManagementTests(TestCase):
     def setUp(self):
