@@ -65,6 +65,13 @@
             </label>
         </div>
 
+        <div class="checkbox-field" style="margin-top: 0.5rem;">
+            <label>
+                {{ form.print_emergency_phone }}
+                Print the guardian's emergency phone on minors' labels (use for VBS / off-site events)
+            </label>
+        </div>
+
         <div class="hero-actions">
             <button type="submit" class="btn">Save Session</button>
             <a href="{% url 'checkin:session_list' %}" class="btn ghost">Cancel</a>

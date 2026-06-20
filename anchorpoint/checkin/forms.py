@@ -151,6 +151,7 @@ class CheckInSessionForm(forms.ModelForm):
         fields = [
             "configuration", "name", "date", "checkin_opens", "checkin_closes",
             "event_starts", "event_ends", "rooms", "is_active",
+            "print_emergency_phone",
         ]
         widgets = {
             "date": forms.DateInput(attrs={"type": "date"}),
