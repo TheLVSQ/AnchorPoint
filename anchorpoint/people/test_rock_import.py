@@ -1,0 +1,148 @@
+"""Tests for the Rock RMS person-export importer."""
+
+import csv
+import io
+from datetime import date
+
+from django.test import TestCase
+
+from households.models import Household, HouseholdMember
+from people.models import Person
+from people.services.rock_import import RockImportError, parse_csv, run_rock_import
+
+COLS = [
+    "Email", "Gender", "Last Name", "Nick Name", "Name", "Birth Date",
+    "Connection Status", "Id", "Is Deceased", "Marital Status",
+    "Primary Family Id", "Family Name", "Record Status", "Record Type",
+    "Allergy", "Legal Notes", "Home Address - Street 1", "Home Address - City",
+    "Home Address - State", "Home Address - Postal Code", "Age", "Phone Number",
+    "Custody Notes", "Emergency Contact: Name", "Emergency Contact: Phone Number",
+    "Emergency Contact: Relationship",
+]
+
+
+def _csv(rows):
+    buf = io.StringIO()
+    w = csv.DictWriter(buf, fieldnames=COLS)
+    w.writeheader()
+    for r in rows:
+        w.writerow({c: r.get(c, "") for c in COLS})
+    return buf.getvalue()
+
+
+def _person(**kw):
+    base = {"Record Type": "Person", "Is Deceased": "False"}
+    base.update(kw)
+    return base
+
+
+# A family: one adult (no DOB), one child (DOB → minor).
+FAMILY = [
+    _person(Id="10", **{
+        "Nick Name": "Maria", "Last Name": "Ruiz", "Gender": "Female",
+        "Marital Status": "Married", "Connection Status": "Member",
+        "Primary Family Id": "100", "Family Name": "Ruiz Family",
+        "Phone Number": "540-555-0101", "Email": "maria@example.com",
+        "Home Address - Street 1": "12 Oak St", "Home Address - City": "Bolivar",
+        "Home Address - State": "MO", "Home Address - Postal Code": "65613",
+    }),
+    _person(Id="11", **{
+        "Nick Name": "Leo", "Last Name": "Ruiz", "Gender": "Male",
+        "Birth Date": "5/1/2017", "Connection Status": "Attendee",
+        "Primary Family Id": "100", "Family Name": "Ruiz Family",
+        "Allergy": "Peanuts", "Custody Notes": "Court order on file",
+        "Emergency Contact: Name": "Aunt Jo", "Emergency Contact: Relationship": "Aunt",
+        "Emergency Contact: Phone Number": "540-555-0199",
+    }),
+]
+
+
+class RockImportTests(TestCase):
+    def test_dry_run_writes_nothing(self):
+        result = run_rock_import(parse_csv(_csv(FAMILY)), commit=False)
+        self.assertEqual(Person.objects.count(), 0)
+        self.assertEqual(Household.objects.count(), 0)
+        self.assertFalse(result.committed)
+        self.assertEqual(result.stats["people_created"], 2)
+
+    def test_commit_creates_family(self):
+        run_rock_import(parse_csv(_csv(FAMILY)), commit=True)
+        self.assertEqual(Person.objects.count(), 2)
+        hh = Household.objects.get(external_id="rock-fam:100")
+        self.assertEqual(hh.name, "Ruiz Family")
+        self.assertEqual(hh.address_line1, "12 Oak St")
+        self.assertEqual(hh.city, "Bolivar")
+        # Adult is primary; child linked as child.
+        self.assertEqual(hh.primary_adult.first_name, "Maria")
+        leo = Person.objects.get(first_name="Leo")
+        self.assertEqual(
+            HouseholdMember.objects.get(household=hh, person=leo).relationship_type,
+            HouseholdMember.RelationshipType.CHILD,
+        )
+
+    def test_field_mapping(self):
+        run_rock_import(parse_csv(_csv(FAMILY)), commit=True)
+        maria = Person.objects.get(first_name="Maria")
+        self.assertEqual(maria.gender, "female")
+        self.assertEqual(maria.marital_status, "married")
+        self.assertEqual(maria.status, "member")
+        self.assertEqual(maria.external_id, "rock:10")
+        leo = Person.objects.get(first_name="Leo")
+        self.assertEqual(leo.birthdate, date(2017, 5, 1))
+        self.assertEqual(leo.allergies, "Peanuts")
+        self.assertTrue(leo.custody_flag)
+        self.assertEqual(leo.custody_notes, "Court order on file")
+        self.assertEqual(leo.status, "regular_attendee")  # "Attendee"
+        self.assertIn("Aunt Jo", leo.notes)  # emergency contact captured
+
+    def test_idempotent_rerun(self):
+        run_rock_import(parse_csv(_csv(FAMILY)), commit=True)
+        result = run_rock_import(parse_csv(_csv(FAMILY)), commit=True)
+        self.assertEqual(Person.objects.count(), 2)       # no duplicates
+        self.assertEqual(Household.objects.count(), 1)
+        self.assertEqual(result.stats["people_matched"], 2)
+        self.assertEqual(result.stats["people_created"], 0)
+
+    def test_same_surname_different_family_stays_separate(self):
+        rows = [
+            _person(Id="1", **{"Nick Name": "Al", "Last Name": "Smith",
+                               "Primary Family Id": "1", "Family Name": "Smith Family"}),
+            _person(Id="2", **{"Nick Name": "Bo", "Last Name": "Smith",
+                               "Primary Family Id": "2", "Family Name": "Smith Family"}),
+        ]
+        run_rock_import(parse_csv(_csv(rows)), commit=True)
+        self.assertEqual(Household.objects.count(), 2)  # NOT merged by name
+
+    def test_skips_restuser_deceased_and_stock(self):
+        rows = [
+            _person(Id="1", **{"Nick Name": "Real", "Last Name": "Person",
+                               "Primary Family Id": "1", "Family Name": "Person Family"}),
+            _person(Id="2", Record_Type="RestUser", **{
+                "Record Type": "RestUser", "Nick Name": "Rest", "Last Name": "User",
+                "Primary Family Id": "2", "Family Name": "x"}),
+            _person(Id="3", **{"Nick Name": "Dead", "Last Name": "Guy",
+                               "Is Deceased": "True", "Primary Family Id": "3",
+                               "Family Name": "y"}),
+            _person(Id="4", **{"Nick Name": "Admin", "Last Name": "Admin",
+                               "Primary Family Id": "4", "Family Name": "Admin"}),
+        ]
+        result = run_rock_import(parse_csv(_csv(rows)), commit=True)
+        self.assertEqual(Person.objects.count(), 1)
+        self.assertEqual(result.stats["skipped"], 3)
+
+    def test_negative_allergy_custody_treated_as_empty(self):
+        # Rock often stores "No"/"None" answers; they must not become a false
+        # allergy ✚ or custody shield on the label.
+        rows = [_person(Id="9", **{
+            "Nick Name": "Sam", "Last Name": "Quirk", "Birth Date": "5/1/2017",
+            "Primary Family Id": "9", "Family Name": "Quirk Family",
+            "Allergy": "No", "Custody Notes": "None",
+        })]
+        run_rock_import(parse_csv(_csv(rows)), commit=True)
+        sam = Person.objects.get(first_name="Sam")
+        self.assertEqual(sam.allergies, "")
+        self.assertFalse(sam.custody_flag)
+
+    def test_bad_headers_raise(self):
+        with self.assertRaises(RockImportError):
+            parse_csv("name,age\nA,7\n")
