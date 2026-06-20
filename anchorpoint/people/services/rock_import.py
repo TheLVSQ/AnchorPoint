@@ -16,6 +16,7 @@ from datetime import datetime
 
 from django.db import transaction
 
+from events.services import _match_person
 from households.models import Household, HouseholdMember
 from people.models import Person
 
@@ -54,6 +55,7 @@ class RockImportError(Exception):
 class RockResult:
     log: list = field(default_factory=list)
     stats: dict = field(default_factory=dict)
+    families_count: int = 0
     committed: bool = False
 
     def add(self, level, text):
@@ -171,6 +173,7 @@ def run_rock_import(rows, *, commit=False) -> RockResult:
             continue
         fam_id = _g(row, "Primary Family Id") or f"solo-{_g(row, 'Id') or i}"
         families.setdefault(fam_id, []).append(row)
+    result.families_count = len(families)
 
     with transaction.atomic():
         for fam_id, members in families.items():
@@ -197,7 +200,16 @@ def run_rock_import(rows, *, commit=False) -> RockResult:
                 ext = f"rock:{_g(row, 'Id')}" if _g(row, "Id") else ""
                 fields = _person_fields(row)
                 person = Person.objects.filter(external_id=ext).first() if ext else None
+                if person is None:
+                    # Merge with an existing record (beta / earlier VBS import)
+                    # by email, name+birthdate, or phone — don't duplicate it.
+                    person = _match_person(
+                        fields["email"], fields["first_name"],
+                        fields["last_name"], fields["birthdate"], fields["phone"],
+                    )
                 if person:
+                    if ext and not person.external_id:
+                        person.external_id = ext  # claim it for future re-runs
                     for f in _FILLABLE:
                         if fields.get(f) and not getattr(person, f):
                             setattr(person, f, fields[f])

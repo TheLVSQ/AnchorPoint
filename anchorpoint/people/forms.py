@@ -41,6 +41,23 @@ class SignupImportForm(forms.Form):
         return f
 
 
+class RockImportForm(forms.Form):
+    csv_file = forms.FileField(
+        label="Rock person export (CSV)",
+        help_text="Export all people from Rock RMS and save as CSV. One row per person.",
+    )
+
+    MAX_BYTES = 15 * 1024 * 1024  # 15 MB — a full directory export
+
+    def clean_csv_file(self):
+        f = self.cleaned_data["csv_file"]
+        if f.size > self.MAX_BYTES:
+            raise forms.ValidationError("File too large (max 15 MB).")
+        if not f.name.lower().endswith(".csv"):
+            raise forms.ValidationError("Please upload a .csv file (re-save the xlsx as CSV).")
+        return f
+
+
 class PersonForm(forms.ModelForm):
     state = forms.ChoiceField(
         choices=US_STATES,
