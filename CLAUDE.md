@@ -188,6 +188,18 @@ Last session focused on:
 - [x] **People page tile view** — shipped: age + family link + status chip, prefetched; pagination already existed.
   Original note: **People page tile view** — show age, family/household name, status chip alongside name/email. At scale: server-side pagination (~50/page) + the existing search as primary navigation; consider an A-Z last-name filter rail.
 
+## Go-live checklist (queued 2026-06-21 from pre-flight; do before Sunday/VBS)
+
+- [ ] **Set a kiosk PIN** — Settings → Organization (`kiosk_pin` is currently empty, so the kiosk isn't PIN-gated).
+- [ ] **Zebra agent width 62 → 76mm** on the Print Agents page (it's a 3"×2" printer; rotation 180° is correct).
+- [ ] **Reboot the Zebra Pi** (`bcc-printmon-2`) to activate the comitup WiFi fallback.
+- [ ] **Brother end-to-end test** — one real check-in → confirm the landscape label prints right-side-up, cuts, and routes to the right room (Brother hasn't printed a real label since the landscape redesign).
+- [ ] **Bind the Sunday kiosk to the Brother** (kiosk lookup → "Change" printer) so the Zebra being online doesn't matter.
+- [ ] **DB backup before Sunday** — `pg_dump` or a DigitalOcean snapshot (890 people just migrated).
+- [ ] **VBS: set the config's auto-enroll group** to "VBS 2026 Participants" (Check-In config screen) so walk-ins land on the next day's pre-print.
+- [ ] **VBS: add a check-in window per upcoming VBS date** — the existing window is dated 2026-06-18 (past), so sessions won't auto-create.
+- [x] **Sunday "BKids" config eligibility** corrected to age 0–12 / grade Pre-K–6 (was 0–3, which blocked nearly everyone) — fixed on prod 2026-06-21.
+
 ## Pending operational follow-ups
 
 - [x] Label cutting between labels: the print agent now passes `-o CutMedia=EndOfPage` per job (only on queues that expose CutMedia — a no-op elsewhere), so cutting no longer depends on the queue default. `install.sh` still sets `CutMedia-default=EndOfPage` on the resolved printer as belt-and-suspenders. To apply on an already-running Pi: update the agent (`curl -fsSL <host>/checkin/agent/install.sh | sudo bash -s -- ...` or re-pull `anchorpoint_agent.py` + `systemctl restart`); the immediate manual equivalent is `sudo lpadmin -p <queue> -o CutMedia-default=EndOfPage`.
