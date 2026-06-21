@@ -7,12 +7,36 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
+    /* Light kiosk theme. Colours are CSS variables so child templates can use
+       var(--x) inline and stay consistent. */
+    :root {
+      --bg: #eef2f7;
+      --card: #ffffff;
+      --inset: #f1f5f9;
+      --border: #cbd5e1;
+      --border-soft: #e2e8f0;
+      --text: #0f172a;
+      --muted: #475569;
+      --faint: #64748b;
+      --primary: #4f46e5;
+      --primary-text: #ffffff;
+      --secondary-bg: #e2e8f0;
+      --secondary-text: #334155;
+      --chip-bg: #eef2f7;
+      --chip-border: #cbd5e1;
+      --success: #15803d;
+      --success-bg: #f0fdf4;
+      --success-border: #86efac;
+      --danger: #dc2626;
+      --danger-bg: #fef2f2;
+      --danger-border: #fca5a5;
+    }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html, body {
       height: 100%;
       font-family: 'Outfit', system-ui, sans-serif;
-      background: #0a0a14;
-      color: #fff;
+      background: var(--bg);
+      color: var(--text);
       -webkit-font-smoothing: antialiased;
     }
     .kiosk-wrap {
@@ -27,64 +51,66 @@
       margin-bottom: 32px;
     }
     .kiosk-header .org-name {
-      font-size: 22px;
+      font-size: 24px;
       font-weight: 700;
-      color: #e8e8f0;
+      color: var(--text);
       letter-spacing: 0.02em;
     }
     .kiosk-card {
-      background: #16162a;
-      border: 1px solid #2a2a44;
+      background: var(--card);
+      border: 1px solid var(--border);
       border-radius: 16px;
       padding: 32px;
       width: 100%;
       max-width: 600px;
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08), 0 8px 24px rgba(15, 23, 42, 0.04);
     }
     .kiosk-title {
-      font-size: 26px;
+      font-size: 34px;
       font-weight: 800;
       margin-bottom: 8px;
     }
     .kiosk-subtitle {
-      font-size: 15px;
-      color: #8888aa;
+      font-size: 18px;
+      color: var(--faint);
       margin-bottom: 24px;
     }
     .btn {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      padding: 14px 28px;
+      padding: 16px 30px;
       border-radius: 10px;
-      font-size: 16px;
+      font-size: 19px;
       font-weight: 600;
       font-family: 'Outfit', sans-serif;
       cursor: pointer;
       border: none;
       text-decoration: none;
+      color: var(--text);
       transition: opacity 0.15s;
     }
     .btn:active { opacity: 0.85; }
-    .btn-primary { background: #4f46e5; color: #fff; }
-    .btn-secondary { background: #2a2a44; color: #ccc; }
-    .btn-lg { padding: 18px 36px; font-size: 18px; width: 100%; }
+    .btn-primary { background: var(--primary); color: var(--primary-text); }
+    .btn-secondary { background: var(--secondary-bg); color: var(--secondary-text); }
+    .btn-lg { padding: 20px 38px; font-size: 22px; width: 100%; }
     .form-group { margin-bottom: 18px; }
-    .form-group label { display: block; font-size: 14px; color: #8888aa; margin-bottom: 6px; }
+    .form-group label { display: block; font-size: 16px; color: var(--muted); margin-bottom: 6px; }
     .form-group input, .form-group textarea, .form-group select {
       width: 100%;
-      background: #0d0d20;
-      border: 1px solid #2a2a44;
+      background: var(--inset);
+      border: 1px solid var(--border);
       border-radius: 8px;
-      color: #fff;
-      font-size: 18px;
+      color: var(--text);
+      font-size: 22px;
       font-family: 'Outfit', sans-serif;
       padding: 12px 16px;
       outline: none;
     }
-    .form-group input:focus, .form-group textarea:focus {
-      border-color: #4f46e5;
+    .form-group input:focus, .form-group textarea:focus, .form-group select:focus {
+      border-color: var(--primary);
     }
-    .error-text { color: #f87171; font-size: 14px; margin-top: 4px; }
+    .error-text { color: var(--danger); font-size: 16px; margin-top: 4px; }
 
     /* Hide print labels on screen */
     .print-labels { display: none; }
@@ -128,5 +154,31 @@
     {% block content %}{% endblock %}
   </div>
   {% block extra_js %}{% endblock %}
+  <script>
+    /* Keep the kiosk display awake during a service. Best-effort: needs the
+       Screen Wake Lock API (iPadOS 16.4+ / Chrome / Edge) served over HTTPS,
+       and re-acquires the lock after the screen briefly sleeps or the tab is
+       backgrounded. If the device doesn't support it, set the iPad's
+       Settings > Display & Brightness > Auto-Lock to "Never" (or use Guided
+       Access) so the kiosk never dims. */
+    (function () {
+      let wakeLock = null;
+      async function requestWakeLock() {
+        try {
+          if ('wakeLock' in navigator) {
+            wakeLock = await navigator.wakeLock.request('screen');
+          }
+        } catch (err) {
+          /* denied or unsupported — ignore and rely on device auto-lock setting */
+        }
+      }
+      document.addEventListener('visibilitychange', function () {
+        if (wakeLock !== null && document.visibilityState === 'visible') {
+          requestWakeLock();
+        }
+      });
+      requestWakeLock();
+    })();
+  </script>
 </body>
 </html>

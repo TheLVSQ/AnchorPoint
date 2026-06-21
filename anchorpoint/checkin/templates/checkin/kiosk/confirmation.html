@@ -2,7 +2,7 @@
 {% block title %}Checked In!{% endblock %}
 {% block content %}
 <div class="kiosk-card" style="text-align:center;">
-  <div style="font-size:48px;margin-bottom:16px;">✓</div>
+  <div style="font-size:48px;margin-bottom:16px;color:var(--success);">✓</div>
   <div class="kiosk-title">You're All Set!</div>
   {% if printer_ok %}
   <div class="kiosk-subtitle">Labels are printing now</div>
@@ -10,18 +10,18 @@
   <div class="kiosk-subtitle">Print your labels below</div>
   {% endif %}
 
-  <div style="margin:28px 0;padding:24px;background:#0d0d20;border-radius:12px;">
-    <div style="font-size:12px;color:#666;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px;">
+  <div style="margin:28px 0;padding:24px;background:var(--inset);border-radius:12px;">
+    <div style="font-size:13px;color:var(--faint);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px;">
       Security Code
     </div>
-    <div style="font-size:48px;font-weight:800;letter-spacing:12px;font-variant-numeric:tabular-nums;">
+    <div style="font-size:52px;font-weight:800;letter-spacing:12px;font-variant-numeric:tabular-nums;">
       {{ security_code }}
     </div>
-    <div style="font-size:13px;color:#666;margin-top:8px;">
+    <div style="font-size:14px;color:var(--faint);margin-top:8px;">
       Present the pickup tag at pickup
     </div>
     {% if sms_sent %}
-      <div style="font-size:14px;color:#4ade80;margin-top:10px;">
+      <div style="font-size:15px;color:var(--success);margin-top:10px;">
         ✓ Code texted to your phone
       </div>
     {% endif %}
@@ -29,9 +29,9 @@
 
   {% for checkin in checkins %}
     <div style="display:flex;justify-content:space-between;padding:10px 0;
-                border-bottom:1px solid #1e1e34;font-size:16px;">
+                border-bottom:1px solid var(--border-soft);font-size:17px;">
       <span style="font-weight:600;">{{ checkin.person.first_name }} {{ checkin.person.last_name }}</span>
-      <span style="color:#888;">{{ checkin.room.name }}</span>
+      <span style="color:var(--faint);">{{ checkin.room.name }}</span>
     </div>
   {% endfor %}
 
@@ -40,10 +40,11 @@
       Check In Another Family
     </a>
   </div>
-  <div id="countdown" style="margin-top:16px;font-size:13px;color:#555;"></div>
+  <div id="countdown" style="margin-top:16px;font-size:14px;color:var(--faint);"></div>
 </div>
 
-<!-- Hidden print area — shown only during print -->
+<!-- Hidden print area — shown only during print. Colours here render on white
+     label stock, so they intentionally stay as fixed greys (not theme vars). -->
 <div class="print-labels">
   {% for checkin in checkins %}
     <div class="label">

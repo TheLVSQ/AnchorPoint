@@ -3,12 +3,12 @@
 {% block content %}
 <div class="kiosk-card">
   {% if session.configuration.welcome_message %}
-    <div style="font-size:16px;color:#a0a0c0;margin-bottom:16px;">
+    <div style="font-size:17px;color:var(--muted);margin-bottom:16px;">
       {{ session.configuration.welcome_message }}
     </div>
   {% endif %}
   {% if session.configuration.location_name %}
-    <div style="font-size:13px;color:#666;margin-bottom:20px;text-transform:uppercase;letter-spacing:0.08em;">
+    <div style="font-size:14px;color:var(--faint);margin-bottom:20px;text-transform:uppercase;letter-spacing:0.08em;">
       {{ session.configuration.location_name }}
     </div>
   {% endif %}
@@ -16,10 +16,10 @@
     <div class="form-group">
       <input type="text" name="query" value="{{ query }}" minlength="2"
              placeholder="Enter last name or phone number"
-             style="font-size:20px;" autofocus autocomplete="off">
+             style="font-size:24px;" autofocus autocomplete="off">
     </div>
     {% if form.query.errors %}
-      <div style="color:#ff9592;font-size:14px;margin-bottom:12px;">
+      <div style="color:var(--danger);font-size:15px;margin-bottom:12px;">
         Please enter at least 2 characters.
       </div>
     {% endif %}
@@ -29,20 +29,20 @@
   {% if query and not form.query.errors %}
     <div style="margin-top:28px;">
       {% if households %}
-        <div style="font-size:13px;color:#666;margin-bottom:12px;text-transform:uppercase;letter-spacing:0.06em;">
+        <div style="font-size:14px;color:var(--faint);margin-bottom:12px;text-transform:uppercase;letter-spacing:0.06em;">
           Results
         </div>
         {% if results_capped %}
-          <div style="color:#888;font-size:13px;margin-bottom:10px;">
+          <div style="color:var(--faint);font-size:14px;margin-bottom:10px;">
             Showing the first 25 matches — add more letters to narrow your search.
           </div>
         {% endif %}
         {% for household in households %}
           <a href="{% url 'checkin:kiosk_family_select' household.pk %}"
-             style="display:block;background:#0d0d20;border:1px solid #2a2a44;border-radius:12px;
-                    padding:18px 20px;margin-bottom:10px;text-decoration:none;color:#fff;">
-            <div style="font-size:20px;font-weight:700;">{{ household.name }}</div>
-            <div style="font-size:14px;color:#888;margin-top:4px;">
+             style="display:block;background:var(--inset);border:1px solid var(--border);border-radius:12px;
+                    padding:18px 20px;margin-bottom:10px;text-decoration:none;color:var(--text);">
+            <div style="font-size:22px;font-weight:700;">{{ household.name }}</div>
+            <div style="font-size:15px;color:var(--faint);margin-top:4px;">
               {% for person in household.members.all %}
                 {{ person.first_name }}{% if not forloop.last %}, {% endif %}
               {% endfor %}
@@ -50,7 +50,7 @@
           </a>
         {% endfor %}
       {% else %}
-        <div style="color:#888;text-align:center;padding:20px 0;">
+        <div style="color:var(--faint);text-align:center;padding:20px 0;font-size:16px;">
           No families found for "{{ query }}"
         </div>
       {% endif %}
@@ -63,9 +63,9 @@
     </a>
   </div>
 
-  <div style="margin-top:28px;text-align:center;font-size:13px;color:#666;">
+  <div style="margin-top:28px;text-align:center;font-size:14px;color:var(--faint);">
     Printer: {% if kiosk_agent %}{{ kiosk_agent.name }}{% else %}Automatic{% endif %}
-    · <a href="{% url 'checkin:kiosk_printer' %}" style="color:#888;">Change</a>
+    · <a href="{% url 'checkin:kiosk_printer' %}" style="color:var(--primary);">Change</a>
   </div>
 </div>
 {% endblock %}

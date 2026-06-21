@@ -36,7 +36,12 @@ class HouseholdMembershipForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         person = kwargs.pop("person", None)
         super().__init__(*args, **kwargs)
+        # Show members' names (not just the surname) so same-surname families are
+        # distinguishable in the dropdown.
+        self.fields["household"].label_from_instance = lambda hh: hh.selector_label()
         if person is not None:
-            self.fields["household"].queryset = Household.objects.exclude(
-                memberships__person=person
+            self.fields["household"].queryset = (
+                Household.objects.exclude(memberships__person=person)
+                .prefetch_related("memberships__person")
+                .order_by("name")
             )

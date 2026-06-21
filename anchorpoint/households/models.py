@@ -40,6 +40,28 @@ class Household(models.Model):
         ]
         return "\n".join([part for part in parts if part])
 
+    def selector_label(self):
+        """A disambiguating label for family dropdowns where many households
+        share a surname (e.g. six "Morris" families). Lists the members' first
+        names — primary adult first — plus a street/city hint, so staff can tell
+        which family is which. Callers listing many households should
+        ``prefetch_related("memberships__person")`` to avoid per-option queries.
+        """
+        members = sorted(
+            self.memberships.all(),
+            key=lambda m: (
+                m.person_id != self.primary_adult_id,
+                (m.person.first_name or "").lower(),
+            ),
+        )
+        names = [m.person.first_name for m in members if m.person.first_name]
+        who = ", ".join(names[:5])
+        if len(names) > 5:
+            who += f", +{len(names) - 5} more"
+        location = self.address_line1 or self.city or ""
+        bits = [bit for bit in (who, location) if bit]
+        return f"{self.name} — {' · '.join(bits)}" if bits else self.name
+
 
 class HouseholdMember(models.Model):
     class RelationshipType(models.TextChoices):

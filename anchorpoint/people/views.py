@@ -516,7 +516,11 @@ def people_household_move(request, pk, household_pk):
         return redirect("people_detail", pk=pk)
 
     # GET: show the move form
-    other_households = Household.objects.exclude(pk=household_pk).order_by("name")
+    other_households = (
+        Household.objects.exclude(pk=household_pk)
+        .prefetch_related("memberships__person")
+        .order_by("name")
+    )
     return render(request, "people/people_household_move.html", {
         "person": person,
         "source_membership": source_membership,
