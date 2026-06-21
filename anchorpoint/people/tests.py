@@ -272,6 +272,52 @@ class PeopleDeleteTests(TestCase):
         self.assertTrue(Household.objects.filter(pk=fam.pk).exists())  # family kept
 
 
+class PeopleBulkDeleteTests(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(username="bulk", password="pw")
+        self.user.profile.role = UserProfile.Role.STAFF
+        self.user.profile.save()
+        self.client.force_login(self.user)
+        self.a = Person.objects.create(first_name="Test", last_name="A")
+        self.b = Person.objects.create(first_name="Test", last_name="B")
+        self.keep = Person.objects.create(first_name="Keep", last_name="Me")
+
+    def test_confirm_page_lists_selected_only(self):
+        resp = self.client.post(reverse("people_bulk_delete"),
+                                {"ids": [self.a.pk, self.b.pk]})
+        self.assertContains(resp, "Delete 2 people?")
+        self.assertContains(resp, "Test A")
+        self.assertNotContains(resp, "Keep Me")
+        self.assertEqual(Person.objects.count(), 3)  # nothing deleted yet
+
+    def test_confirm_action_deletes_selected(self):
+        resp = self.client.post(reverse("people_bulk_delete"),
+                                {"ids": [self.a.pk, self.b.pk], "action": "confirm"})
+        self.assertRedirects(resp, reverse("people_list"))
+        self.assertFalse(Person.objects.filter(pk__in=[self.a.pk, self.b.pk]).exists())
+        self.assertTrue(Person.objects.filter(pk=self.keep.pk).exists())
+
+    def test_empty_selection_deletes_nothing(self):
+        resp = self.client.post(reverse("people_bulk_delete"), {"ids": []})
+        self.assertRedirects(resp, reverse("people_list"))
+        self.assertEqual(Person.objects.count(), 3)
+
+    def test_get_not_allowed(self):
+        self.assertEqual(self.client.get(reverse("people_bulk_delete")).status_code, 405)
+
+    def test_requires_login(self):
+        self.client.logout()
+        resp = self.client.post(reverse("people_bulk_delete"),
+                                {"ids": [self.a.pk], "action": "confirm"})
+        self.assertNotEqual(resp.status_code, 200)
+        self.assertTrue(Person.objects.filter(pk=self.a.pk).exists())
+
+    def test_list_shows_bulk_controls(self):
+        resp = self.client.get(reverse("people_list"))
+        self.assertContains(resp, "Delete selected")
+        self.assertContains(resp, 'id="select-all"')
+
+
 class PeopleDuplicatesTests(TestCase):
     def setUp(self):
         self.user = get_user_model().objects.create_user(username="dup", password="pw")

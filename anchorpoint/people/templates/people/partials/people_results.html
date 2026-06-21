@@ -1,7 +1,18 @@
 <div id="people-results">
+    <form method="post" action="{% url 'people_bulk_delete' %}" hx-boost="false">
+        {% csrf_token %}
+        <div class="bulk-toolbar" style="display:flex; align-items:center; gap:1rem; flex-wrap:wrap; margin-bottom:0.5rem;">
+            <label style="display:inline-flex; align-items:center; gap:6px; cursor:pointer;">
+                <input type="checkbox" id="select-all"> Select all on this page
+            </label>
+            <button type="submit" class="btn ghost danger" style="color:#dc2626;">Delete selected</button>
+        </div>
     <div class="cards">
         {% for person in page_obj %}
             <div class="card person-card">
+                <label class="person-card__select" style="display:inline-flex; align-items:center; gap:6px; font-size:0.85rem; color:var(--muted); cursor:pointer;">
+                    <input type="checkbox" class="row-check" name="ids" value="{{ person.pk }}"> Select
+                </label>
                 <h2>{{ person.first_name }} {{ person.last_name }}</h2>
                 <p class="stat-hint person-card__meta">
                     {% if person.age is not None %}Age {{ person.age }} · {% endif %}<span class="chip">{{ person.get_status_display }}</span>
@@ -18,5 +29,6 @@
             <p>No people found.</p>
         {% endfor %}
     </div>
+    </form>
     {% include "partials/pagination.html" %}
 </div>
