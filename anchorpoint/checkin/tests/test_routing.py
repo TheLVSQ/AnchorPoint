@@ -43,6 +43,21 @@ class RoomMatchTests(TestCase):
         p = Person.objects.create(first_name="Hi", last_name="Schooler", grade="12")
         self.assertIsNone(match_room(p, self.rooms))
 
+    def test_grade_beats_overlapping_age_band(self):
+        # 252 also covers age 5-10; a 5th-grader who is 10 must still go to
+        # Community (by grade), not get grabbed by 252's age band.
+        self.k4.min_age, self.k4.max_age = 5, 10
+        self.k4.save()
+        p = Person.objects.create(first_name="Ten", last_name="Fifth", grade="5",
+                                  birthdate=_age(10))
+        self.assertEqual(match_room(p, self.rooms), self.comm)
+
+    def test_ageonly_kid_routes_by_age_when_no_grade(self):
+        self.k4.min_age, self.k4.max_age = 5, 10
+        self.k4.save()
+        p = Person.objects.create(first_name="Sev", last_name="NoGrade", birthdate=_age(7))
+        self.assertEqual(match_room(p, self.rooms), self.k4)
+
 
 class PreprintAutoRouteTests(TestCase):
     def setUp(self):

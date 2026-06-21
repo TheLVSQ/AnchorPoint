@@ -60,32 +60,39 @@ def is_person_eligible(person, config, config_group_ids=None):
     return False
 
 
-def room_matches(person, room):
-    """True if the person's age OR grade falls inside this room's routing band.
-    A room with no band set never matches (it's not an auto-route target)."""
-    has_age = room.min_age is not None or room.max_age is not None
-    has_grade = bool(room.min_grade) or bool(room.max_grade)
-    if not has_age and not has_grade:
+def _grade_fits(person, room):
+    if not person.grade or not (room.min_grade or room.max_grade):
         return False
-    if has_grade and person.grade:
-        idx = _grade_index(person.grade)
-        lo = _grade_index(room.min_grade) if room.min_grade else 0
-        hi = _grade_index(room.max_grade) if room.max_grade else len(GRADE_ORDER) - 1
-        if idx >= 0 and lo <= idx <= hi:
-            return True
-    if has_age and person.age is not None:
-        lo_ok = room.min_age is None or person.age >= room.min_age
-        hi_ok = room.max_age is None or person.age <= room.max_age
-        if lo_ok and hi_ok:
-            return True
-    return False
+    idx = _grade_index(person.grade)
+    lo = _grade_index(room.min_grade) if room.min_grade else 0
+    hi = _grade_index(room.max_grade) if room.max_grade else len(GRADE_ORDER) - 1
+    return idx >= 0 and lo <= idx <= hi
+
+
+def _age_fits(person, room):
+    if person.age is None or (room.min_age is None and room.max_age is None):
+        return False
+    lo_ok = room.min_age is None or person.age >= room.min_age
+    hi_ok = room.max_age is None or person.age <= room.max_age
+    return lo_ok and hi_ok
+
+
+def room_matches(person, room):
+    """True if the person's grade OR age falls inside this room's routing band.
+    A room with no band set never matches (it's not an auto-route target)."""
+    return _grade_fits(person, room) or _age_fits(person, room)
 
 
 def match_room(person, rooms):
-    """The first room (in given order, normally sort_order) whose age/grade band
-    fits this person — or None when nothing matches (volunteer picks manually)."""
+    """Best room for a child. Grade takes priority over age — a 5th-grader who
+    happens to be 10 routes to the grade-5 room, not a room whose age band also
+    covers 10. Falls back to age when the child has no grade (or no grade-banded
+    room fits). Returns None when nothing matches (volunteer picks manually)."""
     for room in rooms:
-        if room_matches(person, room):
+        if _grade_fits(person, room):
+            return room
+    for room in rooms:
+        if _age_fits(person, room):
             return room
     return None
 
