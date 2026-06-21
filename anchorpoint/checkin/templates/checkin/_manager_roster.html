@@ -19,6 +19,12 @@
             <div style="font-size:2rem; font-weight:700;">{{ stats.checked_out }}</div>
             <div class="stat-hint">Checked out</div>
         </div>
+        {% if stats.no_show %}
+        <div class="card" style="padding:0.75rem 1.25rem;">
+            <div style="font-size:2rem; font-weight:700;">{{ stats.no_show }}</div>
+            <div class="stat-hint">No-show</div>
+        </div>
+        {% endif %}
         <div class="card" style="padding:0.75rem 1.25rem; align-self:center;">
             {% if agent and agent.is_online %}
                 <span class="chip" style="background:#dcfce7;color:#166534;">Printer online</span>
@@ -68,4 +74,40 @@
     {% empty %}
         <p class="empty-state">No one is checked in yet.</p>
     {% endfor %}
+
+    {% if expected %}
+        <section class="detail-card" style="margin-bottom:1rem; border:1px dashed #d4b106;">
+            <div class="list-card__header">
+                <div>
+                    <h2>Expected — not arrived <span class="chip">{{ expected|length }}</span></h2>
+                    <p class="stat-hint">Pre-printed but not here. At the end, mark no-shows so they're excluded from attendance.</p>
+                </div>
+                <form method="post" action="{% url 'checkin:checkin_clear_expected' session.id %}"
+                      onsubmit="return confirm('Mark all {{ expected|length }} remaining expected kids as no-shows?');">
+                    {% csrf_token %}
+                    <button type="submit" class="btn ghost danger">Mark all as no-show</button>
+                </form>
+            </div>
+            <div style="overflow-x:auto;">
+                <table class="data-table" style="width:100%; border-collapse:collapse;">
+                    <tbody>
+                        {% for c in expected %}
+                            <tr>
+                                <td style="padding:6px 10px;">
+                                    <strong>{{ c.person.first_name }} {{ c.person.last_name }}</strong>
+                                    <span class="muted-text">{% if c.person.get_grade_display %}{{ c.person.get_grade_display }}{% elif c.person.age is not None %}Age {{ c.person.age }}{% endif %}</span>
+                                </td>
+                                <td style="padding:6px 10px; text-align:right;">
+                                    <form method="post" action="{% url 'checkin:checkin_mark_noshow' session.id c.id %}" style="display:inline;">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn ghost">No-show</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    {% endif %}
 </div>
