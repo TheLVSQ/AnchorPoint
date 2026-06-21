@@ -91,6 +91,26 @@ def _clean(value):
     return "" if v.lower() in _NEGATIVES else v
 
 
+def _family_name(raw):
+    """Normalize a household name to always end in 'Family' (Rock is
+    inconsistent: some are 'Levesque Family', some just 'Abel')."""
+    name = (raw or "").strip() or "Family"
+    if not name.lower().endswith("family"):
+        name = f"{name} Family"
+    return name
+
+
+def _row_age(row, person=None):
+    """Best age for child/adult inference: Rock's Age column first (it's often
+    set when a birthdate isn't), then the person's birthdate-derived age."""
+    raw = _g(row, "Age")
+    try:
+        return int(float(raw))
+    except (TypeError, ValueError):
+        pass
+    return person.age if person and person.birthdate else None
+
+
 def parse_csv(text):
     rows = list(csv.DictReader(io.StringIO(text)))
     if not rows:
@@ -177,8 +197,8 @@ def run_rock_import(rows, *, commit=False) -> RockResult:
 
     with transaction.atomic():
         for fam_id, members in families.items():
-            fam_name = _g(members[0], "Family Name") or (
-                _g(members[0], "Last Name") + " Family"
+            fam_name = _family_name(
+                _g(members[0], "Family Name") or _g(members[0], "Last Name")
             )
             addr = next((_household_address(r) for r in members
                          if _g(r, "Home Address - Street 1")), _household_address(members[0]))
@@ -190,12 +210,15 @@ def run_rock_import(rows, *, commit=False) -> RockResult:
             )
             if created:
                 stats["families_created"] += 1
+            household.name = fam_name  # keep normalized name current on re-runs
             for key, val in addr.items():
                 if val and not getattr(household, key):
                     setattr(household, key, val)
             household.save()
 
-            first_adult = household.primary_adult
+            # Recompute the primary adult each run: the first actual adult, or
+            # None if the family has no adult (so a lone 3-year-old isn't it).
+            first_adult = None
             for row in members:
                 ext = f"rock:{_g(row, 'Id')}" if _g(row, "Id") else ""
                 fields = _person_fields(row)
@@ -221,7 +244,8 @@ def run_rock_import(rows, *, commit=False) -> RockResult:
                     person = Person.objects.create(external_id=ext, **fields)
                     stats["people_created"] += 1
 
-                is_child = person.is_minor is True
+                age = _row_age(row, person)
+                is_child = age is not None and age < MINOR_AGE
                 rel = (HouseholdMember.RelationshipType.CHILD if is_child
                        else HouseholdMember.RelationshipType.ADULT)
                 HouseholdMember.objects.get_or_create(
@@ -235,7 +259,8 @@ def run_rock_import(rows, *, commit=False) -> RockResult:
                     if first_adult is None:
                         first_adult = person
 
-            if first_adult and household.primary_adult_id != first_adult.pk:
+            # Set the primary adult, or clear it when the family has no adult.
+            if household.primary_adult_id != (first_adult.pk if first_adult else None):
                 household.primary_adult = first_adult
                 household.save(update_fields=["primary_adult"])
 

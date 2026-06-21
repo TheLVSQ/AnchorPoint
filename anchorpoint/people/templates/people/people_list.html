@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
 
-<h1>People</h1>
+<h1>People <span class="chip" style="vertical-align:middle;">{{ total_people }}</span></h1>
 
 <form method="GET" style="margin-bottom: 20px;">
     <input type="text"
@@ -19,6 +19,7 @@
     {% if request.user.is_superuser or request.user.profile.role == 'admin' or request.user.profile.role == 'staff' %}
         <a href="{% url 'rock_import' %}" style="margin-left: 10px;">Other CMS import</a>
     {% endif %}
+    <a href="{% url 'people_duplicates' %}" style="margin-left: 10px;">Find duplicates</a>
 </form>
 
 {% include "people/partials/people_results.html" %}

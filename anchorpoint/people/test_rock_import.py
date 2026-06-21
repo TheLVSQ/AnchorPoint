@@ -131,6 +131,55 @@ class RockImportTests(TestCase):
         self.assertEqual(Person.objects.count(), 1)
         self.assertEqual(result.stats["skipped"], 3)
 
+    def test_family_name_normalized_to_family_suffix(self):
+        rows = [_person(Id="50", **{"Nick Name": "Julia", "Last Name": "Abel",
+                                    "Primary Family Id": "200", "Family Name": "Abel",
+                                    "Age": "3"})]
+        run_rock_import(parse_csv(_csv(rows)), commit=True)
+        self.assertEqual(Household.objects.get(external_id="rock-fam:200").name, "Abel Family")
+
+    def test_lone_child_is_not_primary_adult(self):
+        # Julia is 3 (Age column, no birthdate) and the only member — she must
+        # be a child and the family must have NO primary adult.
+        rows = [_person(Id="50", **{"Nick Name": "Julia", "Last Name": "Abel",
+                                    "Primary Family Id": "200", "Family Name": "Abel",
+                                    "Age": "3"})]
+        run_rock_import(parse_csv(_csv(rows)), commit=True)
+        hh = Household.objects.get(external_id="rock-fam:200")
+        self.assertIsNone(hh.primary_adult)
+        julia = Person.objects.get(first_name="Julia")
+        self.assertEqual(
+            HouseholdMember.objects.get(household=hh, person=julia).relationship_type,
+            HouseholdMember.RelationshipType.CHILD,
+        )
+
+    def test_age_column_used_when_no_birthdate(self):
+        rows = [_person(Id="51", **{"Nick Name": "Kid", "Last Name": "Noage",
+                                    "Primary Family Id": "201", "Family Name": "Noage Family",
+                                    "Age": "10"})]
+        run_rock_import(parse_csv(_csv(rows)), commit=True)
+        kid = Person.objects.get(first_name="Kid")
+        hh = Household.objects.get(external_id="rock-fam:201")
+        self.assertEqual(
+            HouseholdMember.objects.get(household=hh, person=kid).relationship_type,
+            HouseholdMember.RelationshipType.CHILD,
+        )
+
+    def test_rerun_fixes_name_and_clears_bad_primary(self):
+        # Simulate the already-imported bad state, then re-run the fixed import.
+        hh = Household.objects.create(external_id="rock-fam:200", name="Abel")
+        julia = Person.objects.create(external_id="rock:50", first_name="Julia", last_name="Abel")
+        hh.primary_adult = julia
+        hh.save()
+        HouseholdMember.objects.create(household=hh, person=julia,
+                                       relationship_type=HouseholdMember.RelationshipType.ADULT)
+        rows = [_person(Id="50", **{"Nick Name": "Julia", "Last Name": "Abel",
+                                    "Primary Family Id": "200", "Family Name": "Abel", "Age": "3"})]
+        run_rock_import(parse_csv(_csv(rows)), commit=True)
+        hh.refresh_from_db()
+        self.assertEqual(hh.name, "Abel Family")   # renamed
+        self.assertIsNone(hh.primary_adult)        # bad primary cleared
+
     def test_negative_allergy_custody_treated_as_empty(self):
         # Rock often stores "No"/"None" answers; they must not become a false
         # allergy ✚ or custody shield on the label.
