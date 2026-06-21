@@ -88,11 +88,17 @@ class Person(models.Model):
     first_visit_date = models.DateField(blank=True, null=True)
     allergies = models.TextField(blank=True, null=True)
     security_notes = models.TextField(blank=True, null=True)
-    # Guardian opt-in to photographing a minor / using their image in promo
-    # materials. Default False = no consent on record (only use when True).
-    photo_consent = models.BooleanField(
-        default=False,
-        help_text="Guardian permits photos / use of this person's image (relevant for minors).",
+    # Guardian's photo/likeness permission. Three states so we can tell an
+    # explicit "no photos" (which prints a label badge) apart from "never asked"
+    # — the default for migrated/unknown records, which prints nothing.
+    PHOTO_CONSENT_CHOICES = [
+        ("unknown", "Not asked"),
+        ("granted", "Granted"),
+        ("denied", "Denied — no photos"),
+    ]
+    photo_consent = models.CharField(
+        max_length=10, choices=PHOTO_CONSENT_CHOICES, default="unknown",
+        help_text="Guardian's photo/likeness permission (relevant for minors).",
     )
     # Custody/security tracking (only relevant for minors)
     custody_flag = models.BooleanField(default=False)

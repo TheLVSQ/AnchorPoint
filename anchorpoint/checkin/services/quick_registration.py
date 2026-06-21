@@ -50,7 +50,7 @@ def register_new_family(
             custody_flag=child_data.get("custody_flag", False),
             custody_notes=child_data.get("custody_notes", ""),
             unauthorized_pickup=child_data.get("unauthorized_pickup", ""),
-            photo_consent=child_data.get("photo_consent", False),
+            photo_consent=child_data.get("photo_consent", "unknown"),
         )
         HouseholdMember.objects.create(
             household=household,

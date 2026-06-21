@@ -107,7 +107,7 @@ class GroupRosterReport(Report):
             ("allergies", "Allergies"),
             ("custody", "Security/Custody"),
             ("unauthorized_pickup", "Unauthorized Pickup"),
-            ("photo_consent", "Photo OK"),
+            ("photo_consent", "Photo Consent"),
         ]
 
     def get_rows(self, params):
@@ -134,7 +134,7 @@ class GroupRosterReport(Report):
                 "allergies": (p.allergies or "").strip(),
                 "custody": custody,
                 "unauthorized_pickup": (p.unauthorized_pickup or "").strip(),
-                "photo_consent": _yes_no(p.photo_consent),
+                "photo_consent": p.get_photo_consent_display(),
             }
 
 
@@ -167,7 +167,7 @@ class SessionAttendanceReport(Report):
             ("allergies", "Allergies"),
             ("custody", "Security/Custody"),
             ("guardian_phone", "Guardian Phone"),
-            ("photo_consent", "Photo OK"),
+            ("photo_consent", "Photo Consent"),
         ]
 
     def get_rows(self, params):
@@ -199,5 +199,5 @@ class SessionAttendanceReport(Report):
                 "allergies": (p.allergies or "").strip(),
                 "custody": (p.custody_notes or "Flagged").strip() if p.custody_flag else "",
                 "guardian_phone": (g.phone if g else "") or "",
-                "photo_consent": _yes_no(p.photo_consent),
+                "photo_consent": p.get_photo_consent_display(),
             }

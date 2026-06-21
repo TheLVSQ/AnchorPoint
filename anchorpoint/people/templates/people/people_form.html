@@ -225,11 +225,9 @@
                     {% for error in form.security_notes.errors %}<span class="error-text">{{ error }}</span>{% endfor %}
                 </div>
                 <div class="form-field form-field--full">
-                    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
-                        {{ form.photo_consent }}
-                        Photo / likeness permission
-                    </label>
-                    <span class="section-hint">For minors, check only if the parent/guardian has opted in to photos / use of the child's image.</span>
+                    {{ form.photo_consent.label_tag }}
+                    {{ form.photo_consent }}
+                    <span class="section-hint">For minors: guardian's permission to photograph / use the child's image. "Denied" prints a NO-PHOTO badge on their label.</span>
                     {% for error in form.photo_consent.errors %}<span class="error-text">{{ error }}</span>{% endfor %}
                 </div>
                 <div class="form-field form-field--full">
