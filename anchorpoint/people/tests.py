@@ -228,6 +228,50 @@ class PeopleCountTests(TestCase):
         self.assertEqual(resp.context["total_people"], 2)  # overall, not the 1 match
 
 
+class PeopleDeleteTests(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(username="del", password="pw")
+        self.user.profile.role = UserProfile.Role.STAFF
+        self.user.profile.save()
+        self.client.force_login(self.user)
+        self.person = Person.objects.create(first_name="Test", last_name="Dummy")
+
+    def test_confirm_page_renders(self):
+        resp = self.client.get(reverse("people_delete", args=[self.person.pk]))
+        self.assertContains(resp, "Delete Test Dummy?")
+
+    def test_post_deletes_and_redirects(self):
+        resp = self.client.post(reverse("people_delete", args=[self.person.pk]))
+        self.assertRedirects(resp, reverse("people_list"))
+        self.assertFalse(Person.objects.filter(pk=self.person.pk).exists())
+
+    def test_get_does_not_delete(self):
+        self.client.get(reverse("people_delete", args=[self.person.pk]))
+        self.assertTrue(Person.objects.filter(pk=self.person.pk).exists())
+
+    def test_requires_login(self):
+        self.client.logout()
+        resp = self.client.post(reverse("people_delete", args=[self.person.pk]))
+        self.assertNotEqual(resp.status_code, 200)
+        self.assertTrue(Person.objects.filter(pk=self.person.pk).exists())
+
+    def test_delete_cascades_checkins_but_keeps_family(self):
+        from datetime import time
+        from django.utils import timezone
+        from checkin.models import CheckIn, CheckInSession
+        from households.models import Household, HouseholdMember
+        fam = Household.objects.create(name="Dummy Family")
+        HouseholdMember.objects.create(household=fam, person=self.person)
+        session = CheckInSession.objects.create(
+            name="S", date=timezone.localdate(), checkin_opens=time(0, 0),
+            checkin_closes=time(23, 50), event_starts=time(0, 5), event_ends=time(23, 55),
+        )
+        CheckIn.objects.create(session=session, person=self.person, security_code="ZZZZ")
+        self.client.post(reverse("people_delete", args=[self.person.pk]))
+        self.assertFalse(CheckIn.objects.filter(person_id=self.person.pk).exists())
+        self.assertTrue(Household.objects.filter(pk=fam.pk).exists())  # family kept
+
+
 class PeopleDuplicatesTests(TestCase):
     def setUp(self):
         self.user = get_user_model().objects.create_user(username="dup", password="pw")

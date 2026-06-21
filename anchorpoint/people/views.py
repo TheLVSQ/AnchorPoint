@@ -44,6 +44,27 @@ def people_list(request):
 
 
 @staff_required
+def people_delete(request, pk):
+    """Confirm + permanently delete a person (e.g. test records).
+
+    Deleting cascades to their household memberships, group memberships,
+    check-in history, and message logs; household primary-adult links are
+    nulled. Irreversible."""
+    person = get_object_or_404(Person, pk=pk)
+    if request.method == "POST":
+        name = str(person)
+        person.delete()
+        messages.success(request, f"Deleted {name}.")
+        return redirect("people_list")
+    return render(request, "people/people_confirm_delete.html", {
+        "person": person,
+        "households": person.households.all(),
+        "checkin_count": person.checkins.count(),
+        "group_count": person.group_memberships.count(),
+    })
+
+
+@staff_required
 def people_duplicates(request):
     """Review likely-duplicate people: records sharing a name or an email.
 
