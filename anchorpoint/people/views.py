@@ -2,7 +2,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db import IntegrityError, transaction
-from django.db.models import Q
+from django.db.models import Count, Q
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
@@ -62,6 +62,35 @@ def people_delete(request, pk):
         "households": person.households.all(),
         "checkin_count": person.checkins.count(),
         "group_count": person.group_memberships.count(),
+    })
+
+
+@staff_required
+def people_cleanup(request):
+    """Review + cull likely-inactive imported records: visitor/guest people with
+    no contact info (no email, phone, or birthdate) who aren't in a household
+    with anyone else. Conservative — it won't touch a contact-less parent who's
+    linked to a kid (they'd be in a multi-member household). Selecting deletes
+    via the shared bulk-delete confirm flow."""
+    blank_email = Q(email__isnull=True) | Q(email="")
+    blank_phone = Q(phone__isnull=True) | Q(phone="")
+    multi_household_ids = (
+        HouseholdMember.objects.values("household")
+        .annotate(c=Count("id")).filter(c__gt=1).values_list("household", flat=True)
+    )
+    in_multi_household = HouseholdMember.objects.filter(
+        household__in=multi_household_ids
+    ).values_list("person_id", flat=True)
+    candidates = (
+        Person.objects.filter(status__in=["visitor", "guest"])
+        .filter(blank_email & blank_phone & Q(birthdate__isnull=True))
+        .exclude(pk__in=in_multi_household)
+        .prefetch_related("households")
+        .order_by("last_name", "first_name")
+    )
+    return render(request, "people/cleanup.html", {
+        "candidates": candidates,
+        "count": candidates.count(),
     })
 
 
