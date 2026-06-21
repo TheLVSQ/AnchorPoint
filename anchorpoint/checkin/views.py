@@ -28,7 +28,7 @@ from .models import (
 )
 from .services import PrintService
 from .services.checkin_sms import send_security_code_sms
-from .services.eligibility import get_eligible_members, is_person_eligible
+from .services.eligibility import get_eligible_members, is_person_eligible, match_room
 from .services.session_manager import get_or_create_session
 from .services.quick_registration import register_new_family
 from .services.print_queue import enqueue_checkin_labels, enqueue_test_label, get_active_agent
@@ -309,11 +309,16 @@ def kiosk_family_select(request, household_id):
             prestaged_ids=prestaged_ids,
         )
 
-    # (person, eligible, prestaged_checkin_or_None) for the template.
-    members_display = [
-        (person, eligible, prestaged.get(person.pk))
-        for person, eligible in members_with_eligibility
-    ]
+    # (person, eligible, prestaged_checkin_or_None, routed_room_id) for the
+    # template. routed_room_id pre-selects the room matching the child's
+    # age/grade band (volunteer can still tap a different one).
+    members_display = []
+    for person, eligible in members_with_eligibility:
+        routed = None
+        if eligible and person.pk not in prestaged_ids:
+            m = match_room(person, rooms)
+            routed = m.pk if m else None
+        members_display.append((person, eligible, prestaged.get(person.pk), routed))
 
     return render(request, "checkin/kiosk/family_select.html", {
         "household": household,
@@ -698,7 +703,7 @@ def session_preprint(request, session_id):
     existing = {c.person_id: c for c in session.checkins.select_related("room").all()}
 
     if request.method == "POST":
-        created, fam_count = _preprint_generate(request, session, candidates, existing)
+        created, fam_count = _preprint_generate(request, session, candidates, existing, rooms)
         if created:
             messages.success(
                 request,
@@ -733,11 +738,13 @@ def session_preprint(request, session_id):
             status = None
         if status in ("expected", "present"):
             groups[key]["has_staged"] = True
+        routed = match_room(person, rooms) if status is None else None
         groups[key]["rows"].append({
             "person": person,
             "existing": c,
             "status": status,
             "assigned_room": c.room if c else None,
+            "routed_room_id": routed.pk if routed else None,
         })
 
     return render(request, "checkin/session_preprint.html", {
@@ -748,10 +755,13 @@ def session_preprint(request, session_id):
     })
 
 
-def _preprint_generate(request, session, candidates, existing):
+def _preprint_generate(request, session, candidates, existing, rooms=None):
     """Create pre-staged check-ins for selected, not-yet-staged people and queue
-    their labels. Returns (people_created, households_touched)."""
+    their labels. Returns (people_created, households_touched). Rooms not chosen
+    in the form fall back to the child's age/grade-matched room."""
     from collections import defaultdict
+
+    rooms = rooms if rooms is not None else list(session.rooms.all())
 
     by_household = defaultdict(list)
     for person in candidates:
@@ -773,6 +783,8 @@ def _preprint_generate(request, session, candidates, existing):
         new_checkins = []
         for person, _hh, room_id in members:
             room = Room.objects.filter(pk=room_id).first() if room_id else None
+            if room is None:
+                room = match_room(person, rooms)  # auto-route by age/grade
             checkin = CheckIn.objects.create(
                 session=session, person=person, room=room,
                 security_code=code, arrived_at=None,

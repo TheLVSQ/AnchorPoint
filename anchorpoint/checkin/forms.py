@@ -172,7 +172,14 @@ class CheckInSessionForm(forms.ModelForm):
 class RoomForm(forms.ModelForm):
     class Meta:
         model = Room
-        fields = ["name", "building", "capacity", "sort_order", "is_active"]
+        fields = [
+            "name", "building", "capacity", "sort_order", "is_active",
+            "min_age", "max_age", "min_grade", "max_grade",
+        ]
+        help_texts = {
+            "min_grade": "Auto-routing: a child whose age OR grade fits this room "
+                         "is sent here at check-in. Leave all blank for no auto-routing.",
+        }
 
 
 class PrinterConfigForm(forms.ModelForm):
