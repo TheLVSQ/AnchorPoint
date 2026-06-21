@@ -208,6 +208,59 @@ class PeopleListTileTests(TestCase):
         self.assertContains(response, "Tiles Family")
 
 
+class PeopleCountTests(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(username="cnt", password="pw")
+        self.user.profile.role = UserProfile.Role.STAFF
+        self.user.profile.save()
+        self.client.force_login(self.user)
+
+    def test_overall_count_in_context(self):
+        Person.objects.create(first_name="A", last_name="One")
+        Person.objects.create(first_name="B", last_name="Two")
+        resp = self.client.get(reverse("people_list"))
+        self.assertEqual(resp.context["total_people"], 2)
+
+    def test_count_is_unfiltered_during_search(self):
+        Person.objects.create(first_name="Alice", last_name="One")
+        Person.objects.create(first_name="Bob", last_name="Two")
+        resp = self.client.get(reverse("people_list"), {"q": "Alice"})
+        self.assertEqual(resp.context["total_people"], 2)  # overall, not the 1 match
+
+
+class PeopleDuplicatesTests(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(username="dup", password="pw")
+        self.user.profile.role = UserProfile.Role.STAFF
+        self.user.profile.save()
+        self.client.force_login(self.user)
+
+    def test_requires_login(self):
+        self.client.logout()
+        self.assertNotEqual(self.client.get(reverse("people_duplicates")).status_code, 200)
+
+    def test_flags_same_name(self):
+        Person.objects.create(first_name="Jane", last_name="Doe")
+        Person.objects.create(first_name="Jane", last_name="Doe")
+        Person.objects.create(first_name="Unique", last_name="Person")
+        resp = self.client.get(reverse("people_duplicates"))
+        self.assertContains(resp, "Jane Doe")
+        self.assertNotContains(resp, "Unique Person")  # single record, not flagged
+
+    def test_flags_same_email_case_insensitive(self):
+        Person.objects.create(first_name="A", last_name="X", email="dup@e.com")
+        Person.objects.create(first_name="B", last_name="Y", email="DUP@e.com")
+        resp = self.client.get(reverse("people_duplicates"))
+        self.assertContains(resp, "dup@e.com")
+
+    def test_phone_sharing_family_not_flagged(self):
+        # Family members share a phone but have different names → not duplicates.
+        Person.objects.create(first_name="Mom", last_name="Reed", phone="+15551112222")
+        Person.objects.create(first_name="Kid", last_name="Reed", phone="+15551112222")
+        resp = self.client.get(reverse("people_duplicates"))
+        self.assertContains(resp, "No potential duplicates")
+
+
 class PersonStatusDisplayTests(TestCase):
     def setUp(self):
         self.user = get_user_model().objects.create_user(

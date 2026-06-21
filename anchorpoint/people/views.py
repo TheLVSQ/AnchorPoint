@@ -39,6 +39,45 @@ def people_list(request):
     return render(request, "people/people_list.html", {
         "page_obj": page_obj,
         "query": query,
+        "total_people": Person.objects.count(),
+    })
+
+
+@staff_required
+def people_duplicates(request):
+    """Review likely-duplicate people: records sharing a name or an email.
+
+    Phone is intentionally NOT a signal — families share one number. Same-name
+    groups may occasionally be distinct people, so this is a review aid, not an
+    auto-merge."""
+    people = list(
+        Person.objects.all().prefetch_related("households").order_by("last_name", "first_name")
+    )
+    buckets = {}
+    for p in people:
+        buckets.setdefault(
+            ("name", p.first_name.strip().lower(), p.last_name.strip().lower()), []
+        ).append(p)
+        if p.email:
+            buckets.setdefault(("email", p.email.strip().lower()), []).append(p)
+
+    groups, seen = [], set()
+    for key, members in buckets.items():
+        if len(members) < 2:
+            continue
+        ids = frozenset(m.pk for m in members)
+        if ids in seen:
+            continue
+        seen.add(ids)
+        groups.append({
+            "reason": "Same name" if key[0] == "name" else "Same email",
+            "label": f"{members[0].first_name} {members[0].last_name}" if key[0] == "name" else key[1],
+            "people": members,
+        })
+    groups.sort(key=lambda g: -len(g["people"]))
+    return render(request, "people/duplicates.html", {
+        "groups": groups,
+        "people_in_groups": sum(len(g["people"]) for g in groups),
     })
 
 
