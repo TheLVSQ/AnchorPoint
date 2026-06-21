@@ -26,6 +26,7 @@
         <div class="hero-actions">
             <a class="btn" href="{% url 'people_edit' person.pk %}">Edit person</a>
             <a class="btn ghost" href="{% url 'people_add' %}">Add another</a>
+            <a class="btn ghost" style="color:#dc2626;" href="{% url 'people_delete' person.pk %}">Delete</a>
         </div>
     </div>
 </div>
