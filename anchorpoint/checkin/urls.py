@@ -10,6 +10,7 @@ urlpatterns = [
     path("kiosk/", views.kiosk_lookup, name="kiosk_lookup"),
     path("kiosk/unlock/", views.kiosk_unlock, name="kiosk_unlock"),
     path("kiosk/lock/", views.kiosk_lock, name="kiosk_lock"),
+    path("kiosk/printer/", views.kiosk_printer, name="kiosk_printer"),
     path("kiosk/select-config/", views.kiosk_select_config, name="kiosk_select_config"),
     path("kiosk/family/<int:household_id>/", views.kiosk_family_select, name="kiosk_family_select"),
     path("kiosk/confirmation/", views.kiosk_confirmation, name="kiosk_confirmation"),

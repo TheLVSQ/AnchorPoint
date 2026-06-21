@@ -144,6 +144,14 @@ class EnqueueTests(TestCase):
         self.assertEqual(enqueue_checkin_labels([self._checkin()], self.session), 0)
         self.assertEqual(PrintJob.objects.count(), 0)
 
+    def test_explicit_agent_overrides_active(self):
+        a = PrintAgent.objects.create(name="A"); a.complete_pairing()
+        b = PrintAgent.objects.create(name="B"); b.complete_pairing()
+        count = enqueue_checkin_labels([self._checkin()], self.session, agent=b)
+        self.assertEqual(count, 2)
+        self.assertEqual(PrintJob.objects.filter(agent=b).count(), 2)
+        self.assertEqual(PrintJob.objects.filter(agent=a).count(), 0)  # not the active one
+
     def test_queues_child_and_pickup_with_real_png(self):
         agent = PrintAgent.objects.create(name="Desk")
         agent.complete_pairing()
@@ -265,6 +273,43 @@ class LabelContentTests(TestCase):
         self.session.save()
         img = _make_child_label(self._checkin(), self.session)
         self.assertEqual(img.size, (898, 600))
+
+
+class KioskPrinterBindingTests(TestCase):
+    """A kiosk device can be bound to a specific printer (stored per-session)."""
+
+    def setUp(self):
+        self.agent = PrintAgent.objects.create(name="Brother")
+        self.agent.complete_pairing()
+
+    def _unlock(self):
+        s = self.client.session
+        s["kiosk_authenticated"] = True
+        s.save()
+
+    def test_requires_kiosk_unlock(self):
+        resp = self.client.get(reverse("checkin:kiosk_printer"))
+        self.assertRedirects(resp, reverse("checkin:kiosk_unlock"),
+                             fetch_redirect_response=False)
+
+    def test_get_lists_agents_and_automatic(self):
+        self._unlock()
+        resp = self.client.get(reverse("checkin:kiosk_printer"))
+        self.assertContains(resp, "Brother")
+        self.assertContains(resp, "Automatic")
+
+    def test_post_binds_agent(self):
+        self._unlock()
+        self.client.post(reverse("checkin:kiosk_printer"), {"agent_id": str(self.agent.pk)})
+        self.assertEqual(self.client.session.get("kiosk_agent_id"), self.agent.pk)
+
+    def test_post_empty_clears_binding(self):
+        self._unlock()
+        s = self.client.session
+        s["kiosk_agent_id"] = self.agent.pk
+        s.save()
+        self.client.post(reverse("checkin:kiosk_printer"), {"agent_id": ""})
+        self.assertIsNone(self.client.session.get("kiosk_agent_id"))
 
 
 class AgentManagementTests(TestCase):
