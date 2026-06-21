@@ -1,18 +1,18 @@
 <div id="people-results">
     <div class="cards">
         {% for person in page_obj %}
-            <div class="card">
+            <div class="card person-card">
                 <h2>{{ person.first_name }} {{ person.last_name }}</h2>
-                <p class="stat-hint">
+                <p class="stat-hint person-card__meta">
                     {% if person.age is not None %}Age {{ person.age }} · {% endif %}<span class="chip">{{ person.get_status_display }}</span>
                 </p>
                 {% with household=person.households.all|first %}
                     {% if household %}
-                        <p><a class="ghost-link" href="{% url 'households:family_detail' household.pk %}">{{ household.name }}</a></p>
+                        <p class="person-card__family"><a class="ghost-link" href="{% url 'households:family_detail' household.pk %}">{{ household.name }}</a></p>
                     {% endif %}
                 {% endwith %}
-                {% if person.email %}<p>{{ person.email }}</p>{% endif %}
-                <a href="{% url 'people_detail' person.pk %}">View</a>
+                {% if person.email %}<p class="person-card__email">{{ person.email }}</p>{% endif %}
+                <a class="person-card__view" href="{% url 'people_detail' person.pk %}">View</a>
             </div>
         {% empty %}
             <p>No people found.</p>
