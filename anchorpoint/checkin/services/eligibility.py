@@ -60,6 +60,36 @@ def is_person_eligible(person, config, config_group_ids=None):
     return False
 
 
+def room_matches(person, room):
+    """True if the person's age OR grade falls inside this room's routing band.
+    A room with no band set never matches (it's not an auto-route target)."""
+    has_age = room.min_age is not None or room.max_age is not None
+    has_grade = bool(room.min_grade) or bool(room.max_grade)
+    if not has_age and not has_grade:
+        return False
+    if has_grade and person.grade:
+        idx = _grade_index(person.grade)
+        lo = _grade_index(room.min_grade) if room.min_grade else 0
+        hi = _grade_index(room.max_grade) if room.max_grade else len(GRADE_ORDER) - 1
+        if idx >= 0 and lo <= idx <= hi:
+            return True
+    if has_age and person.age is not None:
+        lo_ok = room.min_age is None or person.age >= room.min_age
+        hi_ok = room.max_age is None or person.age <= room.max_age
+        if lo_ok and hi_ok:
+            return True
+    return False
+
+
+def match_room(person, rooms):
+    """The first room (in given order, normally sort_order) whose age/grade band
+    fits this person — or None when nothing matches (volunteer picks manually)."""
+    for room in rooms:
+        if room_matches(person, room):
+            return room
+    return None
+
+
 def get_eligible_members(household, config):
     """Return list of (person, eligible) tuples for all household members."""
     # Pre-fetch config group IDs once (avoids repeated DB hits per person)

@@ -42,6 +42,19 @@
             </label>
         </div>
 
+        <div class="form-section" style="margin-top:1rem;">
+            <h3>Auto-routing (optional)</h3>
+            <p class="stat-hint">At check-in, a child whose <strong>age</strong> or <strong>grade</strong>
+               falls in this room's range is sent here automatically (a volunteer can still override).
+               Leave all blank to never auto-route to this room.</p>
+            <div class="form-grid">
+                <div class="form-field">{{ form.min_age.label_tag }}{{ form.min_age }}</div>
+                <div class="form-field">{{ form.max_age.label_tag }}{{ form.max_age }}</div>
+                <div class="form-field">{{ form.min_grade.label_tag }}{{ form.min_grade }}</div>
+                <div class="form-field">{{ form.max_grade.label_tag }}{{ form.max_grade }}</div>
+            </div>
+        </div>
+
         <div class="hero-actions">
             <button type="submit" class="btn">Save Room</button>
             <a href="{% url 'checkin:room_list' %}" class="btn ghost">Cancel</a>

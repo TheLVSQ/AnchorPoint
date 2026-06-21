@@ -202,7 +202,8 @@ class CheckInWindow(models.Model):
 
 
 class Room(models.Model):
-    """Physical check-in room. Eligibility is on CheckInConfiguration, not here."""
+    """Physical check-in room / class. Optional age/grade bands let a child be
+    auto-routed to the right room at check-in (e.g. Tots / 252 / Community Kids)."""
 
     name = models.CharField(max_length=100)
     building = models.CharField(max_length=100, blank=True)
@@ -210,11 +211,24 @@ class Room(models.Model):
     sort_order = models.PositiveIntegerField(default=0)
     is_active = models.BooleanField(default=True)
 
+    # Auto-routing band (all optional). A child is routed here if their age OR
+    # grade falls in range. Leave all blank for a room that's never auto-picked.
+    min_age = models.PositiveIntegerField(null=True, blank=True)
+    max_age = models.PositiveIntegerField(null=True, blank=True)
+    min_grade = models.CharField(max_length=20, choices=Person.GRADE_CHOICES, blank=True)
+    max_grade = models.CharField(max_length=20, choices=Person.GRADE_CHOICES, blank=True)
+
     class Meta:
         ordering = ["sort_order", "name"]
 
     def __str__(self):
         return self.name
+
+    def has_routing_band(self):
+        return any([
+            self.min_age is not None, self.max_age is not None,
+            self.min_grade, self.max_grade,
+        ])
 
 
 class CheckInSession(models.Model):

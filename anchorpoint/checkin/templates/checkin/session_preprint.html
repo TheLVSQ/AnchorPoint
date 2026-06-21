@@ -57,7 +57,7 @@
                             {% elif rooms %}
                                 <select name="room_{{ row.person.pk }}" class="room-select" data-group="{{ forloop.parentloop.counter }}">
                                     <option value="">— Room —</option>
-                                    {% for room in rooms %}<option value="{{ room.pk }}">{{ room.name }}</option>{% endfor %}
+                                    {% for room in rooms %}<option value="{{ room.pk }}"{% if room.pk == row.routed_room_id %} selected{% endif %}>{{ room.name }}</option>{% endfor %}
                                 </select>
                             {% endif %}
                         </div>
