@@ -13,6 +13,7 @@ from django.db.models import Count, Q
 
 from core.models import OrganizationSettings
 from core.permissions import checkin_admin_required, checkin_team_required, staff_required
+from groups.models import GroupMembership
 from households.models import Household
 from people.models import Person, normalize_phone
 
@@ -280,6 +281,18 @@ def kiosk_family_select(request, household_id):
                         )
                         to_print_ids.append(checkin.pk)
                     checkin_ids.append(checkin.pk)
+
+                # Auto-enroll: add everyone who checked in to the config's group
+                # (e.g. VBS walk-ins land on the next day's pre-print roster).
+                enroll_group = (
+                    session.configuration.auto_enroll_group
+                    if session.configuration else None
+                )
+                if enroll_group:
+                    for person_id, _room_id in selected:
+                        GroupMembership.objects.get_or_create(
+                            group=enroll_group, person_id=person_id
+                        )
 
                 request.session["kiosk_checkin_ids"] = checkin_ids
                 request.session["kiosk_security_code"] = security_code
