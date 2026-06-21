@@ -131,7 +131,9 @@ class Person(models.Model):
         years = today.year - self.birthdate.year - (
             (today.month, today.day) < (self.birthdate.month, self.birthdate.day)
         )
-        return years
+        # A future-dated birthdate (bad data) would yield a negative age; treat
+        # it as unknown so it never prints a "-29" on a label or tile.
+        return years if years >= 0 else None
 
     @property
     def is_minor(self):
