@@ -38,6 +38,7 @@ logger = logging.getLogger(__name__)
 
 KIOSK_SESSION_KEY = "kiosk_authenticated"
 KIOSK_SESSION_ID_KEY = "kiosk_session_id"
+KIOSK_AGENT_ID_KEY = "kiosk_agent_id"  # this device's bound printer (optional)
 
 
 # =============================================================================
@@ -50,6 +51,18 @@ def _ensure_kiosk(request):
     if not request.session.get(KIOSK_SESSION_KEY):
         return redirect("checkin:kiosk_unlock")
     return None
+
+
+def _kiosk_agent(request):
+    """The print agent bound to this kiosk device (active + paired), or None to
+    fall back to the most-recently-active agent."""
+    agent_id = request.session.get(KIOSK_AGENT_ID_KEY)
+    if not agent_id:
+        return None
+    return (
+        PrintAgent.objects.filter(pk=agent_id, is_active=True)
+        .exclude(token_hash="").first()
+    )
 
 
 def _get_active_session(request):
@@ -185,6 +198,7 @@ def kiosk_lookup(request):
         "results_capped": results_capped,
         "session": session,
         "org": org,
+        "kiosk_agent": _kiosk_agent(request),
     })
 
 
@@ -279,7 +293,9 @@ def kiosk_family_select(request, household_id):
                         key=lambda c: to_print_ids.index(c.pk),
                     )
                     if ordered:
-                        queued = enqueue_checkin_labels(ordered, session)
+                        queued = enqueue_checkin_labels(
+                            ordered, session, agent=_kiosk_agent(request)
+                        )
                 except Exception:
                     logger.exception("Failed to queue print jobs for check-in")
                 # Suppress the confirmation page's browser-print fallback when
@@ -449,9 +465,33 @@ def kiosk_select_config(request):
     return redirect("checkin:kiosk_lookup")
 
 
+def kiosk_printer(request):
+    """Bind this kiosk device to a specific printer (or Automatic). The choice
+    lives in the device's session, so two stations can each print to their own."""
+    redir = _ensure_kiosk(request)
+    if redir:
+        return redir
+    agents = (
+        PrintAgent.objects.filter(is_active=True).exclude(token_hash="").order_by("name")
+    )
+    if request.method == "POST":
+        choice = request.POST.get("agent_id", "")
+        if choice == "":
+            request.session.pop(KIOSK_AGENT_ID_KEY, None)  # back to Automatic
+        elif choice.isdigit() and agents.filter(pk=choice).exists():
+            request.session[KIOSK_AGENT_ID_KEY] = int(choice)
+        return redirect("checkin:kiosk_lookup")
+    return render(request, "checkin/kiosk/printer.html", {
+        "agents": agents,
+        "current": request.session.get(KIOSK_AGENT_ID_KEY),
+        "org": OrganizationSettings.load(),
+    })
+
+
 def kiosk_lock(request):
     request.session.pop(KIOSK_SESSION_KEY, None)
     request.session.pop(KIOSK_SESSION_ID_KEY, None)
+    request.session.pop(KIOSK_AGENT_ID_KEY, None)
     # Also drop any staff login, so a shared tablet can never be left both
     # PIN-unlocked and authenticated into the full app.
     if request.user.is_authenticated:

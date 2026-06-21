@@ -1,0 +1,36 @@
+{% extends "checkin/kiosk/base.html" %}
+{% block title %}Choose Printer{% endblock %}
+{% block content %}
+<div class="kiosk-card" style="max-width:520px;">
+  <div class="kiosk-title">This station's printer</div>
+  <div class="kiosk-subtitle">Labels from this device print to the printer you pick here.</div>
+  <form method="post">
+    {% csrf_token %}
+    <label style="display:flex;align-items:center;gap:12px;padding:14px 16px;margin:8px 0;
+                  border:1px solid #2a2a44;border-radius:12px;cursor:pointer;background:#0d0d20;">
+      <input type="radio" name="agent_id" value="" {% if not current %}checked{% endif %}
+             style="width:20px;height:20px;">
+      <span><strong>Automatic</strong> — most recently active printer</span>
+    </label>
+    {% for agent in agents %}
+      <label style="display:flex;align-items:center;gap:12px;padding:14px 16px;margin:8px 0;
+                    border:1px solid #2a2a44;border-radius:12px;cursor:pointer;background:#0d0d20;">
+        <input type="radio" name="agent_id" value="{{ agent.id }}"
+               {% if current == agent.id %}checked{% endif %} style="width:20px;height:20px;">
+        <span>
+          <strong>{{ agent.name }}</strong>
+          {% if agent.is_online %}<span style="color:#4ade80;"> · online</span>
+          {% else %}<span style="color:#f87171;"> · offline</span>{% endif %}
+          <span style="color:#888;"> · {{ agent.label_width_mm }}mm</span>
+        </span>
+      </label>
+    {% empty %}
+      <p class="kiosk-subtitle">No printers are paired yet.</p>
+    {% endfor %}
+    <div style="margin-top:18px;display:flex;gap:12px;">
+      <button type="submit" class="btn btn-primary btn-lg">Save</button>
+      <a href="{% url 'checkin:kiosk_lookup' %}" class="btn btn-lg">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}
