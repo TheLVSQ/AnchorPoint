@@ -390,6 +390,37 @@
             transform: translateY(-1px);
         }
 
+        /* People tiles — quieter layout so "View" is the only button. */
+        .person-card {
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+        .person-card h2 { margin-bottom: 0.1rem; }
+        .person-card__meta,
+        .person-card__family { margin: 0; }
+        /* The family link reads as a quiet link, not a primary pill. */
+        .person-card a.ghost-link {
+            margin-top: 0;
+            padding: 0;
+            background: none;
+            color: var(--primary);
+            border-radius: 0;
+            font-weight: 600;
+        }
+        .person-card a.ghost-link:hover {
+            background: none;
+            transform: none;
+            text-decoration: underline;
+        }
+        .person-card__email {
+            margin: 0;
+            color: var(--muted);
+            font-size: 0.9rem;
+            overflow-wrap: anywhere;   /* long emails wrap instead of overflowing */
+        }
+        .person-card__view { align-self: flex-start; }
+
         .btn {
             display: inline-flex;
             align-items: center;
