@@ -431,7 +431,7 @@ def kiosk_quick_register(request):
                     "custody_flag": cf.cleaned_data.get("custody_flag", False),
                     "custody_notes": cf.cleaned_data.get("custody_notes", ""),
                     "unauthorized_pickup": cf.cleaned_data.get("unauthorized_pickup", ""),
-                    "photo_consent": cf.cleaned_data.get("photo_consent", False),
+                    "photo_consent": "granted" if cf.cleaned_data.get("photo_consent") else "unknown",
                 }
                 children_data.append(child_data)
 
