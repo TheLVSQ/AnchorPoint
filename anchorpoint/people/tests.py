@@ -588,3 +588,22 @@ class ImportPhotoConsentTests(TestCase):
         import io
         call_command("import_signups", self._csv(""), "--commit", stdout=io.StringIO())
         self.assertEqual(Person.objects.get(first_name="Kid").photo_consent, "unknown")
+
+
+class PersonAgeGuardTests(TestCase):
+    def test_future_birthdate_reads_as_unknown_age(self):
+        from datetime import date, timedelta
+        p = Person.objects.create(
+            first_name="Future", last_name="Kid",
+            birthdate=date.today() + timedelta(days=400),
+        )
+        self.assertIsNone(p.age)       # not a negative number
+        self.assertIsNone(p.is_minor)  # unknown, not "minor"
+
+    def test_normal_birthdate_age(self):
+        from datetime import date, timedelta
+        p = Person.objects.create(
+            first_name="Nine", last_name="Yo",
+            birthdate=date.today() - timedelta(days=365 * 9 + 10),
+        )
+        self.assertEqual(p.age, 9)
