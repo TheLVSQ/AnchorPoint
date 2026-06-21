@@ -8,52 +8,59 @@
     <p class="page-subtitle">
         Records that share a <strong>name</strong> or an <strong>email</strong>. Phone isn't used
         (families share one number). Some same-name groups may be different people — this is a
-        review aid, not an automatic merge. Open each record to compare or fix.
+        review aid, not an automatic merge. Tick the duplicate copy in each group and delete it.
     </p>
 </div>
 
 {% if groups %}
-    <p class="stat-hint" style="margin-bottom:1rem;">
-        {{ groups|length }} group{{ groups|length|pluralize }} · {{ people_in_groups }} records to review.
-    </p>
-    {% for group in groups %}
-        <section class="detail-card" style="margin-bottom:1rem;">
-            <h2 style="font-size:1.05rem;">
-                <span class="chip">{{ group.reason }}</span> {{ group.label }}
-                <span class="stat-hint">({{ group.people|length }})</span>
-            </h2>
-            <div style="overflow-x:auto;">
-                <table class="data-table" style="width:100%; border-collapse:collapse;">
-                    <thead>
-                        <tr>
-                            <th style="text-align:left; padding:6px 10px;">Name</th>
-                            <th style="text-align:left; padding:6px 10px;">Age</th>
-                            <th style="text-align:left; padding:6px 10px;">Email</th>
-                            <th style="text-align:left; padding:6px 10px;">Phone</th>
-                            <th style="text-align:left; padding:6px 10px;">Family</th>
-                            <th style="text-align:right; padding:6px 10px;"></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for p in group.people %}
+    <form method="post" action="{% url 'people_bulk_delete' %}" hx-boost="false">
+        {% csrf_token %}
+        <div class="bulk-toolbar" style="display:flex; align-items:center; gap:1rem; flex-wrap:wrap; margin-bottom:1rem;">
+            <button type="submit" class="btn ghost danger" style="color:#dc2626;">Delete selected</button>
+            <span class="stat-hint">{{ groups|length }} group{{ groups|length|pluralize }} · {{ people_in_groups }} records. Tick the copy to remove (keep one per group).</span>
+        </div>
+
+        {% for group in groups %}
+            <section class="detail-card" style="margin-bottom:1rem;">
+                <h2 style="font-size:1.05rem;">
+                    <span class="chip">{{ group.reason }}</span> {{ group.label }}
+                    <span class="stat-hint">({{ group.people|length }})</span>
+                </h2>
+                <div style="overflow-x:auto;">
+                    <table class="data-table" style="width:100%; border-collapse:collapse;">
+                        <thead>
                             <tr>
-                                <td style="padding:6px 10px;"><strong>{{ p.first_name }} {{ p.last_name }}</strong></td>
-                                <td style="padding:6px 10px;">{{ p.age|default:"—" }}</td>
-                                <td style="padding:6px 10px; overflow-wrap:anywhere;">{{ p.email|default:"—" }}</td>
-                                <td style="padding:6px 10px;">{{ p.phone|default:"—" }}</td>
-                                <td style="padding:6px 10px;">
-                                    {% with hh=p.households.all|first %}{{ hh.name|default:"—" }}{% endwith %}
-                                </td>
-                                <td style="padding:6px 10px; text-align:right;">
-                                    <a class="btn ghost" href="{% url 'people_detail' p.pk %}">Open</a>
-                                </td>
+                                <th style="padding:6px 10px;"></th>
+                                <th style="text-align:left; padding:6px 10px;">Name</th>
+                                <th style="text-align:left; padding:6px 10px;">Age</th>
+                                <th style="text-align:left; padding:6px 10px;">Email</th>
+                                <th style="text-align:left; padding:6px 10px;">Phone</th>
+                                <th style="text-align:left; padding:6px 10px;">Family</th>
+                                <th style="text-align:right; padding:6px 10px;"></th>
                             </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </section>
-    {% endfor %}
+                        </thead>
+                        <tbody>
+                            {% for p in group.people %}
+                                <tr>
+                                    <td style="padding:6px 10px;"><input type="checkbox" name="ids" value="{{ p.pk }}"></td>
+                                    <td style="padding:6px 10px;"><strong>{{ p.first_name }} {{ p.last_name }}</strong></td>
+                                    <td style="padding:6px 10px;">{{ p.age|default:"—" }}</td>
+                                    <td style="padding:6px 10px; overflow-wrap:anywhere;">{{ p.email|default:"—" }}</td>
+                                    <td style="padding:6px 10px;">{{ p.phone|default:"—" }}</td>
+                                    <td style="padding:6px 10px;">
+                                        {% with hh=p.households.all|first %}{{ hh.name|default:"—" }}{% endwith %}
+                                    </td>
+                                    <td style="padding:6px 10px; text-align:right;">
+                                        <a class="btn ghost" href="{% url 'people_detail' p.pk %}">Open</a>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        {% endfor %}
+    </form>
 {% else %}
     <p class="empty-state">No potential duplicates found. 🎉</p>
 {% endif %}

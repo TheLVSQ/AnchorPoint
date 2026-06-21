@@ -312,10 +312,10 @@ class PeopleBulkDeleteTests(TestCase):
         self.assertNotEqual(resp.status_code, 200)
         self.assertTrue(Person.objects.filter(pk=self.a.pk).exists())
 
-    def test_list_shows_bulk_controls(self):
+    def test_people_list_has_no_bulk_controls(self):
+        # Bulk delete moved to the duplicates page; the main list stays clean.
         resp = self.client.get(reverse("people_list"))
-        self.assertContains(resp, "Delete selected")
-        self.assertContains(resp, 'id="select-all"')
+        self.assertNotContains(resp, "Delete selected")
 
 
 class PeopleDuplicatesTests(TestCase):
@@ -342,6 +342,13 @@ class PeopleDuplicatesTests(TestCase):
         Person.objects.create(first_name="B", last_name="Y", email="DUP@e.com")
         resp = self.client.get(reverse("people_duplicates"))
         self.assertContains(resp, "dup@e.com")
+
+    def test_duplicates_page_has_bulk_controls(self):
+        Person.objects.create(first_name="Jane", last_name="Doe")
+        Person.objects.create(first_name="Jane", last_name="Doe")
+        resp = self.client.get(reverse("people_duplicates"))
+        self.assertContains(resp, "Delete selected")     # bulk button moved here
+        self.assertContains(resp, 'name="ids"')           # per-row checkboxes
 
     def test_phone_sharing_family_not_flagged(self):
         # Family members share a phone but have different names → not duplicates.

@@ -24,20 +24,4 @@
 
 {% include "people/partials/people_results.html" %}
 
-<script>
-// Delegated so it keeps working after HTMX swaps the results in. "Select all"
-// toggles every visible row checkbox within the same bulk form.
-(function () {
-    document.addEventListener("change", function (e) {
-        if (e.target && e.target.id === "select-all") {
-            var form = e.target.closest("form");
-            if (!form) return;
-            form.querySelectorAll(".row-check").forEach(function (cb) {
-                cb.checked = e.target.checked;
-            });
-        }
-    });
-})();
-</script>
-
 {% endblock %}
