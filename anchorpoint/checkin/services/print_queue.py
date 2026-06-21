@@ -45,13 +45,15 @@ def _png_bytes(image, rotation=0) -> bytes:
     return buf.getvalue()
 
 
-def enqueue_checkin_labels(checkins, session) -> int:
-    """Render labels for a check-in batch and queue them for the active agent.
+def enqueue_checkin_labels(checkins, session, agent=None) -> int:
+    """Render labels for a check-in batch and queue them for an agent.
 
-    Returns the number of jobs queued (0 if no agent is available, which lets
-    the kiosk fall back to browser printing).
+    `agent` lets a caller target a specific printer (e.g. the one bound to this
+    kiosk); when None it falls back to the most-recently-active agent. Returns
+    the number of jobs queued (0 if no agent is available, which lets the kiosk
+    fall back to browser printing).
     """
-    agent = get_active_agent()
+    agent = agent or get_active_agent()
     if agent is None:
         return 0
 

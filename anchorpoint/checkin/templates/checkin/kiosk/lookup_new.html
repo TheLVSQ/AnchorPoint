@@ -62,5 +62,10 @@
       I'm New Here
     </a>
   </div>
+
+  <div style="margin-top:28px;text-align:center;font-size:13px;color:#666;">
+    Printer: {% if kiosk_agent %}{{ kiosk_agent.name }}{% else %}Automatic{% endif %}
+    · <a href="{% url 'checkin:kiosk_printer' %}" style="color:#888;">Change</a>
+  </div>
 </div>
 {% endblock %}
