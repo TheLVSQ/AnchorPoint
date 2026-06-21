@@ -21,6 +21,7 @@ docs/checkin-printer-raspberry-pi.md). Requires Python 3 and `requests`.
 import argparse
 import json
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -34,6 +35,16 @@ CONFIG_PATH = os.environ.get(
 )
 POLL_INTERVAL_SECONDS = 2
 HTTP_TIMEOUT = 15
+
+# After submitting a label we wait for it to actually finish printing before
+# sending the next one. `lp` returns as soon as a job is QUEUED, so without this
+# a multi-label batch (e.g. a family checking in several kids at once) fires
+# several jobs in milliseconds and overruns a single-connection USB bridge like
+# ipp-usb (Brother QL over USB), wedging the queue mid-batch. Serialising on
+# physical completion keeps batches feeding one label at a time.
+JOB_DONE_TIMEOUT_SECONDS = 45   # give up waiting after this so a stuck job can't hang the agent
+JOB_POLL_SECONDS = 0.4          # how often to check whether the job has cleared the queue
+JOB_SETTLE_SECONDS = 0.4        # brief pause after a label finishes, before the next one
 
 
 def load_config():
@@ -111,6 +122,37 @@ def _png_size(png_bytes):
     return width, height
 
 
+_REQUEST_ID_RE = re.compile(r"request id is (\S+)")
+
+
+def _parse_request_id(stdout):
+    """Pull the CUPS job id out of `lp` stdout, e.g.
+    'request id is ChurchLabel-34 (1 file(s))' -> 'ChurchLabel-34'.
+    None if it can't be found (then we skip the wait and behave as before)."""
+    match = _REQUEST_ID_RE.search(stdout or "")
+    return match.group(1) if match else None
+
+
+def _wait_for_job(job_id, timeout=JOB_DONE_TIMEOUT_SECONDS):
+    """Block until CUPS job `job_id` leaves the active queue (printed or failed)
+    or `timeout` seconds elapse. Best-effort: if `lpstat` is unavailable we
+    return immediately rather than stalling the agent."""
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        try:
+            out = subprocess.run(
+                ["lpstat", "-W", "not-completed", "-o"],
+                capture_output=True, text=True, timeout=10,
+            )
+        except Exception:  # noqa: BLE001 - can't query the queue; don't block the agent
+            return
+        # `lpstat -o` lines begin with the request id ("ChurchLabel-34 user ...").
+        active = [line.split(" ", 1)[0] for line in (out.stdout or "").splitlines()]
+        if job_id not in active:
+            return
+        time.sleep(JOB_POLL_SECONDS)
+
+
 def _print_png(png_bytes, printer, width_mm=DEFAULT_MEDIA_WIDTH_MM,
                cut_media=DEFAULT_CUT_MEDIA):
     """Send a PNG to the printer via CUPS `lp`. Returns (ok, error_message).
@@ -150,6 +192,13 @@ def _print_png(png_bytes, printer, width_mm=DEFAULT_MEDIA_WIDTH_MM,
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
         if result.returncode != 0:
             return False, (result.stderr or result.stdout or "lp failed").strip()
+        # `lp` returns as soon as the job is QUEUED, not printed. Wait for it to
+        # finish feeding so the caller doesn't pile the next label onto the
+        # printer mid-job (which wedges the ipp-usb USB bridge under batches).
+        job_id = _parse_request_id(result.stdout)
+        if job_id:
+            _wait_for_job(job_id)
+            time.sleep(JOB_SETTLE_SECONDS)
         return True, ""
     except Exception as exc:  # noqa: BLE001 - report any failure back to the server
         return False, str(exc)
@@ -221,7 +270,9 @@ def cmd_run(args):
             label = job.get("description") or job.get("kind")
             verb = "saved" if (save_dir and ok) else ("printed" if ok else f"FAILED ({err}):")
             print(f"{verb} {label}")
-            # Drain the rest of the batch immediately rather than waiting.
+            # Loop straight to the next job. _print_png blocks until this label
+            # has finished printing, so a batch feeds one label at a time instead
+            # of flooding the queue (which wedges ipp-usb over USB).
         except requests.RequestException as exc:
             print(f"Network error: {exc}", file=sys.stderr)
             if once:
