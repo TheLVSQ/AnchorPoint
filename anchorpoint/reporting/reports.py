@@ -184,6 +184,8 @@ class SessionAttendanceReport(Report):
                 status = "Checked out"
             elif c.arrived_at:
                 status = "Present"
+            elif c.no_show:
+                status = "No-show"
             else:
                 status = "Expected"
             yield {

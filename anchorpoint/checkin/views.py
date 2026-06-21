@@ -1084,7 +1084,10 @@ def _session_stats(session):
     checked_in = present_q.count()
     checked_out = session.checkins.filter(checked_out_at__isnull=False).count()
     expected = session.checkins.filter(
-        arrived_at__isnull=True, checked_out_at__isnull=True
+        arrived_at__isnull=True, checked_out_at__isnull=True, no_show=False
+    ).count()
+    no_show = session.checkins.filter(
+        arrived_at__isnull=True, checked_out_at__isnull=True, no_show=True
     ).count()
 
     room_counts = {
@@ -1111,6 +1114,7 @@ def _session_stats(session):
         "checked_in": checked_in,
         "checked_out": checked_out,
         "expected": expected,
+        "no_show": no_show,
         "total": checked_in + checked_out,
         "unassigned": room_counts.get(None, 0),
         "rooms": rooms,
@@ -1156,29 +1160,66 @@ def _present_checkins(session):
     )
 
 
+def _expected_checkins(session):
+    """Pre-staged kids who haven't arrived and aren't yet marked no-show."""
+    return (
+        session.checkins
+        .filter(arrived_at__isnull=True, checked_out_at__isnull=True, no_show=False)
+        .select_related("person")
+        .order_by("person__last_name", "person__first_name")
+    )
+
+
+def _manager_context(session):
+    return {
+        "session": session,
+        "stats": _session_stats(session),
+        "present": _present_checkins(session),
+        "expected": _expected_checkins(session),
+        "agent": get_active_agent(),
+    }
+
+
 @checkin_team_required
 def checkin_manager(request, session_id):
     """Live check-in manager for volunteers: who's currently checked in (name +
     grade + room), with per-child reprint and a link to each child's detail."""
     session = get_object_or_404(CheckInSession, pk=session_id)
-    return render(request, "checkin/manager.html", {
-        "session": session,
-        "stats": _session_stats(session),
-        "present": _present_checkins(session),
-        "agent": get_active_agent(),
-    })
+    return render(request, "checkin/manager.html", _manager_context(session))
 
 
 @checkin_team_required
 def checkin_manager_roster(request, session_id):
     """HTMX partial: present-roster + counts, polled live by the manager page."""
     session = get_object_or_404(CheckInSession, pk=session_id)
-    return render(request, "checkin/_manager_roster.html", {
-        "session": session,
-        "stats": _session_stats(session),
-        "present": _present_checkins(session),
-        "agent": get_active_agent(),
-    })
+    return render(request, "checkin/_manager_roster.html", _manager_context(session))
+
+
+@checkin_team_required
+@require_POST
+def checkin_mark_noshow(request, session_id, checkin_id):
+    """Mark one pre-staged (not-arrived) check-in as a no-show."""
+    session = get_object_or_404(CheckInSession, pk=session_id)
+    checkin = get_object_or_404(
+        session.checkins.select_related("person"),
+        pk=checkin_id, arrived_at__isnull=True, checked_out_at__isnull=True,
+    )
+    checkin.no_show = True
+    checkin.save(update_fields=["no_show"])
+    messages.success(request, f"{checkin.person.first_name} marked as a no-show.")
+    return redirect("checkin:checkin_manager", session_id=session_id)
+
+
+@checkin_team_required
+@require_POST
+def checkin_clear_expected(request, session_id):
+    """End-of-session cleanup: mark every still-expected child as a no-show."""
+    session = get_object_or_404(CheckInSession, pk=session_id)
+    n = session.checkins.filter(
+        arrived_at__isnull=True, checked_out_at__isnull=True, no_show=False
+    ).update(no_show=True)
+    messages.success(request, f"Marked {n} remaining expected child{'ren' if n != 1 else ''} as no-shows.")
+    return redirect("checkin:checkin_manager", session_id=session_id)
 
 
 @checkin_team_required
