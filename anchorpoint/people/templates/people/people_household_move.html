@@ -21,7 +21,7 @@
                 <select name="target_household" id="target_household" required>
                     <option value="">— Select a family —</option>
                     {% for hh in other_households %}
-                        <option value="{{ hh.pk }}">{{ hh.name }}</option>
+                        <option value="{{ hh.pk }}">{{ hh.selector_label }}</option>
                     {% endfor %}
                 </select>
             </div>

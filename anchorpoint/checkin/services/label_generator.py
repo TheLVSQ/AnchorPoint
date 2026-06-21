@@ -180,7 +180,7 @@ def _make_child_label(checkin, session) -> Image.Image:
     if person.photo_consent == "denied":
         rows.append(text_row("⊘ DO NOT PHOTOGRAPH", 1.0, fill="#b91c1c"))
 
-    rows.append(text_row(code, 2.6))
+    rows.append(text_row(code, 2.0))
 
     if session and getattr(session, "print_emergency_phone", False) and person.is_minor:
         phone = _guardian_phone(person)

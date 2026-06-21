@@ -12,8 +12,8 @@
     <input type="hidden" name="child_count" id="child_count" value="{{ child_forms|length }}">
 
     {% if parent_form.errors or invalid_children %}
-      <div style="margin-bottom:16px;padding:12px 16px;background:#3b1219;border:1px solid #e5484d;
-                  border-radius:10px;color:#ff9592;font-size:15px;">
+      <div style="margin-bottom:16px;padding:12px 16px;background:var(--danger-bg);border:1px solid var(--danger);
+                  border-radius:10px;color:var(--danger);font-size:15px;">
         {% for error in parent_form.non_field_errors %}<div>{{ error }}</div>{% endfor %}
         {% for field in parent_form %}{% for error in field.errors %}
           <div>{{ field.label }}: {{ error }}</div>
@@ -22,7 +22,7 @@
       </div>
     {% endif %}
 
-    <div style="font-size:14px;color:#666;text-transform:uppercase;letter-spacing:0.06em;
+    <div style="font-size:15px;color:var(--faint);text-transform:uppercase;letter-spacing:0.06em;
                 margin-bottom:12px;margin-top:8px;">Parent / Guardian</div>
 
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
@@ -49,9 +49,9 @@
     </div>
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;">
       <input type="checkbox" name="phone_opt_in" id="phone_opt_in"
-             style="width:20px;height:20px;accent-color:#4f46e5;"
+             style="width:22px;height:22px;accent-color:var(--primary);"
              {% if parent_form.phone_opt_in.value %}checked{% endif %}>
-      <label for="phone_opt_in" style="font-size:14px;color:#aaa;cursor:pointer;">
+      <label for="phone_opt_in" style="font-size:15px;color:var(--muted);cursor:pointer;">
         Allow SMS updates from {{ org.name }}
       </label>
     </div>
@@ -61,12 +61,12 @@
         <div class="child-section" data-index="{{ forloop.counter0 }}">
           <div style="display:flex;justify-content:space-between;align-items:center;
                       margin-bottom:12px;margin-top:20px;">
-            <div class="child-heading" style="font-size:14px;color:#666;text-transform:uppercase;letter-spacing:0.06em;">
+            <div class="child-heading" style="font-size:15px;color:var(--faint);text-transform:uppercase;letter-spacing:0.06em;">
               Child {{ forloop.counter }}
             </div>
             {% if not forloop.first %}
               <button type="button" class="btn btn-secondary remove-child"
-                      style="padding:6px 14px;font-size:13px;" data-index="{{ forloop.counter0 }}">
+                      style="padding:6px 14px;font-size:14px;" data-index="{{ forloop.counter0 }}">
                 Remove
               </button>
             {% endif %}
@@ -76,8 +76,8 @@
               <label>First Name</label>
               <input type="text" name="child_{{ forloop.counter0 }}-first_name"
                      value="{{ cf.first_name.value|default:'' }}" placeholder="First name"
-                     {% if cf.first_name.errors %}style="border-color:#e5484d;"{% endif %}>
-              {% if cf.first_name.errors %}<div style="color:#ff9592;font-size:13px;margin-top:4px;">{{ cf.first_name.errors.0 }}</div>{% endif %}
+                     {% if cf.first_name.errors %}style="border-color:var(--danger);"{% endif %}>
+              {% if cf.first_name.errors %}<div style="color:var(--danger);font-size:14px;margin-top:4px;">{{ cf.first_name.errors.0 }}</div>{% endif %}
             </div>
             <div class="form-group">
               <label>Last Name</label>
@@ -89,8 +89,8 @@
             <label>Birthdate</label>
             <input type="date" name="child_{{ forloop.counter0 }}-birthdate"
                    value="{{ cf.birthdate.value|default:'' }}"
-                   {% if cf.birthdate.errors %}style="border-color:#e5484d;"{% endif %}>
-            {% if cf.birthdate.errors %}<div style="color:#ff9592;font-size:13px;margin-top:4px;">{{ cf.birthdate.errors.0 }}</div>{% endif %}
+                   {% if cf.birthdate.errors %}style="border-color:var(--danger);"{% endif %}>
+            {% if cf.birthdate.errors %}<div style="color:var(--danger);font-size:14px;margin-top:4px;">{{ cf.birthdate.errors.0 }}</div>{% endif %}
           </div>
           <div class="form-group">
             <label>Allergies (optional)</label>
@@ -100,25 +100,25 @@
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
             <input type="checkbox" name="child_{{ forloop.counter0 }}-photo_consent"
                    id="photo_{{ forloop.counter0 }}"
-                   style="width:20px;height:20px;accent-color:#4f46e5;"
+                   style="width:22px;height:22px;accent-color:var(--primary);"
                    {% if cf.photo_consent.value %}checked{% endif %}>
-            <label for="photo_{{ forloop.counter0 }}" style="font-size:14px;color:#aaa;cursor:pointer;">
+            <label for="photo_{{ forloop.counter0 }}" style="font-size:15px;color:var(--muted);cursor:pointer;">
               OK to photograph &amp; use child's image
             </label>
           </div>
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
             <input type="checkbox" name="child_{{ forloop.counter0 }}-custody_flag"
                    id="custody_{{ forloop.counter0 }}"
-                   style="width:20px;height:20px;accent-color:#4f46e5;"
+                   style="width:22px;height:22px;accent-color:var(--primary);"
                    {% if cf.custody_flag.value %}checked{% endif %}
                    onchange="toggleCustody({{ forloop.counter0 }}, this.checked)">
-            <label for="custody_{{ forloop.counter0 }}" style="font-size:14px;color:#aaa;cursor:pointer;">
+            <label for="custody_{{ forloop.counter0 }}" style="font-size:15px;color:var(--muted);cursor:pointer;">
               Security/custody concern
             </label>
           </div>
           <div id="custody_details_{{ forloop.counter0 }}"
                style="display:{% if cf.custody_flag.value %}block{% else %}none{% endif %};
-                      background:#0d0d20;border-radius:8px;padding:14px;margin-bottom:12px;">
+                      background:var(--inset);border-radius:8px;padding:14px;margin-bottom:12px;">
             <div class="form-group">
               <label>Custody notes</label>
               <textarea name="child_{{ forloop.counter0 }}-custody_notes"
@@ -140,7 +140,7 @@
 
     <button type="submit" class="btn btn-primary btn-lg">Continue to Check-In</button>
     <div style="margin-top:14px;text-align:center;">
-      <a href="{% url 'checkin:kiosk_lookup' %}" style="color:#666;font-size:14px;text-decoration:none;">
+      <a href="{% url 'checkin:kiosk_lookup' %}" style="color:var(--faint);font-size:15px;text-decoration:none;">
         Back to Search
       </a>
     </div>
@@ -161,8 +161,8 @@
     var html = `
       <div class="child-section" data-index="${idx}">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;margin-top:20px;">
-          <div class="child-heading" style="font-size:14px;color:#666;text-transform:uppercase;letter-spacing:0.06em;">Child ${idx + 1}</div>
-          <button type="button" class="btn btn-secondary remove-child" style="padding:6px 14px;font-size:13px;" data-index="${idx}">Remove</button>
+          <div class="child-heading" style="font-size:15px;color:var(--faint);text-transform:uppercase;letter-spacing:0.06em;">Child ${idx + 1}</div>
+          <button type="button" class="btn btn-secondary remove-child" style="padding:6px 14px;font-size:14px;" data-index="${idx}">Remove</button>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
           <div class="form-group"><label>First Name</label><input type="text" name="child_${idx}-first_name" placeholder="First name"></div>
@@ -171,16 +171,16 @@
         <div class="form-group"><label>Birthdate</label><input type="date" name="child_${idx}-birthdate"></div>
         <div class="form-group"><label>Allergies (optional)</label><textarea name="child_${idx}-allergies" rows="2" placeholder="List any allergies"></textarea></div>
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
-          <input type="checkbox" name="child_${idx}-photo_consent" id="photo_${idx}" style="width:20px;height:20px;accent-color:#4f46e5;">
-          <label for="photo_${idx}" style="font-size:14px;color:#aaa;cursor:pointer;">OK to photograph &amp; use child's image</label>
+          <input type="checkbox" name="child_${idx}-photo_consent" id="photo_${idx}" style="width:22px;height:22px;accent-color:var(--primary);">
+          <label for="photo_${idx}" style="font-size:15px;color:var(--muted);cursor:pointer;">OK to photograph &amp; use child's image</label>
         </div>
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
           <input type="checkbox" name="child_${idx}-custody_flag" id="custody_${idx}"
-                 style="width:20px;height:20px;accent-color:#4f46e5;"
+                 style="width:22px;height:22px;accent-color:var(--primary);"
                  onchange="toggleCustody(${idx}, this.checked)">
-          <label for="custody_${idx}" style="font-size:14px;color:#aaa;cursor:pointer;">Security/custody concern</label>
+          <label for="custody_${idx}" style="font-size:15px;color:var(--muted);cursor:pointer;">Security/custody concern</label>
         </div>
-        <div id="custody_details_${idx}" style="display:none;background:#0d0d20;border-radius:8px;padding:14px;margin-bottom:12px;">
+        <div id="custody_details_${idx}" style="display:none;background:var(--inset);border-radius:8px;padding:14px;margin-bottom:12px;">
           <div class="form-group"><label>Custody notes</label><textarea name="child_${idx}-custody_notes" rows="2" placeholder="Who has custody, any concerns..."></textarea></div>
           <div class="form-group"><label>Persons NOT allowed to pick up</label><textarea name="child_${idx}-unauthorized_pickup" rows="2" placeholder="Names of unauthorized persons..."></textarea></div>
         </div>

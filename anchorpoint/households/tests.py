@@ -260,3 +260,57 @@ class FamilyDeleteTests(TestCase):
         self.client.logout()
         resp = self.client.get(self.url)
         self.assertRedirects(resp, "/login/", fetch_redirect_response=False)
+
+
+class HouseholdSelectorLabelTests(TestCase):
+    """selector_label() disambiguates same-surname families in dropdowns."""
+
+    def _morris(self, name, adult_first, kid_first, **hh_kwargs):
+        adult = Person.objects.create(
+            first_name=adult_first, last_name="Morris", birthdate=date(1985, 3, 3)
+        )
+        kid = Person.objects.create(
+            first_name=kid_first, last_name="Morris", birthdate=date(2016, 6, 6)
+        )
+        hh = Household.objects.create(name=name, primary_adult=adult, **hh_kwargs)
+        # Add the kid first to prove ordering puts the primary adult ahead of it.
+        HouseholdMember.objects.create(
+            household=hh, person=kid,
+            relationship_type=HouseholdMember.RelationshipType.CHILD,
+        )
+        HouseholdMember.objects.create(
+            household=hh, person=adult,
+            relationship_type=HouseholdMember.RelationshipType.ADULT,
+        )
+        return hh
+
+    def test_label_lists_members_primary_first_with_location(self):
+        hh = self._morris("Morris", "John", "Colton", address_line1="12 Oak St")
+        label = hh.selector_label()
+        self.assertIn("Morris", label)
+        self.assertIn("John", label)
+        self.assertIn("Colton", label)
+        self.assertLess(label.index("John"), label.index("Colton"))
+        self.assertIn("12 Oak St", label)
+
+    def test_two_same_surname_families_are_distinguishable(self):
+        a = self._morris("Morris", "John", "Colton")
+        b = self._morris("Morris", "Mark", "Nash")
+        self.assertNotEqual(a.selector_label(), b.selector_label())
+        self.assertIn("Colton", a.selector_label())
+        self.assertIn("Nash", b.selector_label())
+
+    def test_label_falls_back_to_name_when_no_members(self):
+        hh = Household.objects.create(name="Lonely Household")
+        self.assertEqual(hh.selector_label(), "Lonely Household")
+
+    def test_membership_form_options_show_member_names(self):
+        from households.forms import HouseholdMembershipForm
+
+        self._morris("Morris", "John", "Colton")
+        outsider = Person.objects.create(
+            first_name="Nash", last_name="Smith", birthdate=date(2015, 2, 2)
+        )
+        rendered = str(HouseholdMembershipForm(person=outsider)["household"])
+        self.assertIn("John", rendered)
+        self.assertIn("Colton", rendered)
