@@ -16,7 +16,9 @@
     <button type="submit">Search</button>
     <a href="{% url 'people_add' %}" style="margin-left: 10px;">Add Person</a>
     <a href="{% url 'signup_import' %}" style="margin-left: 10px;">Import CSV</a>
-    <a href="{% url 'rock_import' %}" style="margin-left: 10px;">Import from Rock</a>
+    {% if request.user.is_superuser or request.user.profile.role == 'admin' or request.user.profile.role == 'staff' %}
+        <a href="{% url 'rock_import' %}" style="margin-left: 10px;">Other CMS import</a>
+    {% endif %}
 </form>
 
 {% include "people/partials/people_results.html" %}

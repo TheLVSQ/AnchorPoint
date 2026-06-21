@@ -7,7 +7,7 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from messaging.models import CommunicationLog
 
-from core.permissions import staff_required
+from core.permissions import staff_or_admin_required, staff_required
 from households.forms import (
     HouseholdMembershipForm,
     HouseholdQuickCreateForm,
@@ -160,9 +160,9 @@ def signup_import(request):
     })
 
 
-@staff_required
+@staff_or_admin_required
 def rock_import_view(request):
-    """Migrate a Rock RMS person-export CSV: upload → dry-run preview → commit.
+    """Migrate another CMS's person-export CSV: upload → dry-run preview → commit.
 
     Shares run_rock_import with the management command. The parsed CSV text is
     stashed in the (DB-backed) session between preview and commit."""
