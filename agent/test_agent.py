@@ -90,5 +90,70 @@ class PrinterSupportsCutTests(unittest.TestCase):
             self.assertFalse(agent._printer_supports_cut("X"))
 
 
+class JobSerializationTests(unittest.TestCase):
+    """A label must finish printing before the next job is submitted, so batches
+    don't overrun the ipp-usb USB bridge and wedge the queue."""
+
+    def setUp(self):
+        agent._cut_support_cache.clear()
+
+    def test_print_waits_until_job_leaves_the_queue(self):
+        # lpstat shows the job still active for two polls, then it clears.
+        lpstat_stdout = [
+            "ChurchLabel-7 luke 1024 Sun 21 Jun\n",  # still printing
+            "ChurchLabel-7 luke 1024 Sun 21 Jun\n",  # still printing
+            "",                                       # cleared
+        ]
+        calls = {"lpstat": 0}
+
+        def fake_run(cmd, *a, **kw):
+            if cmd[0] == "lpstat":
+                idx = min(calls["lpstat"], len(lpstat_stdout) - 1)
+                calls["lpstat"] += 1
+                return mock.Mock(returncode=0, stdout=lpstat_stdout[idx], stderr="")
+            return mock.Mock(
+                returncode=0,
+                stdout="request id is ChurchLabel-7 (1 file(s))",
+                stderr="",
+            )
+
+        with mock.patch.object(agent, "_printer_supports_cut", return_value=False), \
+                mock.patch.object(agent.subprocess, "run", side_effect=fake_run), \
+                mock.patch.object(agent.time, "sleep") as sleep:
+            ok, err = agent._print_png(_fake_png(), "ChurchLabel")
+
+        self.assertTrue(ok, err)
+        self.assertGreaterEqual(calls["lpstat"], 3)  # polled until the job cleared
+        self.assertTrue(sleep.called)                # paced polls + settle
+
+    def test_no_request_id_means_no_wait(self):
+        # If `lp` emits no request id we don't poll lpstat (degrade to old behaviour).
+        def fake_run(cmd, *a, **kw):
+            self.assertNotEqual(cmd[0], "lpstat")  # lpstat must never be queried
+            return mock.Mock(returncode=0, stdout="", stderr="")
+
+        with mock.patch.object(agent, "_printer_supports_cut", return_value=False), \
+                mock.patch.object(agent.subprocess, "run", side_effect=fake_run):
+            ok, err = agent._print_png(_fake_png(), "ChurchLabel")
+        self.assertTrue(ok, err)
+
+    def test_wait_times_out_without_hanging(self):
+        # A job that never clears must not loop forever — give up at the timeout.
+        clock = {"t": 0.0}
+
+        def fake_monotonic():
+            clock["t"] += 1.0
+            return clock["t"]
+
+        def fake_run(cmd, *a, **kw):
+            return mock.Mock(returncode=0, stdout="ChurchLabel-9 luke 1 Sun\n", stderr="")
+
+        with mock.patch.object(agent.time, "monotonic", side_effect=fake_monotonic), \
+                mock.patch.object(agent.time, "sleep"), \
+                mock.patch.object(agent.subprocess, "run", side_effect=fake_run):
+            agent._wait_for_job("ChurchLabel-9", timeout=5)
+        # Reaching this line (no infinite loop) is the assertion.
+
+
 if __name__ == "__main__":
     unittest.main()
