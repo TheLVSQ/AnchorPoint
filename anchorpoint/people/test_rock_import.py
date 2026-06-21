@@ -184,6 +184,20 @@ class RockImportPageTests(TestCase):
         self.client.logout()
         self.assertEqual(self.client.get(reverse("rock_import")).status_code, 302)
 
+    def test_volunteer_admin_forbidden(self):
+        # Staff/admin only — volunteer admins (and volunteers) can't import a CMS.
+        from django.contrib.auth import get_user_model
+        from core.models import UserProfile
+        va = get_user_model().objects.create_user(username="va", password="pw")
+        va.profile.role = UserProfile.Role.VOLUNTEER_ADMIN
+        va.profile.save()
+        self.client.force_login(va)
+        self.assertEqual(self.client.get(reverse("rock_import")).status_code, 403)
+
+    def test_page_uses_generic_cms_wording(self):
+        resp = self.client.get(reverse("rock_import"))
+        self.assertContains(resp, "Other CMS import")
+
     def test_preview_writes_nothing(self):
         resp = self._upload()
         self.assertEqual(resp.status_code, 200)
