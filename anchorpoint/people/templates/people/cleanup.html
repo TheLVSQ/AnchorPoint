@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block content %}
+<a class="ghost-link" href="{% url 'people_list' %}">&larr; Back to People</a>
+
+<div class="page-header">
+    <span class="chip">Cleanup</span>
+    <h1>Clean up inactive records</h1>
+    <p class="page-subtitle">
+        Likely-stale imported records: status <strong>visitor</strong> or <strong>guest</strong>,
+        <strong>no</strong> email / phone / birthdate, and <strong>not</strong> in a household with
+        anyone else. Contact-less parents linked to a child are deliberately excluded, so this won't
+        orphan a kid. Review, then delete — nothing happens without the confirm step.
+    </p>
+</div>
+
+{% if candidates %}
+    <form method="post" action="{% url 'people_bulk_delete' %}" hx-boost="false">
+        {% csrf_token %}
+        <div class="bulk-toolbar" style="display:flex; align-items:center; gap:1rem; flex-wrap:wrap; margin-bottom:1rem;">
+            <label style="display:inline-flex; align-items:center; gap:6px; cursor:pointer;">
+                <input type="checkbox" id="select-all"> Select all {{ count }}
+            </label>
+            <button type="submit" class="btn ghost danger" style="color:#dc2626;">Delete selected</button>
+            <span class="stat-hint">{{ count }} record{{ count|pluralize }} match.</span>
+        </div>
+        <section class="detail-card">
+            <div style="overflow-x:auto;">
+                <table class="data-table" style="width:100%; border-collapse:collapse;">
+                    <thead>
+                        <tr>
+                            <th style="padding:6px 10px;"></th>
+                            <th style="text-align:left; padding:6px 10px;">Name</th>
+                            <th style="text-align:left; padding:6px 10px;">Status</th>
+                            <th style="text-align:left; padding:6px 10px;">Family</th>
+                            <th style="text-align:right; padding:6px 10px;"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for p in candidates %}
+                            <tr>
+                                <td style="padding:6px 10px;"><input type="checkbox" class="row-check" name="ids" value="{{ p.pk }}"></td>
+                                <td style="padding:6px 10px;"><strong>{{ p.first_name }} {{ p.last_name }}</strong></td>
+                                <td style="padding:6px 10px;">{{ p.get_status_display }}</td>
+                                <td style="padding:6px 10px;">{% with hh=p.households.all|first %}{{ hh.name|default:"—" }}{% endwith %}</td>
+                                <td style="padding:6px 10px; text-align:right;"><a class="btn ghost" href="{% url 'people_detail' p.pk %}">Open</a></td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </form>
+    <script>
+    (function () {
+        document.addEventListener("change", function (e) {
+            if (e.target && e.target.id === "select-all") {
+                var form = e.target.closest("form");
+                if (form) form.querySelectorAll(".row-check").forEach(function (c) { c.checked = e.target.checked; });
+            }
+        });
+    })();
+    </script>
+{% else %}
+    <p class="empty-state">No inactive records match. 🎉</p>
+{% endif %}
+{% endblock %}

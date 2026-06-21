@@ -318,6 +318,52 @@ class PeopleBulkDeleteTests(TestCase):
         self.assertNotContains(resp, "Delete selected")
 
 
+class PeopleCleanupTests(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(username="cln", password="pw")
+        self.user.profile.role = UserProfile.Role.STAFF
+        self.user.profile.save()
+        self.client.force_login(self.user)
+
+    def test_flags_only_inactive_no_contact_solo(self):
+        from datetime import date
+        from households.models import Household, HouseholdMember
+        # A: visitor, no contact, solo → SHOULD be flagged
+        flagged = Person.objects.create(first_name="Stale", last_name="Visitor", status="visitor")
+        # B: visitor but has a phone → not flagged
+        Person.objects.create(first_name="Has", last_name="Phone", status="visitor", phone="+15551112222")
+        # C: visitor, no contact, but in a 2-person household → protected
+        parent = Person.objects.create(first_name="Quiet", last_name="Parent", status="visitor")
+        kid = Person.objects.create(first_name="Their", last_name="Kid", birthdate=date(2016, 1, 1))
+        fam = Household.objects.create(name="Parent Family")
+        HouseholdMember.objects.create(household=fam, person=parent)
+        HouseholdMember.objects.create(household=fam, person=kid)
+        # D: member status, no contact → not flagged (not visitor/guest)
+        Person.objects.create(first_name="Real", last_name="Member", status="member")
+        # E: visitor, no contact, but has a birthdate → not flagged
+        Person.objects.create(first_name="Has", last_name="Birthday", status="visitor", birthdate=date(2010, 1, 1))
+
+        resp = self.client.get(reverse("people_cleanup"))
+        self.assertEqual(resp.context["count"], 1)
+        self.assertContains(resp, "Stale Visitor")
+        self.assertNotContains(resp, "Has Phone")
+        self.assertNotContains(resp, "Quiet Parent")   # protected: in a family
+        self.assertNotContains(resp, "Real Member")
+        self.assertNotContains(resp, "Has Birthday")
+        self.assertContains(resp, "Delete selected")
+        self.assertContains(resp, str(flagged.pk))
+
+    def test_empty_state_when_clean(self):
+        Person.objects.create(first_name="Good", last_name="Member", status="member", email="g@e.com")
+        resp = self.client.get(reverse("people_cleanup"))
+        self.assertEqual(resp.context["count"], 0)
+        self.assertContains(resp, "No inactive records")
+
+    def test_requires_login(self):
+        self.client.logout()
+        self.assertNotEqual(self.client.get(reverse("people_cleanup")).status_code, 200)
+
+
 class PeopleDuplicatesTests(TestCase):
     def setUp(self):
         self.user = get_user_model().objects.create_user(username="dup", password="pw")
