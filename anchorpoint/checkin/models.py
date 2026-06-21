@@ -336,6 +336,10 @@ class CheckIn(models.Model):
     )
     child_label_printed = models.BooleanField(default=False)
     parent_label_printed = models.BooleanField(default=False)
+    # A pre-staged check-in confirmed as a no-show (printed ahead, never arrived).
+    # Keeps the record for the roster but excludes it from "expected" and from
+    # attendance (attendance counts arrivals only).
+    no_show = models.BooleanField(default=False)
     notes = models.TextField(blank=True)
 
     class Meta:
@@ -350,8 +354,13 @@ class CheckIn(models.Model):
 
     @property
     def is_expected(self):
-        """Pre-staged: label printed ahead of time, not yet arrived."""
-        return self.arrived_at is None and self.checked_out_at is None
+        """Pre-staged: label printed ahead of time, not yet arrived (and not
+        resolved as a no-show)."""
+        return (
+            self.arrived_at is None
+            and self.checked_out_at is None
+            and not self.no_show
+        )
 
     @property
     def is_present(self):

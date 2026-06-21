@@ -36,6 +36,8 @@ urlpatterns = [
     path("sessions/<int:session_id>/manager/", views.checkin_manager, name="checkin_manager"),
     path("sessions/<int:session_id>/manager/roster/", views.checkin_manager_roster, name="checkin_manager_roster"),
     path("sessions/<int:session_id>/manager/<int:checkin_id>/reprint/", views.checkin_reprint, name="checkin_reprint"),
+    path("sessions/<int:session_id>/manager/<int:checkin_id>/noshow/", views.checkin_mark_noshow, name="checkin_mark_noshow"),
+    path("sessions/<int:session_id>/manager/clear-expected/", views.checkin_clear_expected, name="checkin_clear_expected"),
     path("sessions/<int:session_id>/preprint/", views.session_preprint, name="session_preprint"),
     path("sessions/<int:session_id>/preprint/<int:household_id>/reprint/", views.session_preprint_reprint, name="session_preprint_reprint"),
 
