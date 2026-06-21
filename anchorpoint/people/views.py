@@ -5,6 +5,7 @@ from django.db import IntegrityError, transaction
 from django.db.models import Q
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.views.decorators.http import require_POST
 from messaging.models import CommunicationLog
 
 from core.permissions import staff_or_admin_required, staff_required
@@ -61,6 +62,27 @@ def people_delete(request, pk):
         "households": person.households.all(),
         "checkin_count": person.checkins.count(),
         "group_count": person.group_memberships.count(),
+    })
+
+
+@staff_required
+@require_POST
+def people_bulk_delete(request):
+    """Confirm + delete several people at once (e.g. test records). Two POST
+    stages: first shows a confirmation listing the selected people, then (with
+    action=confirm) deletes them. Family records are kept."""
+    people = Person.objects.filter(pk__in=request.POST.getlist("ids"))
+    if not people.exists():
+        messages.error(request, "Select at least one person to delete.")
+        return redirect("people_list")
+    if request.POST.get("action") == "confirm":
+        count = people.count()
+        people.delete()
+        messages.success(request, f"Deleted {count} {'person' if count == 1 else 'people'}.")
+        return redirect("people_list")
+    return render(request, "people/people_bulk_confirm_delete.html", {
+        "people": people.order_by("last_name", "first_name"),
+        "count": people.count(),
     })
 
 

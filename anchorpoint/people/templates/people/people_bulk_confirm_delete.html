@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block content %}
+<a class="ghost-link" href="{% url 'people_list' %}">&larr; Back to People</a>
+
+<div class="page-header">
+    <span class="chip" style="background:#fee2e2;color:#991b1b;">Delete people</span>
+    <h1>Delete {{ count }} {{ count|pluralize:"person,people" }}?</h1>
+</div>
+
+<div class="detail-card" style="border:2px solid #f59e0b; background:#fffbeb; margin-bottom:1.5rem;">
+    <p>This permanently removes the following, along with their check-in history,
+       group memberships, and message logs. Family records are kept.
+       <strong>This cannot be undone.</strong></p>
+    <ul class="detail-list" style="max-height:340px; overflow:auto;">
+        {% for p in people %}
+            <li><span>{{ p.first_name }} {{ p.last_name }}</span>
+                <strong>{% if p.age is not None %}Age {{ p.age }}{% else %}—{% endif %}</strong></li>
+        {% endfor %}
+    </ul>
+</div>
+
+<div class="hero-actions">
+    <a href="{% url 'people_list' %}" class="btn ghost">Cancel</a>
+    <form method="POST" action="{% url 'people_bulk_delete' %}" hx-boost="false"
+          onsubmit="return confirm('Permanently delete {{ count }} record(s)? This cannot be undone.');">
+        {% csrf_token %}
+        {% for p in people %}<input type="hidden" name="ids" value="{{ p.pk }}">{% endfor %}
+        <input type="hidden" name="action" value="confirm">
+        <button type="submit" class="btn danger" style="background:#dc2626;">Delete {{ count }} permanently</button>
+    </form>
+</div>
+{% endblock %}
