@@ -75,6 +75,12 @@
             {{ form.groups }}
             <p class="help-text">Members of these groups are eligible regardless of age/grade.</p>
           </div>
+          <div class="form-field" style="margin-top: 1rem;">
+            <label for="{{ form.auto_enroll_group.id_for_label }}">Auto-enroll group</label>
+            {{ form.auto_enroll_group }}
+            <p class="help-text">Anyone who checks in under this configuration is added to this group
+               (e.g. enroll VBS walk-ins so they appear on the next day's pre-print roster). Leave blank to disable.</p>
+          </div>
         </div>
       </div>
 
