@@ -72,6 +72,12 @@ class CheckInConfiguration(models.Model):
     groups = models.ManyToManyField(
         "groups.Group", related_name="checkin_app_configurations", blank=True
     )
+    # Anyone who checks in under this configuration is auto-added to this group
+    # (e.g. enroll VBS walk-ins so they're on the next day's pre-print roster).
+    auto_enroll_group = models.ForeignKey(
+        "groups.Group", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="autoenroll_configurations",
+    )
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
