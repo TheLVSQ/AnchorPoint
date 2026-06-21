@@ -16,7 +16,7 @@
       Please tap a room for everyone you're checking in.
     </div>
 
-    {% for person, eligible, prestaged in members_display %}
+    {% for person, eligible, prestaged, routed_room_id in members_display %}
       <div style="background:#0d0d20;border:1px solid {% if prestaged %}#1c3a2a{% elif eligible %}#2a2a44{% else %}#1a1a2a{% endif %};
                   border-radius:12px;padding:16px 20px;margin-bottom:10px;
                   {% if not eligible %}opacity:0.5;{% endif %}">
@@ -50,7 +50,7 @@
                   for members who aren't even selected. Validation happens in JS below
                   (selected members only) with a server-side backstop in the form.{% endcomment %}
                   <input type="radio" name="room_{{ person.pk }}" value="{{ room.pk }}"
-                         style="display:none;"{% if rooms|length == 1 %} checked{% endif %}>
+                         style="display:none;"{% if rooms|length == 1 or room.pk == routed_room_id %} checked{% endif %}>
                   <span class="room-btn" data-person="{{ person.pk }}" data-room="{{ room.pk }}"
                         style="display:inline-block;padding:8px 16px;border-radius:8px;
                                background:#1a1a30;border:1px solid #333;font-size:14px;
