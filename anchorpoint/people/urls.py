@@ -7,6 +7,7 @@ urlpatterns = [
     path("import/", views.signup_import, name="signup_import"),
     path("import/rock/", views.rock_import_view, name="rock_import"),
     path("duplicates/", views.people_duplicates, name="people_duplicates"),
+    path("cleanup/", views.people_cleanup, name="people_cleanup"),
     path("bulk-delete/", views.people_bulk_delete, name="people_bulk_delete"),
     path("lookup/", views.people_lookup, name="people_lookup"),
     path("search/", views.people_search, name="people_search"),
