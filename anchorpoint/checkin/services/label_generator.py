@@ -60,6 +60,19 @@ def _centered(draw, text, font, y, fill="black"):
     draw.text(((LABEL_WIDTH - _text_width(draw, text, font)) / 2, y), text, fill=fill, font=font)
 
 
+def _fit_both(draw, text, font_path, max_width, max_height, start_size=200, min_size=18):
+    """Largest font that fits text within both a width and a height budget."""
+    size = start_size
+    font = _font(font_path, size)
+    while size > min_size and (
+        _text_width(draw, text, font) > max_width
+        or _text_height(draw, text, font) > max_height
+    ):
+        size -= 4
+        font = _font(font_path, size)
+    return font
+
+
 def _centered_line(draw, text, font, y, fill="black", gap=10):
     """Draw centered text at y; return the y just below it (for stacking)."""
     _centered(draw, text, font, y, fill=fill)
@@ -105,9 +118,10 @@ def _guardian_phone(person):
 def _make_child_label(checkin, session) -> Image.Image:
     """Generate a child check-in label as a PIL Image.
 
-    Layout (top→bottom, vertically stacked): first name (large), last name +
-    grade, room with allergy(✚)/custody(shield) marks, allergy text, security
-    code (large), optional emergency phone (VBS), session/date footer.
+    The main rows (first name, last + grade, room with allergy/custody marks,
+    optional allergy text / no-photo badge, security code, optional VBS phone)
+    are spread evenly down the label so it fills the space; the session/date is
+    a small fixed footer. Fonts auto-fit to width.
     """
     person = checkin.person
     img = Image.new("RGB", (LABEL_WIDTH, CHILD_HEIGHT), "white")
@@ -121,58 +135,69 @@ def _make_child_label(checkin, session) -> Image.Image:
     has_allergy = bool(person.allergies)
     has_custody = bool(person.custody_flag or person.custody_notes)
 
-    # First name — large; last name (+ grade) beneath.
-    y = _centered_line(draw, first, _fit_font(draw, first, FONT_BOLD, usable, 124, 56), 8, gap=16)
+    # Rows are laid out in weighted horizontal bands spanning the full height,
+    # so the label always fills the space and fonts shrink to fit when there are
+    # more rows — never overlapping. Each row: (weight, render(band_top, band_h)).
+    rows = []
+
+    def text_row(text, weight, fill="black"):
+        def render(y, band, text=text, fill=fill):
+            font = _fit_both(draw, text, FONT_BOLD, usable, band * 0.80)
+            h = _text_height(draw, text, font)
+            _centered(draw, text, font, y + (band - h) / 2, fill=fill)
+        return (weight, render)
+
+    rows.append(text_row(first, 2.3))
+
     grade = person.get_grade_display() if person.grade else ""
     last_line = f"{last}   ·   {grade}" if grade else last
-    y = _centered_line(draw, last_line, _fit_font(draw, last_line, FONT_BOLD, usable, 64, 30), y, gap=10)
+    rows.append(text_row(last_line, 1.1))
 
-    # Room, with allergy ✚ and a drawn custody shield beside it.
-    room_font = _fit_font(draw, room, FONT_BOLD, usable - 160, 56, 30)
-    allergy_mark = "✚  " if has_allergy else ""
-    room_text = f"{allergy_mark}{room}"
-    rh = _text_height(draw, room_text, room_font)
-    shield_w = (rh * 0.82 + 18) if has_custody else 0
-    block_w = _text_width(draw, room_text, room_font) + shield_w
-    x = (LABEL_WIDTH - block_w) / 2
-    if allergy_mark:
-        aw = _text_width(draw, allergy_mark, room_font)
-        draw.text((x, y), allergy_mark, fill="#b91c1c", font=room_font)
-        draw.text((x + aw, y), room, fill="black", font=room_font)
-    else:
-        draw.text((x, y), room, fill="black", font=room_font)
-    if has_custody:
-        _draw_custody_shield(draw, x + block_w - shield_w / 2 - 4, y, height=rh)
-    y += rh + 12
+    # Room row: allergy ✚ + room + drawn custody shield, centered as a block.
+    def render_room(y, band, room=room, a=has_allergy, c=has_custody):
+        rf = _fit_both(draw, room, FONT_BOLD, usable - 180, band * 0.80)
+        rh = _text_height(draw, room, rf)
+        ty = y + (band - rh) / 2
+        mark = "✚  " if a else ""
+        text = f"{mark}{room}"
+        shield_w = (rh * 0.82 + 18) if c else 0
+        block_w = _text_width(draw, text, rf) + shield_w
+        x = (LABEL_WIDTH - block_w) / 2
+        if mark:
+            aw = _text_width(draw, mark, rf)
+            draw.text((x, ty), mark, fill="#b91c1c", font=rf)
+            draw.text((x + aw, ty), room, fill="black", font=rf)
+        else:
+            draw.text((x, ty), room, fill="black", font=rf)
+        if c:
+            _draw_custody_shield(draw, x + block_w - shield_w / 2 - 4, ty, height=rh)
 
-    # Allergy detail text (red) — only when present.
+    rows.append((1.4, render_room))
+
     if has_allergy:
-        allergy_text = f"Allergy: {person.allergies}".replace("\n", " ")
-        y = _centered_line(
-            draw, allergy_text, _fit_font(draw, allergy_text, FONT_BOLD, usable, 40, 22),
-            y, fill="#b91c1c", gap=12,
-        )
+        rows.append(text_row(f"Allergy: {person.allergies}".replace("\n", " "), 1.0, fill="#b91c1c"))
 
-    # No-photo badge — only when consent is explicitly denied.
     if person.photo_consent == "denied":
-        y = _centered_line(draw, "⊘ DO NOT PHOTOGRAPH",
-                           _fit_font(draw, "⊘ DO NOT PHOTOGRAPH", FONT_BOLD, usable, 38, 22),
-                           y, fill="#b91c1c", gap=12)
+        rows.append(text_row("⊘ DO NOT PHOTOGRAPH", 1.0, fill="#b91c1c"))
 
-    # Security code — large.
-    y = _centered_line(draw, code, _fit_font(draw, code, FONT_BOLD, usable, 104, 56), y + 4, gap=8)
+    rows.append(text_row(code, 2.6))
 
-    # Emergency phone — minors only, and only when the session opts in (VBS).
     if session and getattr(session, "print_emergency_phone", False) and person.is_minor:
         phone = _guardian_phone(person)
         if phone:
-            _centered_line(draw, f"Call: {phone}", _fit_font(draw, phone, FONT_BOLD, usable, 40, 24), y, gap=6)
+            rows.append(text_row(f"Call: {phone}", 1.0))
 
-    # Session / date — fixed footer.
     if session:
         session_line = f"{session.name}  ·  {session.date.strftime('%b')} {session.date.day}"
-        meta_font = _fit_font(draw, session_line, FONT_BOLD, usable, 34, 22)
-        _centered(draw, session_line, meta_font, CHILD_HEIGHT - 44, fill="black")
+        rows.append(text_row(session_line, 0.85))
+
+    total_h = CHILD_HEIGHT - 2 * MARGIN
+    total_w = sum(w for w, _ in rows)
+    y = MARGIN
+    for weight, render in rows:
+        band = total_h * weight / total_w
+        render(y, band)
+        y += band
 
     return img
 
