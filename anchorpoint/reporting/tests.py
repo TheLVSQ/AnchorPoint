@@ -48,7 +48,7 @@ class GroupRosterReportTests(TestCase):
         self.kid = Person.objects.create(
             first_name="Remy", last_name="Reed", birthdate=date(2017, 5, 1),
             allergies="Bees", custody_flag=True, custody_notes="Court order on file",
-            photo_consent=True,
+            photo_consent="granted",
         )
         HouseholdMember.objects.create(
             household=self.fam, person=self.kid,
@@ -80,7 +80,7 @@ class GroupRosterReportTests(TestCase):
         header = body.splitlines()[0]
         self.assertEqual(header.strip(), "First Name,Last Name")
         self.assertNotIn("Guardian Phone", body)
-        self.assertNotIn("Photo OK", body)
+        self.assertNotIn("Photo Consent", body)
 
     def test_sort_orders_rows(self):
         self._enroll("Aaron")  # should sort before "Remy"
@@ -122,14 +122,14 @@ class GroupRosterReportTests(TestCase):
         self.assertIn("attachment", resp["Content-Disposition"])
         body = resp.content.decode()
         self.assertIn("Guardian Phone", body)
-        self.assertIn("Photo OK", body)
-        # The kid's row carries guardian phone, allergy, custody note, photo=Yes
+        self.assertIn("Photo Consent", body)
+        # The kid's row carries guardian phone, allergy, custody note, photo state
         self.assertIn("Remy", body)
         self.assertIn("+15551230000", body)
         self.assertIn("Bees", body)
         self.assertIn("Court order on file", body)
         line = [ln for ln in body.splitlines() if "Remy" in ln][0]
-        self.assertIn("Yes", line)  # photo consent granted
+        self.assertIn("Granted", line)  # photo consent granted
 
     def test_export_without_params_404s(self):
         resp = self.client.get(reverse("reporting:export", args=["group-roster"]))

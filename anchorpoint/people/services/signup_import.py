@@ -220,10 +220,14 @@ def run_import(rows, *, commit=False, group_name="") -> ImportResult:
 
                 # Photo/likeness consent: set only on newly created children,
                 # never overwrite an existing person's recorded preference.
+                # yes/true -> granted, no/false -> denied, blank -> unknown.
                 if child_existing is None:
                     raw = (row.get("photo_consent") or "").strip().lower()
                     if raw in TRUTHY:
-                        child.photo_consent = True
+                        child.photo_consent = "granted"
+                        child.save(update_fields=["photo_consent"])
+                    elif raw in {"no", "n", "false", "0", "denied"}:
+                        child.photo_consent = "denied"
                         child.save(update_fields=["photo_consent"])
 
                 if child_existing:

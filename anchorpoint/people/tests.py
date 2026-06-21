@@ -138,7 +138,7 @@ class PeopleAddFamilyTests(TestCase):
             "address_line2": "", "city": "", "state": "", "postal_code": "",
             "salvation_date": "", "baptism_date": "", "first_visit_date": "",
             "allergies": "", "security_notes": "", "status": "guest", "notes": "",
-            "household_action": "skip",
+            "photo_consent": "unknown", "household_action": "skip",
         }
         data.update(extra)
         return data
@@ -429,24 +429,29 @@ class PhotoConsentTests(TestCase):
         self.user.profile.save()
         self.client.force_login(self.user)
 
-    def test_default_false(self):
+    def test_default_unknown(self):
         p = Person.objects.create(first_name="No", last_name="Consent")
-        self.assertFalse(p.photo_consent)
+        self.assertEqual(p.photo_consent, "unknown")
 
     def test_person_form_sets_consent(self):
         from people.forms import PersonForm
         form = PersonForm(data={
             "first_name": "Pic", "last_name": "Kid", "status": "guest",
-            "photo_consent": "on",
+            "photo_consent": "denied",
         })
         self.assertTrue(form.is_valid(), form.errors)
         person = form.save()
-        self.assertTrue(person.photo_consent)
+        self.assertEqual(person.photo_consent, "denied")
 
     def test_detail_shows_consent_state(self):
-        p = Person.objects.create(first_name="Yes", last_name="Photo", photo_consent=True)
+        p = Person.objects.create(first_name="Yes", last_name="Photo", photo_consent="granted")
         resp = self.client.get(reverse("people_detail", args=[p.pk]))
         self.assertContains(resp, "Granted")
+
+    def test_detail_shows_denied(self):
+        p = Person.objects.create(first_name="No", last_name="Pics", photo_consent="denied")
+        resp = self.client.get(reverse("people_detail", args=[p.pk]))
+        self.assertContains(resp, "no photos")
 
 
 class GenderFieldTests(TestCase):
@@ -468,7 +473,7 @@ class GenderFieldTests(TestCase):
             "address_line1": "", "address_line2": "", "city": "", "state": "",
             "postal_code": "", "salvation_date": "", "baptism_date": "",
             "first_visit_date": "", "allergies": "", "security_notes": "",
-            "status": "guest", "notes": "",
+            "status": "guest", "notes": "", "photo_consent": "unknown",
         }
         resp = self.client.post(reverse("people_edit", args=[person.pk]), data)
         self.assertEqual(resp.status_code, 302)
@@ -570,10 +575,16 @@ class ImportPhotoConsentTests(TestCase):
         from django.core.management import call_command
         import io
         call_command("import_signups", self._csv("yes"), "--commit", stdout=io.StringIO())
-        self.assertTrue(Person.objects.get(first_name="Kid").photo_consent)
+        self.assertEqual(Person.objects.get(first_name="Kid").photo_consent, "granted")
 
-    def test_import_consent_false_by_default(self):
+    def test_import_consent_no_is_denied(self):
         from django.core.management import call_command
         import io
         call_command("import_signups", self._csv("no"), "--commit", stdout=io.StringIO())
-        self.assertFalse(Person.objects.get(first_name="Kid").photo_consent)
+        self.assertEqual(Person.objects.get(first_name="Kid").photo_consent, "denied")
+
+    def test_import_consent_blank_is_unknown(self):
+        from django.core.management import call_command
+        import io
+        call_command("import_signups", self._csv(""), "--commit", stdout=io.StringIO())
+        self.assertEqual(Person.objects.get(first_name="Kid").photo_consent, "unknown")

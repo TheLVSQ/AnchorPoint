@@ -188,10 +188,12 @@
             </li>
             <li>
                 <span>Photo / Likeness Permission</span>
-                {% if person.photo_consent %}
+                {% if person.photo_consent == "granted" %}
                     <span class="chip" style="background:#dcfce7;color:#166534;">Granted</span>
+                {% elif person.photo_consent == "denied" %}
+                    <span class="chip" style="background:#fee2e2;color:#991b1b;">Denied — no photos</span>
                 {% else %}
-                    <span class="chip" style="background:#fee2e2;color:#991b1b;">Not granted</span>
+                    <span class="chip">Not asked</span>
                 {% endif %}
             </li>
         </ul>

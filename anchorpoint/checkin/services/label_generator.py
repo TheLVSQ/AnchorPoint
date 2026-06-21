@@ -153,6 +153,12 @@ def _make_child_label(checkin, session) -> Image.Image:
             y, fill="#b91c1c", gap=12,
         )
 
+    # No-photo badge — only when consent is explicitly denied.
+    if person.photo_consent == "denied":
+        y = _centered_line(draw, "⊘ DO NOT PHOTOGRAPH",
+                           _fit_font(draw, "⊘ DO NOT PHOTOGRAPH", FONT_BOLD, usable, 38, 22),
+                           y, fill="#b91c1c", gap=12)
+
     # Security code — large.
     y = _centered_line(draw, code, _fit_font(draw, code, FONT_BOLD, usable, 104, 56), y + 4, gap=8)
 
