@@ -43,8 +43,8 @@ class SignupImportForm(forms.Form):
 
 class RockImportForm(forms.Form):
     csv_file = forms.FileField(
-        label="Rock person export (CSV)",
-        help_text="Export all people from Rock RMS and save as CSV. One row per person.",
+        label="Person export (CSV)",
+        help_text="Export all people from your previous CMS as CSV (Rock RMS format). One row per person.",
     )
 
     MAX_BYTES = 15 * 1024 * 1024  # 15 MB — a full directory export
