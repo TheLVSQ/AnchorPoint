@@ -75,8 +75,8 @@
     </div>
   </form>
 
-  {# Add an unregistered walk-in (came with friends) to this existing family.
-     Separate <form> — HTML forbids nesting it inside the check-in form above. #}
+  {% comment %}Add an unregistered walk-in (came with friends) to this existing family.
+     Separate <form> — HTML forbids nesting it inside the check-in form above.{% endcomment %}
   <div style="border-top:1px solid var(--border-soft); margin-top:20px; padding-top:16px;">
     <button type="button" id="show-add-child" class="btn btn-secondary" style="width:100%;"
             onclick="document.getElementById('add-child-form').style.display='block'; this.style.display='none';">
