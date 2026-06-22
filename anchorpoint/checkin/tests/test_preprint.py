@@ -281,3 +281,36 @@ class KioskAddChildTests(PreprintFixture):
         resp = self._add(first_name="Locked", grade="2")
         self.assertEqual(resp.status_code, 302)
         self.assertFalse(Person.objects.filter(first_name="Locked").exists())
+
+
+class SessionCreateWindowLinkTests(PreprintFixture):
+    """A manually-created session links the day's schedule window (and reuses an
+    existing one), so it isn't a duplicate of the kiosk's auto-opened session."""
+
+    def _create(self, date_obj):
+        return self.client.post(reverse("checkin:session_create"), {
+            "configuration": self.config.pk,
+            "name": "VBS manual",
+            "date": date_obj.isoformat(),
+            "checkin_opens": "09:00", "checkin_closes": "12:00",
+            "event_starts": "09:30", "event_ends": "11:30",
+            "rooms": [self.room_a.pk],
+            "is_active": "on",
+        })
+
+    def test_reuses_existing_windowed_session(self):
+        from checkin.models import CheckInSession
+        # The fixture already made self.session for (config, window, today).
+        before = CheckInSession.objects.filter(date=timezone.localdate()).count()
+        resp = self._create(timezone.localdate())
+        self.assertRedirects(
+            resp, reverse("checkin:session_detail", args=[self.session.pk])
+        )
+        self.assertEqual(CheckInSession.objects.filter(date=timezone.localdate()).count(), before)
+
+    def test_links_window_on_create(self):
+        from checkin.models import CheckInSession
+        future = timezone.localdate() + timedelta(days=7)  # same weekday → weekly window
+        self._create(future)
+        s = CheckInSession.objects.get(date=future)
+        self.assertEqual(s.window, self.config.windows.first())
