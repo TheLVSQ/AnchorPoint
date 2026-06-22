@@ -630,3 +630,50 @@ class PersonEmergencyContactTests(TestCase):
         self.assertEqual(person.emergency_contact_name, "Aunt May")
         self.assertEqual(person.emergency_contact_phone, "330-555-0199")
         self.assertEqual(person.emergency_contact_relationship, "Aunt")
+
+
+class PhoneOptInDefaultTests(TestCase):
+    def test_new_person_defaults_opt_out(self):
+        p = Person.objects.create(first_name="New", last_name="Person")
+        self.assertFalse(p.phone_opt_in)
+
+
+class FamilyAddressCopyTests(TestCase):
+    def setUp(self):
+        user = get_user_model().objects.create_user(username="addrstaff", password="pw")
+        user.profile.role = UserProfile.Role.STAFF
+        user.profile.save()
+        self.client.force_login(user)
+
+    def _family_kid(self):
+        from households.models import Household, HouseholdMember
+        mom = Person.objects.create(
+            first_name="Mom", last_name="Avery", address_line1="12 Oak St",
+            city="Bolivar", state="OH", postal_code="44612",
+        )
+        kid = Person.objects.create(first_name="Kiddo", last_name="Avery")  # no address
+        hh = Household.objects.create(name="Avery Family")
+        HouseholdMember.objects.create(
+            household=hh, person=mom, relationship_type=HouseholdMember.RelationshipType.ADULT,
+        )
+        HouseholdMember.objects.create(
+            household=hh, person=kid, relationship_type=HouseholdMember.RelationshipType.CHILD,
+        )
+        return kid
+
+    def test_family_address_helper_resolves_from_member(self):
+        from people.views import _family_address
+        addr = _family_address(self._family_kid())
+        self.assertEqual(addr["line1"], "12 Oak St")
+        self.assertEqual(addr["city"], "Bolivar")
+
+    def test_edit_page_offers_copy_family_address(self):
+        kid = self._family_kid()
+        resp = self.client.get(reverse("people_edit", args=[kid.pk]))
+        self.assertContains(resp, "Copy family address")
+        self.assertContains(resp, "12 Oak St")
+
+    def test_no_offer_without_family_address(self):
+        loner = Person.objects.create(first_name="Solo", last_name="Person")
+        resp = self.client.get(reverse("people_edit", args=[loner.pk]))
+        self.assertNotContains(resp, "Copy family address")
