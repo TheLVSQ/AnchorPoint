@@ -228,3 +228,56 @@ class KioskLockTests(TestCase):
         resp = self.client.get(reverse("checkin:session_list"))
         self.assertEqual(resp.status_code, 302)
         self.assertIn("/login", resp.url)
+
+
+class KioskAddChildTests(PreprintFixture):
+    """Adding an unregistered walk-in to an existing family from the kiosk."""
+
+    def setUp(self):
+        super().setUp()
+        s = self.client.session
+        s["kiosk_authenticated"] = True
+        s["kiosk_session_id"] = self.session.pk
+        s.save()
+
+    def _add(self, **data):
+        return self.client.post(
+            reverse("checkin:kiosk_family_add_child", args=[self.family.pk]), data
+        )
+
+    def test_adds_child_links_family_and_enrolls(self):
+        resp = self._add(first_name="Nora", grade="2")
+        self.assertRedirects(
+            resp, reverse("checkin:kiosk_family_select", args=[self.family.pk])
+        )
+        nora = Person.objects.get(first_name="Nora")
+        self.assertEqual(nora.last_name, "Walker")          # surname from the family
+        self.assertEqual(nora.grade, "2")
+        self.assertTrue(self.family.members.filter(pk=nora.pk).exists())
+        self.assertTrue(
+            GroupMembership.objects.filter(group=self.group, person=nora).exists()
+        )
+        # Eligible + visible on the family screen, ready to check in.
+        page = self.client.get(
+            reverse("checkin:kiosk_family_select", args=[self.family.pk])
+        )
+        self.assertContains(page, "Nora Walker")
+
+    def test_blank_name_is_a_noop(self):
+        before = Person.objects.count()
+        self._add(first_name="   ", grade="2")
+        self.assertEqual(Person.objects.count(), before)
+
+    def test_existing_same_name_member_not_duplicated(self):
+        self._add(first_name="Ava", last_name="Walker", grade="1")  # Ava already exists
+        self.assertEqual(
+            Person.objects.filter(first_name="Ava", last_name="Walker").count(), 1
+        )
+
+    def test_requires_kiosk_unlock(self):
+        s = self.client.session
+        s["kiosk_authenticated"] = False
+        s.save()
+        resp = self._add(first_name="Locked", grade="2")
+        self.assertEqual(resp.status_code, 302)
+        self.assertFalse(Person.objects.filter(first_name="Locked").exists())
