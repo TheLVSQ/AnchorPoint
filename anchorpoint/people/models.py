@@ -58,8 +58,9 @@ class Person(models.Model):
         help_text="Auto-generated digits-only version of phone for fast lookups.",
     )
     phone_opt_in = models.BooleanField(
-        default=True,
-        help_text="Can this person receive text messages at their phone number?",
+        default=False,
+        help_text="Can this person receive text messages at their phone number? "
+                  "Opt-in by default OFF — must be explicitly granted.",
     )
     birthdate = models.DateField(blank=True, null=True)
     grade = models.CharField(
