@@ -80,22 +80,21 @@ def _centered_line(draw, text, font, y, fill="black", gap=10):
 
 
 def _draw_custody_shield(draw, cx, top, height=64, fill="#b91c1c"):
-    """Draw a filled shield with a white '!' at center-x `cx`. Drawn (not a
-    glyph) so it renders on any printer regardless of available fonts."""
+    """Draw a filled shield icon (FontAwesome-style) centred at x=cx, starting at
+    y=top. Drawn (not a glyph) so it renders on any printer. Used as a discreet,
+    text-free custody marker — the shield alone, no '!' and no label, so the
+    concern isn't spelled out on the child's tag."""
     w = height * 0.82
     half = w / 2
     pts = [
-        (cx - half, top),
-        (cx + half, top),
-        (cx + half, top + height * 0.52),
-        (cx, top + height),
-        (cx - half, top + height * 0.52),
+        (cx, top),                          # top-centre peak
+        (cx - half, top + height * 0.20),   # left shoulder
+        (cx - half, top + height * 0.52),   # left side
+        (cx, top + height),                 # bottom point
+        (cx + half, top + height * 0.52),   # right side
+        (cx + half, top + height * 0.20),   # right shoulder
     ]
     draw.polygon(pts, fill=fill)
-    bang = _font(FONT_BOLD, int(height * 0.6))
-    bw = _text_width(draw, "!", bang)
-    bh = _text_height(draw, "!", bang)
-    draw.text((cx - bw / 2, top + height * 0.16 - 2), "!", fill="white", font=bang)
 
 
 def _draw_no_photo(draw, cx, cy, size, fill="#b91c1c"):
@@ -127,12 +126,13 @@ def _guardian_phone(person):
 
 
 def _markers_render(draw, usable, has_custody, no_photo):
-    """Return a render(y, band) that draws a centred strip of warning badges — a
-    custody shield and/or a 'do not photograph' icon, each with a short red
-    label — sized to fit the band height and shrunk to fit the usable width."""
+    """Return a render(y, band) that draws a centred strip of warning markers:
+    a discreet custody shield (icon only — no text, so the concern isn't spelled
+    out) and/or a 'do not photograph' icon with a label. Sized to the band
+    height and shrunk to fit the usable width."""
     badges = []
     if has_custody:
-        badges.append(("shield", "CUSTODY"))
+        badges.append(("shield", ""))               # custody: icon only, kept discreet
     if no_photo:
         badges.append(("nophoto", "DO NOT PHOTOGRAPH"))
 
@@ -143,17 +143,21 @@ def _markers_render(draw, usable, has_custody, no_photo):
         icon = min(band * 0.66, 56)
         pad = icon * 0.28        # gap between an icon and its label
         between = icon * 0.9     # gap between badges
+
+        def label_width(font, label):
+            return (pad + _text_width(draw, label, font)) if label else 0
+
         # Shrink one shared label font until the whole strip fits the width.
         size = int(min(band * 0.52, 42))
         while size > 14:
             font = _font(FONT_BOLD, size)
-            total = sum(icon + pad + _text_width(draw, lbl, font) for _, lbl in badges)
+            total = sum(icon + label_width(font, lbl) for _, lbl in badges)
             total += between * (len(badges) - 1)
             if total <= usable:
                 break
             size -= 2
         font = _font(FONT_BOLD, size)
-        widths = [icon + pad + _text_width(draw, lbl, font) for _, lbl in badges]
+        widths = [icon + label_width(font, lbl) for _, lbl in badges]
         total = sum(widths) + between * (len(badges) - 1)
         x = (LABEL_WIDTH - total) / 2
         cy = y + band / 2
@@ -162,8 +166,9 @@ def _markers_render(draw, usable, has_custody, no_photo):
                 _draw_custody_shield(draw, x + icon / 2, cy - icon / 2, height=icon, fill=color)
             else:
                 _draw_no_photo(draw, x + icon / 2, cy, icon, fill=color)
-            lh = _text_height(draw, label, font)
-            draw.text((x + icon + pad, cy - lh / 2), label, fill=color, font=font)
+            if label:
+                lh = _text_height(draw, label, font)
+                draw.text((x + icon + pad, cy - lh / 2), label, fill=color, font=font)
             x += w + between
 
     return render
