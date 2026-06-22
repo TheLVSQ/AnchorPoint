@@ -237,7 +237,7 @@ def _make_child_label(checkin, session) -> Image.Image:
     if session and getattr(session, "print_emergency_phone", False) and person.is_minor is not False:
         phone = _guardian_phone(person)
         if phone:
-            rows.append(text_row(f"Call: {phone}", 0.8))
+            rows.append(text_row(f"Call: {phone}", 0.6))
 
     if has_allergy:
         rows.append(text_row(f"✚ {person.allergies}".replace("\n", " "), 0.85, fill="#b91c1c"))
