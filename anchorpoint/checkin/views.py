@@ -956,6 +956,23 @@ def session_preprint_reprint(request, session_id, household_id):
     return redirect("checkin:session_preprint", session_id=session.pk)
 
 
+def _matching_window(config, date):
+    """The active schedule window a session on `date` belongs to. Linking it
+    means a manually-created session is the SAME (config, window, date) the
+    kiosk auto-opens via get_or_create_session — preventing a windowless twin
+    session for the day."""
+    if not config:
+        return None
+    sunday_dow = (date.weekday() + 1) % 7  # window day_of_week is Sunday-first
+    for w in config.windows.filter(is_active=True):
+        if w.schedule_type == CheckInWindow.TYPE_SPECIFIC_DATE:
+            if w.specific_date == date:
+                return w
+        elif w.day_of_week == sunday_dow:
+            return w
+    return None
+
+
 @staff_required
 def session_create(request):
     """Create a new check-in session."""
@@ -963,6 +980,19 @@ def session_create(request):
         form = CheckInSessionForm(request.POST)
         if form.is_valid():
             session = form.save(commit=False)
+            # Link the day's schedule window (and reuse an existing one) so this
+            # session and the kiosk's auto-opened session are one and the same.
+            window = _matching_window(session.configuration, session.date)
+            if window:
+                existing = CheckInSession.objects.filter(
+                    configuration=session.configuration, window=window, date=session.date
+                ).first()
+                if existing:
+                    messages.info(
+                        request, "A session for that day already exists — opening it."
+                    )
+                    return redirect("checkin:session_detail", session_id=existing.pk)
+                session.window = window
             session.created_by = request.user
             session.save()
             form.save_m2m()
