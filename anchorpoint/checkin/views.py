@@ -756,18 +756,19 @@ def session_preprint(request, session_id):
     existing = {c.person_id: c for c in session.checkins.select_related("room").all()}
 
     if request.method == "POST":
-        created, fam_count = _preprint_generate(request, session, candidates, existing, rooms)
-        if created:
+        created, reprinted, fam_count = _preprint_generate(
+            request, session, candidates, existing, rooms
+        )
+        total = created + reprinted
+        if total:
             messages.success(
                 request,
-                f"Pre-printed {created} label(s) across {fam_count} "
-                f"famil{'y' if fam_count == 1 else 'ies'}.",
+                f"Queued {total} label(s) across {fam_count} "
+                f"famil{'y' if fam_count == 1 else 'ies'} "
+                f"({created} new, {reprinted} reprinted).",
             )
         else:
-            messages.info(
-                request,
-                "Nothing to pre-print — pick at least one person who isn't already staged.",
-            )
+            messages.info(request, "Select at least one person to print.")
         return redirect("checkin:session_preprint", session_id=session.pk)
 
     # Build household-grouped rows for display.
@@ -809,32 +810,37 @@ def session_preprint(request, session_id):
 
 
 def _preprint_generate(request, session, candidates, existing, rooms=None):
-    """Create pre-staged check-ins for selected, not-yet-staged people and queue
-    their labels. Returns (people_created, households_touched). Rooms not chosen
-    in the form fall back to the child's age/grade-matched room."""
+    """Queue labels for the selected people: pre-stage + print those not yet
+    staged, and re-queue (reprint) the label for any selected person who is
+    already staged/present. Grouped by household so a family keeps one pickup
+    code. Returns (created, reprinted, households_touched). Rooms not chosen in
+    the form fall back to the child's age/grade-matched room."""
     from collections import defaultdict
 
     rooms = rooms if rooms is not None else list(session.rooms.all())
 
-    by_household = defaultdict(list)
+    buckets = defaultdict(lambda: {"new": [], "reprint": []})
     for person in candidates:
         if not request.POST.get(f"select_{person.pk}"):
             continue
-        current = existing.get(person.pk)
-        if current and current.checked_out_at is None:
-            continue  # already staged or present — idempotent skip
         household = _person_household(person)
         key = household.pk if household else f"solo-{person.pk}"
-        room_id = request.POST.get(f"room_{person.pk}") or None
-        by_household[key].append((person, household, room_id))
+        current = existing.get(person.pk)
+        if current and current.checked_out_at is None:
+            buckets[key]["reprint"].append(current)  # already staged → reprint
+        else:
+            room_id = request.POST.get(f"room_{person.pk}") or None
+            buckets[key]["new"].append((person, household, room_id))
 
-    created = 0
-    fam_count = 0
-    for _, members in by_household.items():
-        household = members[0][1]
+    created = reprinted = fam_count = 0
+    for _, bucket in buckets.items():
+        if bucket["new"]:
+            household = bucket["new"][0][1]
+        else:
+            household = _person_household(bucket["reprint"][0].person)
         code = _family_code(session, household)
-        new_checkins = []
-        for person, _hh, room_id in members:
+        labels = []
+        for person, _hh, room_id in bucket["new"]:
             room = Room.objects.filter(pk=room_id).first() if room_id else None
             if room is None:
                 room = match_room(person, rooms)  # auto-route by age/grade
@@ -842,15 +848,18 @@ def _preprint_generate(request, session, candidates, existing, rooms=None):
                 session=session, person=person, room=room,
                 security_code=code, arrived_at=None,
             )
-            new_checkins.append(checkin)
+            labels.append(checkin)
             created += 1
-        if new_checkins:
+        for checkin in bucket["reprint"]:
+            labels.append(checkin)
+            reprinted += 1
+        if labels:
             fam_count += 1
             try:
-                enqueue_checkin_labels(new_checkins, session)
+                enqueue_checkin_labels(labels, session)
             except Exception:
                 logger.exception("Failed to queue pre-print labels")
-    return created, fam_count
+    return created, reprinted, fam_count
 
 
 @checkin_admin_required
