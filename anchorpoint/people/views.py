@@ -217,8 +217,9 @@ def people_add(request):
         "household_action": household_action,
         "selected_household_id": selected_household_id,
         "household_error": household_error,
-        # New person has no household yet, so no adults to copy from.
+        # New person has no household yet, so no adults/address to copy from.
         "household_adults": [],
+        "family_address": None,
     })
 
 
@@ -404,6 +405,27 @@ def _household_adults(person):
     return adults
 
 
+def _family_address(person):
+    """The household's address (or a household member's, if the household record
+    itself has none) to offer copying onto a person with an incomplete address.
+    Returns a dict of address parts, or None when no family address is on file."""
+    for household in person.households.all():
+        sources = [household] + [
+            m.person for m in household.memberships.all() if m.person_id != person.pk
+        ]
+        for src in sources:
+            if getattr(src, "address_line1", None):
+                return {
+                    "line1": src.address_line1 or "",
+                    "line2": getattr(src, "address_line2", "") or "",
+                    "city": src.city or "",
+                    "state": src.state or "",
+                    "zip": src.postal_code or "",
+                    "household": household.name,
+                }
+    return None
+
+
 @staff_required
 def people_edit(request, pk):
     person = get_object_or_404(Person, pk=pk)
@@ -420,6 +442,7 @@ def people_edit(request, pk):
     return render(request, "people/people_form.html", {
         "form": form,
         "household_adults": _household_adults(person),
+        "family_address": _family_address(person),
     })
 
 

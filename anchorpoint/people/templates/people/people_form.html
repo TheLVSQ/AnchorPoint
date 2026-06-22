@@ -101,6 +101,23 @@
 
         <div class="form-section">
             <h3>Address</h3>
+            {% if family_address %}
+            <div class="form-field form-field--full" style="margin-bottom:0.5rem;">
+                <button type="button" class="btn ghost"
+                        data-line1="{{ family_address.line1 }}" data-line2="{{ family_address.line2 }}"
+                        data-city="{{ family_address.city }}" data-state="{{ family_address.state }}"
+                        data-zip="{{ family_address.zip }}"
+                        onclick="var b=this;
+                                 document.getElementById('id_address_line1').value=b.dataset.line1;
+                                 document.getElementById('id_address_line2').value=b.dataset.line2;
+                                 document.getElementById('id_city').value=b.dataset.city;
+                                 document.getElementById('id_postal_code').value=b.dataset.zip;
+                                 var st=document.getElementById('id_state'); if(st){st.value=b.dataset.state;}">
+                    Copy family address
+                </button>
+                <small class="help-text">From {{ family_address.household }}: {{ family_address.line1 }}{% if family_address.city %}, {{ family_address.city }}{% endif %}{% if family_address.state %} {{ family_address.state }}{% endif %}.</small>
+            </div>
+            {% endif %}
             <div class="form-grid">
                 <div class="form-field form-field--full">
                     {{ form.address_line1.label_tag }}
