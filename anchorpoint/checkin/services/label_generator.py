@@ -230,7 +230,11 @@ def _make_child_label(checkin, session) -> Image.Image:
     rows.append(text_row("   ·   ".join(room_line), 1.0))
 
     # 6. Bottom safety strip: emergency phone, allergy text, custody/no-photo symbols.
-    if session and getattr(session, "print_emergency_phone", False) and person.is_minor:
+    # Print the guardian's number on kids' labels when the session opts in. Gate on
+    # "is_minor is not False" rather than "is_minor" so children whose birthdate
+    # isn't on file (is_minor is None — common for imported rosters like VBS) still
+    # get it; only confirmed adults are skipped.
+    if session and getattr(session, "print_emergency_phone", False) and person.is_minor is not False:
         phone = _guardian_phone(person)
         if phone:
             rows.append(text_row(f"Call: {phone}", 0.8))
