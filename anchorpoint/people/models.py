@@ -104,6 +104,16 @@ class Person(models.Model):
     custody_flag = models.BooleanField(default=False)
     custody_notes = models.TextField(blank=True)
     unauthorized_pickup = models.TextField(blank=True)
+    # Emergency contact for this person (esp. a minor). Free-form so it can be
+    # someone OUTSIDE the household — e.g. a family friend named on a VBS form.
+    # The child label uses this when a phone is set, otherwise it falls back to a
+    # household adult's phone (see label_generator._emergency_contact).
+    emergency_contact_name = models.CharField(max_length=120, blank=True, default="")
+    emergency_contact_phone = models.CharField(max_length=50, blank=True, default="")
+    emergency_contact_relationship = models.CharField(
+        max_length=80, blank=True, default="",
+        help_text="How this contact relates to the person (e.g. Grandmother, Family friend).",
+    )
     STATUS_CHOICES = [
         ("guest", "Guest"),
         ("visitor", "Visitor"),

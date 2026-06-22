@@ -607,3 +607,26 @@ class PersonAgeGuardTests(TestCase):
             birthdate=date.today() - timedelta(days=365 * 9 + 10),
         )
         self.assertEqual(p.age, 9)
+
+
+class PersonEmergencyContactTests(TestCase):
+    def test_defaults_blank(self):
+        p = Person.objects.create(first_name="New", last_name="Kid")
+        self.assertEqual(p.emergency_contact_name, "")
+        self.assertEqual(p.emergency_contact_phone, "")
+        self.assertEqual(p.emergency_contact_relationship, "")
+
+    def test_person_form_saves_emergency_contact(self):
+        from .forms import PersonForm
+        form = PersonForm(data={
+            "first_name": "Nora", "last_name": "Adams",
+            "status": "guest", "photo_consent": "unknown",
+            "emergency_contact_name": "Aunt May",
+            "emergency_contact_phone": "330-555-0199",
+            "emergency_contact_relationship": "Aunt",
+        })
+        self.assertTrue(form.is_valid(), form.errors)
+        person = form.save()
+        self.assertEqual(person.emergency_contact_name, "Aunt May")
+        self.assertEqual(person.emergency_contact_phone, "330-555-0199")
+        self.assertEqual(person.emergency_contact_relationship, "Aunt")
