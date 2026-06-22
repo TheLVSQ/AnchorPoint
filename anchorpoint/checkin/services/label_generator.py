@@ -98,6 +98,17 @@ def _draw_custody_shield(draw, cx, top, height=64, fill="#b91c1c"):
     draw.text((cx - bw / 2, top + height * 0.16 - 2), "!", fill="white", font=bang)
 
 
+def _draw_no_photo(draw, cx, cy, size, fill="#b91c1c"):
+    """Draw a 'no photography' icon — a circle with a diagonal slash — centred at
+    (cx, cy). Drawn (not a glyph) so it renders on any printer regardless of
+    available fonts."""
+    r = size / 2
+    w = max(3, int(size * 0.09))
+    draw.ellipse([cx - r, cy - r, cx + r, cy + r], outline=fill, width=w)
+    off = r * 0.7071  # 45° slash from corner to corner of the circle
+    draw.line([cx - off, cy + off, cx + off, cy - off], fill=fill, width=w)
+
+
 def _guardian_phone(person):
     """Best guardian phone for a (minor) person: the household's primary adult,
     else the first adult member. Empty string if none."""
@@ -115,30 +126,71 @@ def _guardian_phone(person):
     return (adult.phone if adult and adult.phone else "") or ""
 
 
+def _markers_render(draw, usable, has_custody, no_photo):
+    """Return a render(y, band) that draws a centred strip of warning badges — a
+    custody shield and/or a 'do not photograph' icon, each with a short red
+    label — sized to fit the band height and shrunk to fit the usable width."""
+    badges = []
+    if has_custody:
+        badges.append(("shield", "CUSTODY"))
+    if no_photo:
+        badges.append(("nophoto", "DO NOT PHOTOGRAPH"))
+
+    def render(y, band):
+        if not badges:
+            return
+        color = "#b91c1c"
+        icon = min(band * 0.66, 56)
+        pad = icon * 0.28        # gap between an icon and its label
+        between = icon * 0.9     # gap between badges
+        # Shrink one shared label font until the whole strip fits the width.
+        size = int(min(band * 0.52, 42))
+        while size > 14:
+            font = _font(FONT_BOLD, size)
+            total = sum(icon + pad + _text_width(draw, lbl, font) for _, lbl in badges)
+            total += between * (len(badges) - 1)
+            if total <= usable:
+                break
+            size -= 2
+        font = _font(FONT_BOLD, size)
+        widths = [icon + pad + _text_width(draw, lbl, font) for _, lbl in badges]
+        total = sum(widths) + between * (len(badges) - 1)
+        x = (LABEL_WIDTH - total) / 2
+        cy = y + band / 2
+        for (kind, label), w in zip(badges, widths):
+            if kind == "shield":
+                _draw_custody_shield(draw, x + icon / 2, cy - icon / 2, height=icon, fill=color)
+            else:
+                _draw_no_photo(draw, x + icon / 2, cy, icon, fill=color)
+            lh = _text_height(draw, label, font)
+            draw.text((x + icon + pad, cy - lh / 2), label, fill=color, font=font)
+            x += w + between
+
+    return render
+
+
 def _make_child_label(checkin, session) -> Image.Image:
     """Generate a child check-in label as a PIL Image.
 
-    The main rows (first name, last + grade, room with allergy/custody marks,
-    optional allergy text / no-photo badge, security code, optional VBS phone)
-    are spread evenly down the label so it fills the space; the session/date is
-    a small fixed footer. Fonts auto-fit to width.
+    Top-to-bottom: full name (hero), age · grade, the check-in name, the
+    security code (kept smaller than the name), room · date, then a bottom
+    safety strip — emergency phone, allergy description, and custody / no-photo
+    symbols. Rows are weighted horizontal bands spanning the full height and
+    fonts auto-fit, so the label fills the space and never overlaps regardless
+    of which optional rows are present.
     """
     person = checkin.person
     img = Image.new("RGB", (LABEL_WIDTH, CHILD_HEIGHT), "white")
     draw = ImageDraw.Draw(img)
     usable = LABEL_WIDTH - 2 * MARGIN
 
-    first = person.first_name
-    last = person.last_name
     room = checkin.room.name if checkin.room else "—"
     code = checkin.security_code
     has_allergy = bool(person.allergies)
     has_custody = bool(person.custody_flag or person.custody_notes)
+    no_photo = person.photo_consent == "denied"
 
-    # Rows are laid out in weighted horizontal bands spanning the full height,
-    # so the label always fills the space and fonts shrink to fit when there are
-    # more rows — never overlapping. Each row: (weight, render(band_top, band_h)).
-    rows = []
+    rows = []  # each: (weight, render(band_top, band_height))
 
     def text_row(text, weight, fill="black"):
         def render(y, band, text=text, fill=fill):
@@ -147,49 +199,42 @@ def _make_child_label(checkin, session) -> Image.Image:
             _centered(draw, text, font, y + (band - h) / 2, fill=fill)
         return (weight, render)
 
-    rows.append(text_row(first, 2.3))
+    # 1. Full name — the hero line.
+    rows.append(text_row(f"{person.first_name} {person.last_name}".strip(), 2.4))
 
-    grade = person.get_grade_display() if person.grade else ""
-    last_line = f"{last}   ·   {grade}" if grade else last
-    rows.append(text_row(last_line, 1.1))
+    # 2. Age · Grade.
+    age_grade = []
+    if person.age is not None:
+        age_grade.append(f"Age {person.age}")
+    if person.grade:
+        age_grade.append(person.get_grade_display())
+    if age_grade:
+        rows.append(text_row("   ·   ".join(age_grade), 0.85))
 
-    # Room row: allergy ✚ + room + drawn custody shield, centered as a block.
-    def render_room(y, band, room=room, a=has_allergy, c=has_custody):
-        rf = _fit_both(draw, room, FONT_BOLD, usable - 180, band * 0.80)
-        rh = _text_height(draw, room, rf)
-        ty = y + (band - rh) / 2
-        mark = "✚  " if a else ""
-        text = f"{mark}{room}"
-        shield_w = (rh * 0.82 + 18) if c else 0
-        block_w = _text_width(draw, text, rf) + shield_w
-        x = (LABEL_WIDTH - block_w) / 2
-        if mark:
-            aw = _text_width(draw, mark, rf)
-            draw.text((x, ty), mark, fill="#b91c1c", font=rf)
-            draw.text((x + aw, ty), room, fill="black", font=rf)
-        else:
-            draw.text((x, ty), room, fill="black", font=rf)
-        if c:
-            _draw_custody_shield(draw, x + block_w - shield_w / 2 - 4, ty, height=rh)
+    # 3. Check-in name (e.g. "VBS Check-In").
+    if session and session.name:
+        rows.append(text_row(session.name, 0.95))
 
-    rows.append((1.4, render_room))
+    # 4. Security code — smaller than the name.
+    rows.append(text_row(code, 1.4))
 
-    if has_allergy:
-        rows.append(text_row(f"Allergy: {person.allergies}".replace("\n", " "), 1.0, fill="#b91c1c"))
+    # 5. Room · Date.
+    room_line = [room]
+    if session:
+        room_line.append(f"{session.date.strftime('%b')} {session.date.day}")
+    rows.append(text_row("   ·   ".join(room_line), 1.0))
 
-    if person.photo_consent == "denied":
-        rows.append(text_row("⊘ DO NOT PHOTOGRAPH", 1.0, fill="#b91c1c"))
-
-    rows.append(text_row(code, 2.0))
-
+    # 6. Bottom safety strip: emergency phone, allergy text, custody/no-photo symbols.
     if session and getattr(session, "print_emergency_phone", False) and person.is_minor:
         phone = _guardian_phone(person)
         if phone:
-            rows.append(text_row(f"Call: {phone}", 1.0))
+            rows.append(text_row(f"Call: {phone}", 0.8))
 
-    if session:
-        session_line = f"{session.name}  ·  {session.date.strftime('%b')} {session.date.day}"
-        rows.append(text_row(session_line, 0.85))
+    if has_allergy:
+        rows.append(text_row(f"✚ {person.allergies}".replace("\n", " "), 0.85, fill="#b91c1c"))
+
+    if has_custody or no_photo:
+        rows.append((0.95, _markers_render(draw, usable, has_custody, no_photo)))
 
     total_h = CHILD_HEIGHT - 2 * MARGIN
     total_w = sum(w for w, _ in rows)
