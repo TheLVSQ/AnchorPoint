@@ -99,6 +99,27 @@ def _match_parent(email, first, last, phone):
     return None
 
 
+def _child_in_household(parent, first_name, last_name):
+    """An existing person with this name already in one of the parent's
+    households. Lets us dedupe children that carry no birthdate (so
+    `_match_person` can't) — e.g. VBS rosters — by matching a kid by name within
+    the family rather than creating a duplicate."""
+    first_name = (first_name or "").strip()
+    last_name = (last_name or "").strip()
+    if not (getattr(parent, "pk", None) and first_name):
+        return None
+    return (
+        Person.objects.filter(
+            households__members=parent,
+            first_name__iexact=first_name,
+            last_name__iexact=last_name,
+        )
+        .exclude(pk=parent.pk)
+        .distinct()
+        .first()
+    )
+
+
 def parse_csv(text):
     """Parse CSV text into a list of row dicts. Raises SignupImportError on
     empty content or missing required columns."""
@@ -197,11 +218,28 @@ def run_import(rows, *, commit=False, group_name="") -> ImportResult:
                     result.add("warn", f"row {line_no}: unrecognized grade "
                                        f"{row['child_grade']!r} — leaving blank")
 
-                child_existing = _match_person("", c_first, c_last, birthdate, "")
-                child = _ensure_person(
-                    c_first, c_last, birthdate=birthdate,
-                    grade=grade, allergies=(row.get("child_allergies") or "").strip(),
-                )
+                allergies = (row.get("child_allergies") or "").strip()
+
+                # Match by the usual keys (email/birthdate/phone); kids rarely
+                # carry any, so fall back to matching by name within the parent's
+                # family. Without this, birthdate-less rosters (VBS) duplicate
+                # every child on re-import.
+                child = _match_person("", c_first, c_last, birthdate, "")
+                if child is None:
+                    child = _child_in_household(parent, c_first, c_last)
+                is_new = child is None
+
+                if is_new:
+                    child = Person.objects.create(
+                        first_name=c_first, last_name=c_last,
+                        birthdate=birthdate, grade=grade, allergies=allergies,
+                    )
+                else:
+                    _apply_contact_data(
+                        child,
+                        {"birthdate": birthdate, "grade": grade, "allergies": allergies},
+                    )
+
                 custody_notes = (row.get("custody_notes") or "").strip()
                 unauthorized = (row.get("unauthorized_pickup") or "").strip()
                 if custody_notes or unauthorized:
@@ -218,10 +256,28 @@ def run_import(rows, *, commit=False, group_name="") -> ImportResult:
                     if changed:
                         child.save(update_fields=changed)
 
-                # Photo/likeness consent: set only on newly created children,
-                # never overwrite an existing person's recorded preference.
-                # yes/true -> granted, no/false -> denied, blank -> unknown.
-                if child_existing is None:
+                # Emergency contact (often a non-family contact named on the form):
+                # fill missing fields, never overwrite what's already recorded.
+                ec_name = (row.get("emergency_contact_name") or "").strip()
+                ec_phone = (row.get("emergency_contact_phone") or "").strip()
+                ec_rel = (row.get("emergency_contact_relationship") or "").strip()
+                ec_changed = []
+                if ec_phone and not child.emergency_contact_phone:
+                    child.emergency_contact_phone = ec_phone
+                    ec_changed.append("emergency_contact_phone")
+                if ec_name and not child.emergency_contact_name:
+                    child.emergency_contact_name = ec_name
+                    ec_changed.append("emergency_contact_name")
+                if ec_rel and not child.emergency_contact_relationship:
+                    child.emergency_contact_relationship = ec_rel
+                    ec_changed.append("emergency_contact_relationship")
+                if ec_changed:
+                    child.save(update_fields=ec_changed)
+
+                # Photo/likeness consent: fill only while still "unknown" — sets it
+                # for new kids AND backfills matched ones, but never overwrites an
+                # explicit choice. yes/true -> granted, no/false -> denied.
+                if child.photo_consent == "unknown":
                     raw = (row.get("photo_consent") or "").strip().lower()
                     if raw in TRUTHY:
                         child.photo_consent = "granted"
@@ -230,15 +286,16 @@ def run_import(rows, *, commit=False, group_name="") -> ImportResult:
                         child.photo_consent = "denied"
                         child.save(update_fields=["photo_consent"])
 
-                if child_existing:
-                    stats["children_matched"] += 1
-                    result.add("match", f"MATCHED child → existing #{child.pk} ({child})")
-                else:
+                if is_new:
                     stats["children_created"] += 1
                     extras = " ⚠ custody" if (custody_notes or unauthorized) else ""
-                    allergy = " ✚ allergies" if (row.get("child_allergies") or "").strip() else ""
+                    allergy = " ✚ allergies" if allergies else ""
+                    contact = " ☎ contact" if ec_phone else ""
                     result.add("create", f"CREATE child #{child.pk} {child} "
-                               f"({birthdate}{', grade ' + grade if grade else ''}){allergy}{extras}")
+                               f"({birthdate}{', grade ' + grade if grade else ''}){allergy}{extras}{contact}")
+                else:
+                    stats["children_matched"] += 1
+                    result.add("match", f"MATCHED child → existing #{child.pk} ({child})")
 
                 _ensure_household(parent, child)
                 if group:
