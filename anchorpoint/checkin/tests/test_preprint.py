@@ -111,13 +111,23 @@ class PreprintRosterTests(PreprintFixture):
         mock_enqueue.assert_called_once()            # labels queued once for the family
 
     @mock.patch("checkin.views.enqueue_checkin_labels", return_value=2)
-    def test_generate_is_idempotent(self, mock_enqueue):
+    def test_reselecting_staged_reprints_without_creating(self, mock_enqueue):
         self._preprint({self.kids[0]: self.room_a, self.kids[1]: self.room_b})
         mock_enqueue.reset_mock()
-        # Re-running selects the same kids — already staged, so nothing new.
+        # Re-selecting the same (already-staged) kids re-queues their labels
+        # (reprint) but creates no new check-ins.
         self._preprint({self.kids[0]: self.room_a, self.kids[1]: self.room_b})
         self.assertEqual(CheckIn.objects.filter(session=self.session).count(), 2)
-        mock_enqueue.assert_not_called()
+        mock_enqueue.assert_called_once()
+
+    @mock.patch("checkin.views.enqueue_checkin_labels", return_value=1)
+    def test_print_selected_mixes_new_and_reprint(self, mock_enqueue):
+        self._preprint({self.kids[0]: self.room_a})  # stage one kid
+        mock_enqueue.reset_mock()
+        # Select both: the staged kid (reprint) + the new kid (create + print).
+        self._preprint({self.kids[0]: self.room_a, self.kids[1]: self.room_b})
+        self.assertEqual(CheckIn.objects.filter(session=self.session).count(), 2)
+        mock_enqueue.assert_called_once()  # one batch for the family
 
     @mock.patch("checkin.views.enqueue_checkin_labels", return_value=2)
     def test_prestaged_not_counted_present(self, _m):
