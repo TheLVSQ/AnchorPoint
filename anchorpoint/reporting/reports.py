@@ -159,6 +159,8 @@ class SessionAttendanceReport(Report):
         return [
             ("first_name", "First Name"),
             ("last_name", "Last Name"),
+            ("age", "Age"),
+            ("grade", "Grade"),
             ("status", "Status"),
             ("room", "Room"),
             ("arrived_at", "Arrived"),
@@ -191,6 +193,8 @@ class SessionAttendanceReport(Report):
             yield {
                 "first_name": p.first_name,
                 "last_name": p.last_name,
+                "age": p.age if p.age is not None else "",
+                "grade": p.get_grade_display() if p.grade else "",
                 "status": status,
                 "room": c.room.name if c.room else "",
                 "arrived_at": c.arrived_at.strftime("%-I:%M %p") if c.arrived_at else "",

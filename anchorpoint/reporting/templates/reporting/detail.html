@@ -48,8 +48,8 @@
                 <h2>Results</h2>
                 {% if truncated %}<p class="stat-hint">Showing first {{ preview_limit }} — the CSV export includes all {{ row_count }}.</p>{% endif %}
             </div>
-            {# hx-boost="false" so this is a real navigation and the browser downloads
-               the file (Content-Disposition) instead of htmx swapping the CSV into the page. #}
+            {% comment %}hx-boost="false" so this is a real navigation and the browser downloads
+               the file (Content-Disposition) instead of htmx swapping the CSV into the page.{% endcomment %}
             <a class="btn" hx-boost="false" download
                href="{% url 'reporting:export' report.slug %}{% if export_qs %}?{{ export_qs }}{% endif %}">Export CSV</a>
         </div>
