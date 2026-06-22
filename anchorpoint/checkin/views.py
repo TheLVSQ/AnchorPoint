@@ -14,7 +14,7 @@ from django.db.models import Count, Q
 from core.models import OrganizationSettings
 from core.permissions import checkin_admin_required, checkin_team_required, staff_required
 from groups.models import GroupMembership
-from households.models import Household
+from households.models import Household, HouseholdMember
 from people.models import Person, normalize_phone
 
 from .forms import (
@@ -357,7 +357,77 @@ def kiosk_family_select(request, household_id):
         "rooms": rooms,
         "session": session,
         "config": config,
+        "grade_choices": Person.GRADE_CHOICES,
     })
+
+
+def _household_surname(household):
+    """Best surname for a child being added to this family — the primary adult's,
+    else the first adult member's, else the household name minus Family/Household."""
+    adult = household.primary_adult
+    if not (adult and adult.last_name):
+        membership = (
+            household.memberships.filter(
+                relationship_type=HouseholdMember.RelationshipType.ADULT
+            )
+            .select_related("person")
+            .first()
+        )
+        adult = membership.person if membership else None
+    if adult and adult.last_name:
+        return adult.last_name
+    name = (household.name or "").replace("Family", "").replace("Household", "").strip()
+    return name or "Guest"
+
+
+@require_POST
+def kiosk_family_add_child(request, household_id):
+    """Add a not-yet-registered child to an EXISTING family at the kiosk — a
+    walk-in who showed up with friends. Creates/links the child and enrolls them
+    in the session config's group(s) so they appear eligible on the family
+    screen, then returns there to be checked in."""
+    redir = _ensure_kiosk(request)
+    if redir:
+        return redir
+    session = _get_active_session(request)
+    if not session:
+        return redirect("checkin:kiosk_lookup")
+    household = get_object_or_404(Household, pk=household_id)
+
+    first = (request.POST.get("first_name") or "").strip()
+    if not first:
+        return redirect("checkin:kiosk_family_select", household_id=household.pk)
+    last = (request.POST.get("last_name") or "").strip() or _household_surname(household)
+    grade = (request.POST.get("grade") or "").strip()
+    if grade not in {g for g, _ in Person.GRADE_CHOICES}:
+        grade = ""
+
+    # Reuse an existing same-name member instead of duplicating; else create.
+    child = household.members.filter(
+        first_name__iexact=first, last_name__iexact=last
+    ).first()
+    if child is None:
+        child = Person.objects.create(
+            first_name=first, last_name=last, grade=grade or None,
+            allergies=(request.POST.get("allergies") or "").strip(),
+            photo_consent="granted" if request.POST.get("photo_consent") else "unknown",
+        )
+        HouseholdMember.objects.get_or_create(
+            household=household, person=child,
+            defaults={"relationship_type": HouseholdMember.RelationshipType.CHILD},
+        )
+
+    # Enroll so the child is eligible on the family screen (and on the roster).
+    config = session.configuration
+    if config:
+        for group in config.groups.all():
+            GroupMembership.objects.get_or_create(group=group, person=child)
+        if config.auto_enroll_group_id:
+            GroupMembership.objects.get_or_create(
+                group=config.auto_enroll_group, person=child
+            )
+
+    return redirect("checkin:kiosk_family_select", household_id=household.pk)
 
 
 def kiosk_confirmation(request):
