@@ -38,6 +38,17 @@
         <h2 style="display:flex; align-items:center; gap:8px;">
             <span class="chip chip--warning">Minor</span> Emergency Contact
         </h2>
+        {% if person.emergency_contact_name or person.emergency_contact_phone %}
+        <div style="margin-bottom:1rem; border:1px solid #fde68a; border-radius:10px; padding:0.75rem 1rem; background:#fff;">
+            <span class="chip chip--warning">Listed contact</span>
+            <strong>{{ person.emergency_contact_name|default:"(name not given)" }}</strong>
+            {% if person.emergency_contact_relationship %}<span class="muted-text">· {{ person.emergency_contact_relationship }}</span>{% endif %}
+            <p style="margin:0.4rem 0 0; font-size:1.2rem;">
+                {% if person.emergency_contact_phone %}<a href="tel:{{ person.emergency_contact_phone }}">{{ person.emergency_contact_phone }}</a>{% else %}<span class="muted-text">No phone</span>{% endif %}
+            </p>
+            <small class="stat-hint">This is what prints on the check-in label.</small>
+        </div>
+        {% endif %}
         {% if guardians %}
             <div style="display:flex; flex-wrap:wrap; gap:1rem;">
                 {% for g in guardians %}

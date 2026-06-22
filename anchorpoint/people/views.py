@@ -217,6 +217,8 @@ def people_add(request):
         "household_action": household_action,
         "selected_household_id": selected_household_id,
         "household_error": household_error,
+        # New person has no household yet, so no adults to copy from.
+        "household_adults": [],
     })
 
 
@@ -385,6 +387,23 @@ def people_detail(request, pk):
     return render(request, "people/people_detail.html", context)
 
 
+def _household_adults(person):
+    """Adult members across this person's households (excluding the person),
+    de-duped — powers the 'copy emergency contact from a family adult' helper."""
+    seen, adults = set(), []
+    for household in person.households.all():
+        for membership in household.memberships.select_related("person").all():
+            other = membership.person
+            if (
+                other.pk != person.pk
+                and other.pk not in seen
+                and membership.relationship_type == HouseholdMember.RelationshipType.ADULT
+            ):
+                seen.add(other.pk)
+                adults.append(other)
+    return adults
+
+
 @staff_required
 def people_edit(request, pk):
     person = get_object_or_404(Person, pk=pk)
@@ -398,7 +417,10 @@ def people_edit(request, pk):
     else:
         form = PersonForm(instance=person)
 
-    return render(request, "people/people_form.html", {"form": form})
+    return render(request, "people/people_form.html", {
+        "form": form,
+        "household_adults": _household_adults(person),
+    })
 
 
 @staff_required
