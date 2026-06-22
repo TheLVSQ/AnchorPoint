@@ -238,6 +238,40 @@
             </div>
         </div>
 
+        <div class="form-section">
+            <h3>Emergency Contact</h3>
+            <p class="section-hint">Who to call in an emergency — prints on the child's check-in label. Can be anyone (e.g. a family friend), not just someone in their family. Leave blank to fall back to a household adult's phone.</p>
+            {% if household_adults %}
+            <div class="form-field form-field--full">
+                <label for="copy_emergency_adult">Copy from a family adult</label>
+                <select id="copy_emergency_adult"
+                        onchange="if(this.value){var p=this.value.split('|');var n=document.getElementById('id_emergency_contact_name');var t=document.getElementById('id_emergency_contact_phone');if(n)n.value=p[0];if(t)t.value=p[1];}">
+                    <option value="">— Choose a family adult —</option>
+                    {% for a in household_adults %}
+                        <option value="{{ a.first_name }} {{ a.last_name }}|{{ a.phone|default:'' }}">{{ a.first_name }} {{ a.last_name }}{% if a.phone %} · {{ a.phone }}{% endif %}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% endif %}
+            <div class="form-grid">
+                <div class="form-field">
+                    {{ form.emergency_contact_name.label_tag }}
+                    {{ form.emergency_contact_name }}
+                    {% for error in form.emergency_contact_name.errors %}<span class="error-text">{{ error }}</span>{% endfor %}
+                </div>
+                <div class="form-field">
+                    {{ form.emergency_contact_phone.label_tag }}
+                    {{ form.emergency_contact_phone }}
+                    {% for error in form.emergency_contact_phone.errors %}<span class="error-text">{{ error }}</span>{% endfor %}
+                </div>
+                <div class="form-field">
+                    {{ form.emergency_contact_relationship.label_tag }}
+                    {{ form.emergency_contact_relationship }}
+                    {% for error in form.emergency_contact_relationship.errors %}<span class="error-text">{{ error }}</span>{% endfor %}
+                </div>
+            </div>
+        </div>
+
         <button type="submit">Save</button>
     </form>
 </section>

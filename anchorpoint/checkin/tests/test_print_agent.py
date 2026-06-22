@@ -261,6 +261,21 @@ class LabelContentTests(TestCase):
         loner = Person.objects.create(first_name="No", last_name="Family")
         self.assertEqual(_guardian_phone(loner), "")
 
+    def test_emergency_contact_falls_back_to_household(self):
+        from checkin.services.label_generator import _emergency_contact
+        # No explicit contact → household guardian's phone, blank name.
+        self.assertEqual(_emergency_contact(self.kid), ("", "+15405550123"))
+
+    def test_emergency_contact_prefers_explicit_over_household(self):
+        from checkin.services.label_generator import _emergency_contact
+        # An explicitly-set contact wins — and can be someone outside the family.
+        self.kid.emergency_contact_name = "Kelly Levesque"
+        self.kid.emergency_contact_phone = "+13304326866"
+        self.kid.save()
+        self.assertEqual(
+            _emergency_contact(self.kid), ("Kelly Levesque", "+13304326866")
+        )
+
     def test_full_minor_label_renders_landscape(self):
         # Grade + allergy text + custody shield all present — renders cleanly.
         from checkin.services.label_generator import _make_child_label

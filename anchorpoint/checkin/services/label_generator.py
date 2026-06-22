@@ -125,6 +125,16 @@ def _guardian_phone(person):
     return (adult.phone if adult and adult.phone else "") or ""
 
 
+def _emergency_contact(person):
+    """(name, phone) to print on the label: the person's explicitly-set emergency
+    contact when a phone is on record, otherwise the household guardian's phone as
+    a fallback (name blank). The explicit contact can be anyone — e.g. a family
+    friend named on a registration form, not necessarily a household member."""
+    if getattr(person, "emergency_contact_phone", ""):
+        return (person.emergency_contact_name or ""), person.emergency_contact_phone
+    return "", _guardian_phone(person)
+
+
 def _markers_render(draw, usable, has_custody, no_photo):
     """Return a render(y, band) that draws a centred strip of warning markers:
     a discreet custody shield (icon only — no text, so the concern isn't spelled
@@ -235,9 +245,10 @@ def _make_child_label(checkin, session) -> Image.Image:
     # isn't on file (is_minor is None — common for imported rosters like VBS) still
     # get it; only confirmed adults are skipped.
     if session and getattr(session, "print_emergency_phone", False) and person.is_minor is not False:
-        phone = _guardian_phone(person)
+        name, phone = _emergency_contact(person)
         if phone:
-            rows.append(text_row(f"Call: {phone}", 0.6))
+            text = f"Call: {name} · {phone}" if name else f"Call: {phone}"
+            rows.append(text_row(text, 0.6))
 
     if has_allergy:
         rows.append(text_row(f"✚ {person.allergies}".replace("\n", " "), 0.85, fill="#b91c1c"))
