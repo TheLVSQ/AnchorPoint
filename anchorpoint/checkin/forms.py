@@ -1,6 +1,8 @@
 from django import forms
 from django.forms import inlineformset_factory
 
+from people.models import Person
+
 from .models import CheckInConfiguration, CheckInSession, CheckInWindow, Room, PrinterConfiguration
 
 
@@ -138,6 +140,9 @@ class QuickRegistrationChildForm(forms.Form):
     first_name = forms.CharField(max_length=150)
     last_name = forms.CharField(max_length=150, required=False)
     birthdate = forms.DateField(widget=forms.DateInput(attrs={"type": "date"}))
+    grade = forms.ChoiceField(
+        choices=[("", "—")] + Person.GRADE_CHOICES, required=False
+    )
     allergies = forms.CharField(required=False, widget=forms.Textarea(attrs={"rows": 2}))
     custody_flag = forms.BooleanField(required=False)
     custody_notes = forms.CharField(required=False, widget=forms.Textarea(attrs={"rows": 2}))
