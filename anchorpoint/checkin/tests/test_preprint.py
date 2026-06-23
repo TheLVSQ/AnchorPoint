@@ -263,6 +263,11 @@ class KioskAddChildTests(PreprintFixture):
         )
         self.assertContains(page, "Nora Walker")
 
+    def test_adds_child_with_birthdate(self):
+        self._add(first_name="Eli", birthdate="2017-09-01")
+        eli = Person.objects.get(first_name="Eli")
+        self.assertEqual(eli.birthdate, date(2017, 9, 1))
+
     def test_blank_name_is_a_noop(self):
         before = Person.objects.count()
         self._add(first_name="   ", grade="2")
