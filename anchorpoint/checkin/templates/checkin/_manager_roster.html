@@ -80,7 +80,7 @@
             <div class="list-card__header">
                 <div>
                     <h2>Expected — not arrived <span class="chip">{{ expected|length }}</span></h2>
-                    <p class="stat-hint">Pre-printed but not here. At the end, mark no-shows so they're excluded from attendance.</p>
+                    <p class="stat-hint">Pre-printed but not here. Check the kids who came and mark them arrived; mark the rest no-show so they're excluded from attendance.</p>
                 </div>
                 <form method="post" action="{% url 'checkin:checkin_clear_expected' session.id %}"
                       onsubmit="return confirm('Mark all {{ expected|length }} remaining expected kids as no-shows?');">
@@ -88,26 +88,35 @@
                     <button type="submit" class="btn ghost danger">Mark all as no-show</button>
                 </form>
             </div>
-            <div style="overflow-x:auto;">
-                <table class="data-table" style="width:100%; border-collapse:collapse;">
-                    <tbody>
-                        {% for c in expected %}
-                            <tr>
-                                <td style="padding:6px 10px;">
-                                    <strong>{{ c.person.first_name }} {{ c.person.last_name }}</strong>
-                                    <span class="muted-text">{% if c.person.get_grade_display %}{{ c.person.get_grade_display }}{% elif c.person.age is not None %}Age {{ c.person.age }}{% endif %}</span>
-                                </td>
-                                <td style="padding:6px 10px; text-align:right;">
-                                    <form method="post" action="{% url 'checkin:checkin_mark_noshow' session.id c.id %}" style="display:inline;">
-                                        {% csrf_token %}
-                                        <button type="submit" class="btn ghost">No-show</button>
-                                    </form>
-                                </td>
-                            </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+            <form method="post" action="{% url 'checkin:checkin_bulk_action' session.id %}">
+                {% csrf_token %}
+                <div style="display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap; margin-bottom:0.75rem;">
+                    <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer;">
+                        <input type="checkbox" onclick="toggleAllExpected(this)"> Select all
+                    </label>
+                    <button type="submit" name="action" value="arrive" class="btn">Mark arrived</button>
+                    <button type="submit" name="action" value="noshow" class="btn ghost danger">Mark no-show</button>
+                </div>
+                <div style="overflow-x:auto;">
+                    <table class="data-table" style="width:100%; border-collapse:collapse;">
+                        <tbody>
+                            {% for c in expected %}
+                                <tr>
+                                    <td style="padding:6px 10px; width:1%;">
+                                        <input type="checkbox" name="checkin_ids" value="{{ c.id }}"
+                                               class="expected-check" style="width:20px; height:20px;"
+                                               aria-label="Select {{ c.person.first_name }} {{ c.person.last_name }}">
+                                    </td>
+                                    <td style="padding:6px 10px;">
+                                        <strong>{{ c.person.first_name }} {{ c.person.last_name }}</strong>
+                                        <span class="muted-text">{% if c.person.get_grade_display %}{{ c.person.get_grade_display }}{% elif c.person.age is not None %}Age {{ c.person.age }}{% endif %}</span>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </form>
         </section>
     {% endif %}
 </div>

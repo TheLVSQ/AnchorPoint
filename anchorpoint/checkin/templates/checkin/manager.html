@@ -9,4 +9,20 @@
 </div>
 
 {% include "checkin/_manager_roster.html" %}
+
+<script>
+  // Select-all toggle for the Expected checkboxes.
+  function toggleAllExpected(master) {
+    document.querySelectorAll('.expected-check').forEach(function (cb) { cb.checked = master.checked; });
+  }
+  // The roster polls itself every 15s (hx-swap outerHTML). Pause that refresh
+  // while the volunteer has kids selected, so an auto-swap can't wipe the
+  // checkbox selection out from under a pending bulk action.
+  document.body.addEventListener('htmx:beforeRequest', function (e) {
+    if (e.detail.elt && e.detail.elt.id === 'manager-roster' &&
+        document.querySelector('input[name="checkin_ids"]:checked')) {
+      e.preventDefault();
+    }
+  });
+</script>
 {% endblock %}

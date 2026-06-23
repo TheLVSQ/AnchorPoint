@@ -112,3 +112,72 @@ class NoShowTests(TestCase):
         self.ci.save()
         resp = self.client.get(reverse("checkin:checkin_manager", args=[self.session.id]))
         self.assertEqual(resp.context["stats"]["checked_in"], 0)
+
+
+class BulkActionTests(TestCase):
+    def setUp(self):
+        self.vol = get_user_model().objects.create_user(username="bulkvol", password="pw")
+        self.vol.profile.role = UserProfile.Role.VOLUNTEER
+        self.vol.profile.save()
+        self.client.force_login(self.vol)
+        self.session = _session()
+        self.a = Person.objects.create(first_name="Amy", last_name="Apple")
+        self.b = Person.objects.create(first_name="Ben", last_name="Berry")
+        self.ci_a = CheckIn.objects.create(
+            session=self.session, person=self.a, security_code="AAAA", arrived_at=None)
+        self.ci_b = CheckIn.objects.create(
+            session=self.session, person=self.b, security_code="BBBB", arrived_at=None)
+
+    def _post(self, action, ids):
+        return self.client.post(
+            reverse("checkin:checkin_bulk_action", args=[self.session.id]),
+            {"action": action, "checkin_ids": ids},
+        )
+
+    def test_bulk_noshow_marks_selected(self):
+        self._post("noshow", [self.ci_a.id, self.ci_b.id])
+        self.ci_a.refresh_from_db()
+        self.ci_b.refresh_from_db()
+        self.assertTrue(self.ci_a.no_show)
+        self.assertTrue(self.ci_b.no_show)
+
+    def test_bulk_arrive_stamps_arrival_and_clears_noshow(self):
+        self._post("arrive", [self.ci_a.id, self.ci_b.id])
+        self.ci_a.refresh_from_db()
+        self.ci_b.refresh_from_db()
+        self.assertIsNotNone(self.ci_a.arrived_at)
+        self.assertFalse(self.ci_a.no_show)
+        self.assertIsNotNone(self.ci_b.arrived_at)
+
+    def test_arrive_flips_a_noshow_back_to_present(self):
+        self.ci_a.no_show = True
+        self.ci_a.save(update_fields=["no_show"])
+        self._post("arrive", [self.ci_a.id])
+        self.ci_a.refresh_from_db()
+        self.assertFalse(self.ci_a.no_show)
+        self.assertIsNotNone(self.ci_a.arrived_at)
+
+    def test_noshow_never_undoes_a_real_arrival(self):
+        self.ci_a.arrived_at = timezone.now()
+        self.ci_a.save(update_fields=["arrived_at"])
+        self._post("noshow", [self.ci_a.id])
+        self.ci_a.refresh_from_db()
+        self.assertFalse(self.ci_a.no_show)
+        self.assertIsNotNone(self.ci_a.arrived_at)
+
+    def test_only_selected_are_changed(self):
+        self._post("noshow", [self.ci_a.id])
+        self.ci_a.refresh_from_db()
+        self.ci_b.refresh_from_db()
+        self.assertTrue(self.ci_a.no_show)
+        self.assertFalse(self.ci_b.no_show)
+
+    def test_empty_selection_is_noop(self):
+        resp = self._post("noshow", [])
+        self.assertEqual(resp.status_code, 302)
+        self.ci_a.refresh_from_db()
+        self.assertFalse(self.ci_a.no_show)
+
+    def test_requires_post(self):
+        resp = self.client.get(reverse("checkin:checkin_bulk_action", args=[self.session.id]))
+        self.assertEqual(resp.status_code, 405)
