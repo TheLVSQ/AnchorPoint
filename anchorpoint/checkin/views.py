@@ -1339,6 +1339,37 @@ def checkin_clear_expected(request, session_id):
 
 @checkin_team_required
 @require_POST
+def checkin_bulk_action(request, session_id):
+    """Bulk-update the check-ins selected via the roster checkboxes: either mark
+    them arrived (confirmed present) or as no-shows. Scoped to the session and to
+    not-checked-out kids, so a stale roster can't corrupt anyone."""
+    session = get_object_or_404(CheckInSession, pk=session_id)
+    action = request.POST.get("action")
+    ids = request.POST.getlist("checkin_ids")
+    if not ids:
+        messages.info(request, "No children selected.")
+        return redirect("checkin:checkin_manager", session_id=session_id)
+
+    selected = session.checkins.filter(pk__in=ids, checked_out_at__isnull=True)
+    if action == "arrive":
+        # Confirm attendance: stamp arrival on those not yet arrived and clear any
+        # no-show flag (also flips a mistaken no-show back to present).
+        n = selected.filter(arrived_at__isnull=True).update(
+            arrived_at=timezone.now(), no_show=False
+        )
+        selected.filter(arrived_at__isnull=False, no_show=True).update(no_show=False)
+        messages.success(request, f"Marked {n} child{'ren' if n != 1 else ''} as arrived.")
+    elif action == "noshow":
+        # Only not-yet-arrived kids can be no-shows (never undo a real arrival).
+        n = selected.filter(arrived_at__isnull=True).update(no_show=True)
+        messages.success(request, f"Marked {n} child{'ren' if n != 1 else ''} as a no-show.")
+    else:
+        messages.error(request, "Unknown action.")
+    return redirect("checkin:checkin_manager", session_id=session_id)
+
+
+@checkin_team_required
+@require_POST
 def checkin_reprint(request, session_id, checkin_id):
     """Re-queue a single child's label (+ pickup tag) to the active print agent."""
     session = get_object_or_404(CheckInSession, pk=session_id)
