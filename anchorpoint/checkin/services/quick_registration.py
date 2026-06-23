@@ -46,6 +46,7 @@ def register_new_family(
             first_name=child_data["first_name"],
             last_name=child_data.get("last_name", parent_last),
             birthdate=child_data.get("birthdate"),
+            grade=child_data.get("grade"),
             allergies=child_data.get("allergies", ""),
             custody_flag=child_data.get("custody_flag", False),
             custody_notes=child_data.get("custody_notes", ""),

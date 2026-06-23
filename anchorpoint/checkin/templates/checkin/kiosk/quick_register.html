@@ -93,6 +93,13 @@
             {% if cf.birthdate.errors %}<div style="color:var(--danger);font-size:14px;margin-top:4px;">{{ cf.birthdate.errors.0 }}</div>{% endif %}
           </div>
           <div class="form-group">
+            <label>Grade (optional)</label>
+            <select name="child_{{ forloop.counter0 }}-grade">
+              <option value="">—</option>
+              {% for val, lbl in grade_choices %}<option value="{{ val }}"{% if cf.grade.value == val %} selected{% endif %}>{{ lbl }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="form-group">
             <label>Allergies (optional)</label>
             <textarea name="child_{{ forloop.counter0 }}-allergies"
                       rows="2" placeholder="List any allergies">{{ cf.allergies.value|default:'' }}</textarea>
@@ -149,6 +156,8 @@
 
 {% block extra_js %}
 <script>
+  var gradeOptions = `<option value="">—</option>{% for val, lbl in grade_choices %}<option value="{{ val }}">{{ lbl }}</option>{% endfor %}`;
+
   function toggleCustody(idx, show) {
     document.getElementById('custody_details_' + idx).style.display = show ? 'block' : 'none';
   }
@@ -169,6 +178,7 @@
           <div class="form-group"><label>Last Name</label><input type="text" name="child_${idx}-last_name" placeholder="Same as parent"></div>
         </div>
         <div class="form-group"><label>Birthdate</label><input type="date" name="child_${idx}-birthdate"></div>
+        <div class="form-group"><label>Grade (optional)</label><select name="child_${idx}-grade">${gradeOptions}</select></div>
         <div class="form-group"><label>Allergies (optional)</label><textarea name="child_${idx}-allergies" rows="2" placeholder="List any allergies"></textarea></div>
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
           <input type="checkbox" name="child_${idx}-photo_consent" id="photo_${idx}" style="width:22px;height:22px;accent-color:var(--primary);">

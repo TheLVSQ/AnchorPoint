@@ -203,10 +203,12 @@ class QuickRegistrationViewTests(TestCase):
                 "child_0-first_name": "Mia",
                 "child_0-last_name": "Martinez",
                 "child_0-birthdate": "2019-05-15",
+                "child_0-grade": "k",
             },
         )
         self.assertTrue(Person.objects.filter(first_name="Sarah", last_name="Martinez").exists())
         self.assertTrue(Person.objects.filter(first_name="Mia", last_name="Martinez").exists())
+        self.assertEqual(Person.objects.get(first_name="Mia", last_name="Martinez").grade, "k")
         from households.models import Household
         self.assertTrue(Household.objects.filter(name="Martinez Family").exists())
         household = Household.objects.get(name="Martinez Family")

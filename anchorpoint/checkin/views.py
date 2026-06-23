@@ -9,6 +9,7 @@ from django.contrib.auth import logout
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.utils import timezone
+from django.utils.dateparse import parse_date
 from django.db.models import Count, Q
 
 from core.models import OrganizationSettings
@@ -401,6 +402,8 @@ def kiosk_family_add_child(request, household_id):
     grade = (request.POST.get("grade") or "").strip()
     if grade not in {g for g, _ in Person.GRADE_CHOICES}:
         grade = ""
+    # Birthdate is optional; <input type="date"> posts ISO (YYYY-MM-DD).
+    birthdate = parse_date((request.POST.get("birthdate") or "").strip())
 
     # Reuse an existing same-name member instead of duplicating; else create.
     child = household.members.filter(
@@ -409,6 +412,7 @@ def kiosk_family_add_child(request, household_id):
     if child is None:
         child = Person.objects.create(
             first_name=first, last_name=last, grade=grade or None,
+            birthdate=birthdate,
             allergies=(request.POST.get("allergies") or "").strip(),
             photo_consent="granted" if request.POST.get("photo_consent") else "unknown",
         )
@@ -497,6 +501,7 @@ def kiosk_quick_register(request):
                     "first_name": cf.cleaned_data["first_name"],
                     "last_name": cf.cleaned_data.get("last_name") or parent_form.cleaned_data["parent_last_name"],
                     "birthdate": cf.cleaned_data["birthdate"],
+                    "grade": cf.cleaned_data.get("grade") or None,
                     "allergies": cf.cleaned_data.get("allergies", ""),
                     "custody_flag": cf.cleaned_data.get("custody_flag", False),
                     "custody_notes": cf.cleaned_data.get("custody_notes", ""),
@@ -523,6 +528,7 @@ def kiosk_quick_register(request):
         "parent_form": parent_form,
         "child_forms": child_forms,
         "invalid_children": not children_valid,
+        "grade_choices": Person.GRADE_CHOICES,
         "org": org,
     })
 

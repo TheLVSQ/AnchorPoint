@@ -60,6 +60,7 @@ class QuickRegistrationTests(TestCase):
                     "first_name": "Mia",
                     "last_name": "Martinez",
                     "birthdate": date(2019, 5, 15),
+                    "grade": "k",
                     "allergies": "Tree nuts",
                     "custody_flag": True,
                     "custody_notes": "Mother has sole custody",
@@ -69,6 +70,7 @@ class QuickRegistrationTests(TestCase):
         )
         child = result["children"][0]
         self.assertEqual(child.allergies, "Tree nuts")
+        self.assertEqual(child.grade, "k")
         self.assertTrue(child.custody_flag)
         self.assertIn("sole custody", child.custody_notes)
 
