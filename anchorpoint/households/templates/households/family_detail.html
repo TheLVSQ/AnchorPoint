@@ -70,7 +70,7 @@
 
     <section class="detail-card">
         <h2>Add a Member</h2>
-        <p class="stat-hint">Search for an existing person. New people are added from the People page.</p>
+        <p class="stat-hint">Search for an existing person, or create a brand-new one below.</p>
         <form method="GET" style="display:flex; gap:0.5rem; margin:0.75rem 0;">
             <input type="text" name="member_q" value="{{ member_query }}" placeholder="Search people..." style="flex:1;">
             <button type="submit" class="btn">Search</button>
@@ -98,6 +98,29 @@
                 <p class="empty-state">No matches for "{{ member_query }}" outside this family.</p>
             {% endfor %}
         {% endif %}
+
+        <h3 style="margin-top:1.75rem;">Or create a new person</h3>
+        <p class="stat-hint">Adds a brand-new profile straight into this family.</p>
+        <form method="POST" action="{% url 'households:family_member_create' household.pk %}" style="margin-top:0.5rem;">
+            {% csrf_token %}
+            {% if new_person_form.errors %}
+                <div style="margin-bottom:0.75rem; padding:0.6rem 0.85rem; background:#fef2f2; border:1px solid #fecaca; border-radius:8px; color:#991b1b; font-size:0.9rem;">
+                    {% for field in new_person_form %}{% for error in field.errors %}<div>{{ field.label }}: {{ error }}</div>{% endfor %}{% endfor %}
+                    {% for error in new_person_form.non_field_errors %}<div>{{ error }}</div>{% endfor %}
+                </div>
+            {% endif %}
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem;">
+                <label>First name<br>{{ new_person_form.first_name }}</label>
+                <label>Last name {% if family_surname %}<span class="muted-text">(blank = {{ family_surname }})</span>{% endif %}<br>{{ new_person_form.last_name }}</label>
+                <label>Role in family<br>{{ new_person_form.relationship_type }}</label>
+                <label>Birthdate<br>{{ new_person_form.birthdate }}</label>
+                <label>Grade<br>{{ new_person_form.grade }}</label>
+                <label>Gender<br>{{ new_person_form.gender }}</label>
+                <label>Phone<br>{{ new_person_form.phone }}</label>
+                <label>Email<br>{{ new_person_form.email }}</label>
+            </div>
+            <button type="submit" class="btn" style="margin-top:0.85rem;">Create &amp; add to family</button>
+        </form>
 
         {% if household.formatted_address %}
             <h2 style="margin-top:1.5rem;">Address</h2>
