@@ -262,6 +262,59 @@ class FamilyDeleteTests(TestCase):
         self.assertRedirects(resp, "/login/", fetch_redirect_response=False)
 
 
+class FamilyNewMemberTests(TestCase):
+    def setUp(self):
+        self.user = _staff("newmemberstaff")
+        self.client.force_login(self.user)
+        self.mom = Person.objects.create(first_name="Sue", last_name="Walker")
+        self.family = Household.objects.create(name="Walker Family", primary_adult=self.mom)
+        HouseholdMember.objects.create(
+            household=self.family, person=self.mom,
+            relationship_type=HouseholdMember.RelationshipType.ADULT,
+        )
+        self.url = reverse("households:family_member_create", args=[self.family.pk])
+
+    def test_create_new_person_and_link(self):
+        resp = self.client.post(self.url, {
+            "first_name": "Lily", "last_name": "Walker", "grade": "2",
+            "relationship_type": HouseholdMember.RelationshipType.CHILD,
+        })
+        self.assertRedirects(resp, reverse("households:family_detail", args=[self.family.pk]))
+        lily = Person.objects.get(first_name="Lily", last_name="Walker")
+        self.assertEqual(lily.grade, "2")
+        membership = HouseholdMember.objects.get(household=self.family, person=lily)
+        self.assertEqual(membership.relationship_type, HouseholdMember.RelationshipType.CHILD)
+
+    def test_blank_last_name_falls_back_to_family_surname(self):
+        self.client.post(self.url, {
+            "first_name": "Max", "last_name": "",
+            "relationship_type": HouseholdMember.RelationshipType.CHILD,
+        })
+        max_p = Person.objects.get(first_name="Max")
+        self.assertEqual(max_p.last_name, "Walker")  # from the primary adult
+        self.assertTrue(
+            HouseholdMember.objects.filter(household=self.family, person=max_p).exists()
+        )
+
+    def test_missing_first_name_creates_nothing(self):
+        before = Person.objects.count()
+        resp = self.client.post(self.url, {
+            "first_name": "", "relationship_type": HouseholdMember.RelationshipType.CHILD,
+        })
+        self.assertEqual(resp.status_code, 200)  # re-rendered with errors, not redirected
+        self.assertContains(resp, "This field is required")
+        self.assertEqual(Person.objects.count(), before)
+
+    def test_requires_post(self):
+        resp = self.client.get(self.url)
+        self.assertEqual(resp.status_code, 405)
+
+    def test_requires_staff(self):
+        self.client.logout()
+        resp = self.client.get(self.url)
+        self.assertRedirects(resp, "/login/", fetch_redirect_response=False)
+
+
 class HouseholdSelectorLabelTests(TestCase):
     """selector_label() disambiguates same-surname families in dropdowns."""
 

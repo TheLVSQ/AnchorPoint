@@ -1,5 +1,7 @@
 from django import forms
 
+from people.models import Person
+
 from .models import Household, HouseholdMember
 
 
@@ -26,6 +28,26 @@ class HouseholdQuickCreateForm(HouseholdForm):
 
     class Meta(HouseholdForm.Meta):
         fields = HouseholdForm.Meta.fields
+
+
+class HouseholdNewPersonForm(forms.ModelForm):
+    """Create a brand-new person and drop them straight into a family. Last name
+    is optional — it falls back to the family's surname in the view."""
+
+    relationship_type = forms.ChoiceField(
+        choices=HouseholdMember.RelationshipType.choices,
+        initial=HouseholdMember.RelationshipType.CHILD,
+        label="Role in family",
+    )
+
+    class Meta:
+        model = Person
+        fields = ["first_name", "last_name", "birthdate", "grade", "gender", "phone", "email"]
+        widgets = {"birthdate": forms.DateInput(attrs={"type": "date"})}
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["last_name"].required = False
 
 
 class HouseholdMembershipForm(forms.ModelForm):

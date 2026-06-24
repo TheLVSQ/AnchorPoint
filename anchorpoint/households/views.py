@@ -7,7 +7,7 @@ from django.views.decorators.http import require_POST
 from core.permissions import staff_required
 from people.models import Person
 
-from .forms import HouseholdForm
+from .forms import HouseholdForm, HouseholdNewPersonForm
 from .models import Household, HouseholdMember
 
 
@@ -34,11 +34,7 @@ def family_list(request):
     })
 
 
-@staff_required
-def family_detail(request, pk):
-    household = get_object_or_404(
-        Household.objects.select_related("primary_adult"), pk=pk
-    )
+def _family_detail_context(request, household, new_person_form=None):
     memberships = household.memberships.select_related("person").order_by(
         "relationship_type", "person__last_name", "person__first_name"
     )
@@ -56,13 +52,26 @@ def family_detail(request, pk):
             .order_by("last_name", "first_name")[:10]
         )
 
-    return render(request, "households/family_detail.html", {
+    return {
         "household": household,
         "memberships": memberships,
         "member_query": member_query,
         "candidates": candidates,
         "relationship_choices": HouseholdMember.RelationshipType.choices,
-    })
+        "new_person_form": new_person_form or HouseholdNewPersonForm(),
+        "family_surname": _household_surname(household),
+    }
+
+
+@staff_required
+def family_detail(request, pk):
+    household = get_object_or_404(
+        Household.objects.select_related("primary_adult"), pk=pk
+    )
+    return render(
+        request, "households/family_detail.html",
+        _family_detail_context(request, household),
+    )
 
 
 @staff_required
@@ -168,6 +177,46 @@ def _limit_primary_adult_choices(form, household):
     form.fields["primary_adult"].queryset = Person.objects.filter(
         household_memberships__household=household
     )
+
+
+def _household_surname(household):
+    """Best-guess family surname, for defaulting a new member's last name."""
+    if household.primary_adult and household.primary_adult.last_name:
+        return household.primary_adult.last_name
+    member = household.memberships.select_related("person").first()
+    if member and member.person.last_name:
+        return member.person.last_name
+    name = household.name or ""
+    for suffix in (" Family", " Household"):
+        if name.endswith(suffix):
+            return name[: -len(suffix)].strip()
+    return name.strip()
+
+
+@staff_required
+@require_POST
+def family_member_create(request, pk):
+    """Create a brand-new person and add them to this family in one step."""
+    household = get_object_or_404(
+        Household.objects.select_related("primary_adult"), pk=pk
+    )
+    form = HouseholdNewPersonForm(request.POST)
+    if not form.is_valid():
+        messages.error(request, "Couldn't add the new person — check the highlighted fields.")
+        return render(
+            request, "households/family_detail.html",
+            _family_detail_context(request, household, new_person_form=form),
+        )
+    person = form.save(commit=False)
+    if not person.last_name:
+        person.last_name = _household_surname(household)
+    person.save()
+    HouseholdMember.objects.create(
+        household=household, person=person,
+        relationship_type=form.cleaned_data["relationship_type"],
+    )
+    messages.success(request, f"{person} created and added to {household.name}.")
+    return redirect("households:family_detail", pk=pk)
 
 
 @staff_required
