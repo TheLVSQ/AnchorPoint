@@ -44,6 +44,12 @@
 
                     {% if agent.is_paired and agent.last_seen_at %}
                         <p class="stat-hint">Last seen {{ agent.last_seen_at|timesince }} ago</p>
+                        {% if agent.local_ip or agent.hostname %}
+                            <p class="stat-hint">
+                                {% if agent.local_ip %}IP <strong style="user-select:all;">{{ agent.local_ip }}</strong>{% endif %}
+                                {% if agent.hostname %}· host <span style="user-select:all;">{{ agent.hostname }}</span>{% endif %}
+                            </p>
+                        {% endif %}
                     {% endif %}
 
                     {% if not agent.is_paired and agent.pairing_code %}

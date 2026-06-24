@@ -450,6 +450,11 @@ class PrintAgent(models.Model):
     pairing_expires_at = models.DateTimeField(null=True, blank=True)
     is_active = models.BooleanField(default=True)
     last_seen_at = models.DateTimeField(null=True, blank=True)
+    # Self-reported by the agent on each poll so the Print Agents page can show
+    # where the Pi is — handy on locked-down venue networks where you can't scan
+    # for it. Best-effort; stays blank until a paired agent checks in.
+    hostname = models.CharField(max_length=120, blank=True, default="")
+    local_ip = models.CharField(max_length=64, blank=True, default="")
     # Physical label/roll width at this agent's printer. Sent to the agent with
     # each job so it can size the CUPS page (62 = Brother QL continuous roll).
     label_width_mm = models.PositiveSmallIntegerField(default=62)

@@ -38,7 +38,18 @@ def agent_required(view):
         agent = _agent_from_request(request)
         if agent is None:
             return JsonResponse({"detail": "Invalid or missing agent token."}, status=401)
-        PrintAgent.objects.filter(pk=agent.pk).update(last_seen_at=timezone.now())
+        # Heartbeat + self-reported location. The agent sends its hostname / LAN
+        # IP as headers so the Print Agents page can show where the Pi is (no
+        # scanning needed). Only overwrite when sent, so an older agent that
+        # doesn't report them doesn't blank what we already have.
+        fields = {"last_seen_at": timezone.now()}
+        hostname = request.headers.get("X-Agent-Hostname", "").strip()
+        local_ip = request.headers.get("X-Agent-Local-IP", "").strip()
+        if hostname:
+            fields["hostname"] = hostname[:120]
+        if local_ip:
+            fields["local_ip"] = local_ip[:64]
+        PrintAgent.objects.filter(pk=agent.pk).update(**fields)
         request.print_agent = agent
         return view(request, *args, **kwargs)
     return wrapper
