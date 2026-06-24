@@ -46,6 +46,18 @@ JOB_DONE_TIMEOUT_SECONDS = 45   # give up waiting after this so a stuck job can'
 JOB_POLL_SECONDS = 0.4          # how often to check whether the job has cleared the queue
 JOB_SETTLE_SECONDS = 0.4        # brief pause after a label finishes, before the next one
 
+# Self-heal after a failed print. A Brother QL over USB (ipp-usb) can wedge once
+# the Pi has sat idle — USB autosuspend sleeps the printer and the bridge won't
+# wake it, and CUPS often disables the queue after the resulting error — so the
+# next check-in silently doesn't print until someone reboots the Pi. After a
+# failure we clear the queue, bounce ipp-usb/cups, and re-enable the queue, so it
+# recovers on its own. Best-effort + rate-limited; the service restarts need the
+# small sudoers grant install.sh adds (without it the sudo call just no-ops).
+# Set ANCHORPOINT_NO_RECOVER=1 to disable.
+RECOVER_AFTER_FAILURE = os.environ.get("ANCHORPOINT_NO_RECOVER") != "1"
+RECOVERY_COOLDOWN_SECONDS = 120   # don't bounce cups on every poll if a printer keeps failing
+RECOVERY_SETTLE_SECONDS = 4       # give cups/ipp-usb a moment to come back before we re-enable
+
 
 def load_config():
     if os.path.exists(CONFIG_PATH):
@@ -207,6 +219,42 @@ def _print_png(png_bytes, printer, width_mm=DEFAULT_MEDIA_WIDTH_MM,
             os.unlink(tmp_path)
 
 
+_last_recovery = 0.0
+
+
+def _recover_print_subsystem(printer):
+    """Best-effort recovery after a failed print so the printer comes back
+    without a manual Pi reboot: clear stuck jobs, bounce ipp-usb + cups (wakes a
+    USB bridge that autosuspended while idle), then re-enable the queue (CUPS
+    disables it after a job errors). Rate-limited and never raises — if the sudo
+    grant is missing the service restarts simply no-op and the agent carries on.
+    """
+    global _last_recovery
+    if not RECOVER_AFTER_FAILURE:
+        return
+    now = time.monotonic()
+    if _last_recovery and now - _last_recovery < RECOVERY_COOLDOWN_SECONDS:
+        return  # already tried very recently; don't bounce cups on every poll
+    _last_recovery = now
+    print("Print failed — recovering the print subsystem "
+          "(clear queue, restart ipp-usb/cups, re-enable queue)...", file=sys.stderr)
+
+    def _try(cmd):
+        try:
+            subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+        except Exception as exc:  # noqa: BLE001 - recovery is best-effort
+            print(f"  recovery step {cmd!r} failed (non-fatal): {exc}", file=sys.stderr)
+
+    _try(["cancel", "-a"])
+    _try(["sudo", "-n", "systemctl", "restart", "ipp-usb"])  # wake the USB bridge
+    _try(["sudo", "-n", "systemctl", "restart", "cups"])
+    time.sleep(RECOVERY_SETTLE_SECONDS)                      # let the daemon come back up
+    if printer:
+        _try(["cupsaccept", printer])   # member of lpadmin (install.sh) — no sudo needed
+        _try(["cupsenable", printer])
+    _cut_support_cache.clear()           # the queue may have been re-created
+
+
 def cmd_run(args):
     config = load_config()
     server = config.get("server")
@@ -270,6 +318,10 @@ def cmd_run(args):
             label = job.get("description") or job.get("kind")
             verb = "saved" if (save_dir and ok) else ("printed" if ok else f"FAILED ({err}):")
             print(f"{verb} {label}")
+            if not ok and not save_dir:
+                # Try to self-heal a wedged printer so the next check-in prints
+                # without a manual Pi reboot.
+                _recover_print_subsystem(printer)
             # Loop straight to the next job. _print_png blocks until this label
             # has finished printing, so a batch feeds one label at a time instead
             # of flooding the queue (which wedges ipp-usb over USB).

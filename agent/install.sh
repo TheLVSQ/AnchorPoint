@@ -93,12 +93,58 @@ setup_wifi_fallback() {
     echo "    comitup installed. Reboot to activate it."
 }
 
+# Keep the printer reachable after the Pi sits idle. On a Pi print appliance the
+# two known culprits are USB autosuspend (powers the printer's USB port down; the
+# ipp-usb bridge to a Brother QL then won't wake, so the next check-in silently
+# doesn't print until a reboot) and onboard WiFi power-save (drops the link).
+# Disable both, and grant the agent a tiny, bounded sudo right so it can restart
+# the print stack itself after a failed print instead of waiting for a reboot.
+harden_print_reliability() {
+    echo "==> Hardening print reliability (USB autosuspend off, WiFi power-save off)..."
+
+    # 1. Never autosuspend USB on this appliance — keeps the printer awake.
+    cat > /etc/udev/rules.d/99-anchorpoint-usb-no-suspend.rules <<'RULE'
+# AnchorPoint: keep USB devices (the label printer) powered so they don't sleep
+# while the Pi is idle and then fail to wake on the next print job.
+ACTION=="add", SUBSYSTEM=="usb", TEST=="power/control", ATTR{power/control}="on"
+RULE
+    udevadm control --reload-rules >/dev/null 2>&1 || true
+    udevadm trigger --action=add --subsystem-match=usb >/dev/null 2>&1 || true
+    # Apply to already-connected devices right now (the rule covers future plug-ins).
+    for f in /sys/bus/usb/devices/*/power/control; do
+        echo on > "$f" 2>/dev/null || true
+    done
+
+    # 2. Disable WiFi power-save (NetworkManager owns WiFi here via comitup).
+    mkdir -p /etc/NetworkManager/conf.d
+    cat > /etc/NetworkManager/conf.d/anchorpoint-wifi-powersave-off.conf <<'NMCONF'
+[connection]
+# 2 = disabled — keep the WiFi link awake so it doesn't nap while the Pi is idle.
+wifi.powersave = 2
+NMCONF
+    systemctl reload NetworkManager >/dev/null 2>&1 || true
+    iw dev wlan0 set power_save off >/dev/null 2>&1 || true   # best-effort immediate apply
+
+    # 3. Let the agent restart the print stack after a failed print (self-heal),
+    #    instead of needing a manual reboot. Bounded NOPASSWD grant — only these.
+    cat > /etc/sudoers.d/anchorpoint-agent <<SUDO
+$RUN_USER ALL=(root) NOPASSWD: /usr/bin/systemctl restart ipp-usb, /usr/bin/systemctl restart cups
+SUDO
+    chmod 0440 /etc/sudoers.d/anchorpoint-agent
+    if ! visudo -cf /etc/sudoers.d/anchorpoint-agent >/dev/null 2>&1; then
+        echo "   WARNING: sudoers grant invalid — removing it (agent self-heal will be limited)."
+        rm -f /etc/sudoers.d/anchorpoint-agent
+    fi
+}
+
 echo "==> Installing packages (CUPS + Python requests)..."
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -qq
 apt-get install -y -qq --no-install-recommends cups cups-ipp-utils python3-requests curl >/dev/null
 systemctl enable --now cups >/dev/null 2>&1 || true
 usermod -aG lp,lpadmin "$RUN_USER" 2>/dev/null || usermod -aG lp "$RUN_USER"
+
+harden_print_reliability || echo "   WARNING: print-reliability hardening hit a snag (non-fatal)."
 
 echo "==> Installing the print agent to $INSTALL_DIR..."
 mkdir -p "$INSTALL_DIR"
