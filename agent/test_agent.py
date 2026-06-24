@@ -155,5 +155,56 @@ class JobSerializationTests(unittest.TestCase):
         # Reaching this line (no infinite loop) is the assertion.
 
 
+class RecoveryTests(unittest.TestCase):
+    """After a failed print the agent self-heals the print stack so the printer
+    comes back without a manual Pi reboot."""
+
+    def setUp(self):
+        agent._last_recovery = 0.0
+        agent._cut_support_cache.clear()
+
+    def _capture(self):
+        calls = []
+
+        def fake_run(cmd, *a, **kw):
+            calls.append(" ".join(cmd))
+            return mock.Mock(returncode=0, stdout="", stderr="")
+
+        return calls, fake_run
+
+    def test_runs_full_recovery_sequence(self):
+        calls, fake_run = self._capture()
+        with mock.patch.object(agent, "RECOVER_AFTER_FAILURE", True), \
+                mock.patch.object(agent.time, "sleep"), \
+                mock.patch.object(agent.subprocess, "run", side_effect=fake_run):
+            agent._recover_print_subsystem("ChurchLabel")
+        self.assertIn("cancel -a", calls)
+        self.assertTrue(any("systemctl restart ipp-usb" in c for c in calls))
+        self.assertTrue(any("systemctl restart cups" in c for c in calls))
+        self.assertIn("cupsenable ChurchLabel", calls)
+
+    def test_rate_limited_within_cooldown(self):
+        _, fake_run = self._capture()
+        with mock.patch.object(agent, "RECOVER_AFTER_FAILURE", True), \
+                mock.patch.object(agent.time, "sleep"), \
+                mock.patch.object(agent.subprocess, "run", side_effect=fake_run) as run:
+            agent._recover_print_subsystem("Q")
+            after_first = run.call_count
+            agent._recover_print_subsystem("Q")  # within cooldown → skipped
+        self.assertEqual(run.call_count, after_first)
+
+    def test_disabled_is_noop(self):
+        with mock.patch.object(agent, "RECOVER_AFTER_FAILURE", False), \
+                mock.patch.object(agent.subprocess, "run") as run:
+            agent._recover_print_subsystem("Q")
+        run.assert_not_called()
+
+    def test_best_effort_never_raises(self):
+        with mock.patch.object(agent, "RECOVER_AFTER_FAILURE", True), \
+                mock.patch.object(agent.time, "sleep"), \
+                mock.patch.object(agent.subprocess, "run", side_effect=OSError("boom")):
+            agent._recover_print_subsystem("Q")  # must not propagate
+
+
 if __name__ == "__main__":
     unittest.main()
