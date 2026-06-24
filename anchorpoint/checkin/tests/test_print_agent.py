@@ -129,6 +129,28 @@ class JobApiTests(TestCase):
         )
         self.assertEqual(resp.status_code, 404)
 
+    def test_poll_records_hostname_and_ip(self):
+        # The agent self-reports where it is via headers on each poll.
+        self.client.get(
+            reverse("checkin:print_next"),
+            HTTP_X_AGENT_HOSTNAME="bcc-printmon-1",
+            HTTP_X_AGENT_LOCAL_IP="192.168.1.50",
+            **self.auth,
+        )
+        self.agent.refresh_from_db()
+        self.assertEqual(self.agent.hostname, "bcc-printmon-1")
+        self.assertEqual(self.agent.local_ip, "192.168.1.50")
+
+    def test_poll_without_headers_preserves_location(self):
+        # An older agent that doesn't send the headers must not blank what we have.
+        PrintAgent.objects.filter(pk=self.agent.pk).update(
+            hostname="oldhost", local_ip="10.0.0.9"
+        )
+        self.client.get(reverse("checkin:print_next"), **self.auth)
+        self.agent.refresh_from_db()
+        self.assertEqual(self.agent.hostname, "oldhost")
+        self.assertEqual(self.agent.local_ip, "10.0.0.9")
+
 
 class EnqueueTests(TestCase):
     def setUp(self):
@@ -361,6 +383,16 @@ class AgentManagementTests(TestCase):
         agent.complete_pairing()
         self.client.post(reverse("checkin:print_agent_test", args=[agent.id]))
         self.assertEqual(PrintJob.objects.filter(agent=agent, kind="test").count(), 1)
+
+    def test_list_shows_agent_location(self):
+        self.client.login(username="s", password="pw")
+        agent = PrintAgent.objects.create(
+            name="PiDesk", hostname="bcc-printmon-1", local_ip="192.168.1.50"
+        )
+        agent.complete_pairing()  # sets last_seen_at so the location line renders
+        resp = self.client.get(reverse("checkin:print_agents"))
+        self.assertContains(resp, "192.168.1.50")
+        self.assertContains(resp, "bcc-printmon-1")
 
 
 class LabelWidthTests(TestCase):
