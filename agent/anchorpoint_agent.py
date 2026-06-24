@@ -22,6 +22,7 @@ import argparse
 import json
 import os
 import re
+import socket
 import subprocess
 import sys
 import tempfile
@@ -70,6 +71,36 @@ def save_config(config):
     with open(CONFIG_PATH, "w") as fh:
         json.dump(config, fh, indent=2)
     os.chmod(CONFIG_PATH, 0o600)  # token is sensitive
+
+
+def _local_ip():
+    """Best-effort LAN IP of the interface that routes to the server, so the
+    Print Agents page can show where this Pi lives (no network scanning needed).
+    Opening a UDP socket sends nothing — it just makes the OS pick the route."""
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        try:
+            s.connect(("8.8.8.8", 80))
+            return s.getsockname()[0]
+        finally:
+            s.close()
+    except Exception:  # noqa: BLE001 - reporting location is best-effort
+        return ""
+
+
+def _identity_headers():
+    """Hostname + LAN IP headers the server stores for the Print Agents page."""
+    headers = {}
+    try:
+        host = socket.gethostname()
+        if host:
+            headers["X-Agent-Hostname"] = host
+    except Exception:  # noqa: BLE001
+        pass
+    ip = _local_ip()
+    if ip:
+        headers["X-Agent-Local-IP"] = ip
+    return headers
 
 
 def cmd_pair(args):
@@ -268,6 +299,10 @@ def cmd_run(args):
     # "cut_media": "" in the config). Default "EndOfPage".
     cut_media = "" if args.no_cut else config.get("cut_media", DEFAULT_CUT_MEDIA)
     headers = {"Authorization": f"Bearer {token}"}
+    # Tell the server where this Pi is (shown on the Print Agents page) so it can
+    # be found without scanning the LAN. Computed once at startup; a restart
+    # after a venue/IP change refreshes it.
+    headers.update(_identity_headers())
 
     if save_dir:
         os.makedirs(save_dir, exist_ok=True)

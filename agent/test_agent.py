@@ -206,5 +206,30 @@ class RecoveryTests(unittest.TestCase):
             agent._recover_print_subsystem("Q")  # must not propagate
 
 
+class IdentityHeaderTests(unittest.TestCase):
+    """The agent reports its hostname + LAN IP so the server can show where the
+    Pi is (found without scanning the network)."""
+
+    def test_includes_hostname_and_ip(self):
+        with mock.patch.object(agent.socket, "gethostname", return_value="bcc-printmon-1"), \
+                mock.patch.object(agent, "_local_ip", return_value="192.168.1.50"):
+            headers = agent._identity_headers()
+        self.assertEqual(headers["X-Agent-Hostname"], "bcc-printmon-1")
+        self.assertEqual(headers["X-Agent-Local-IP"], "192.168.1.50")
+
+    def test_omits_blank_ip(self):
+        with mock.patch.object(agent.socket, "gethostname", return_value="host"), \
+                mock.patch.object(agent, "_local_ip", return_value=""):
+            headers = agent._identity_headers()
+        self.assertNotIn("X-Agent-Local-IP", headers)
+        self.assertEqual(headers["X-Agent-Hostname"], "host")
+
+    def test_never_raises_on_socket_failure(self):
+        with mock.patch.object(agent.socket, "gethostname", side_effect=OSError("boom")), \
+                mock.patch.object(agent, "_local_ip", return_value=""):
+            headers = agent._identity_headers()  # must not raise
+        self.assertEqual(headers, {})
+
+
 if __name__ == "__main__":
     unittest.main()
