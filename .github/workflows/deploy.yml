@@ -9,7 +9,11 @@ jobs:
     steps:
       - name: Pull latest code
         working-directory: /home/deploy/anchorpoint
-        run: git pull origin main
+        # fetch + hard reset (not `git pull`) so the deploy survives a
+        # force-pushed / rewritten main (e.g. after a history scrub).
+        run: |
+          git fetch origin main
+          git reset --hard origin/main
 
       - name: Build Docker image
         working-directory: /home/deploy/anchorpoint/docker
