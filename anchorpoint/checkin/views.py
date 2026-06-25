@@ -198,7 +198,12 @@ def kiosk_lookup(request):
                     Household.objects.filter(name__icontains=query)
                     | Household.objects.filter(members__last_name__icontains=query)
                 ).distinct()
-            households = list(matches.order_by("name")[: MAX_RESULTS + 1])
+            # Prefetch members — the results template lists each household's
+            # members, which would otherwise be one query per result (N+1) on the
+            # busiest public path (every parent searching at the kiosk).
+            households = list(
+                matches.prefetch_related("members").order_by("name")[: MAX_RESULTS + 1]
+            )
             results_capped = len(households) > MAX_RESULTS
             households = households[:MAX_RESULTS]
         else:
