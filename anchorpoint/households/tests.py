@@ -17,6 +17,36 @@ def _staff(username="famstaff"):
     return user
 
 
+class PrimaryHouseholdTests(TestCase):
+    """Person.primary_household is deterministic + prefers a guardian household
+    (a child can be in >1 household — blended/custody)."""
+
+    def test_prefers_household_with_primary_adult(self):
+        person = Person.objects.create(first_name="Kid", last_name="Two")
+        hh_a = Household.objects.create(name="A Family")            # no adult
+        adult = Person.objects.create(first_name="Mom", last_name="Two")
+        hh_b = Household.objects.create(name="B Family", primary_adult=adult)
+        for hh in (hh_a, hh_b):
+            HouseholdMember.objects.create(
+                household=hh, person=person,
+                relationship_type=HouseholdMember.RelationshipType.CHILD)
+        self.assertEqual(person.primary_household, hh_b)
+
+    def test_deterministic_without_primary_adult(self):
+        person = Person.objects.create(first_name="Kid", last_name="Three")
+        hh1 = Household.objects.create(name="One")
+        hh2 = Household.objects.create(name="Two")
+        for hh in (hh2, hh1):  # add in reverse to prove it's not insertion order
+            HouseholdMember.objects.create(
+                household=hh, person=person,
+                relationship_type=HouseholdMember.RelationshipType.CHILD)
+        self.assertEqual(person.primary_household, min(hh1, hh2, key=lambda h: h.id))
+
+    def test_none_without_household(self):
+        person = Person.objects.create(first_name="Loner", last_name="X")
+        self.assertIsNone(person.primary_household)
+
+
 class FamilyPagesTests(TestCase):
     def setUp(self):
         self.user = _staff()
