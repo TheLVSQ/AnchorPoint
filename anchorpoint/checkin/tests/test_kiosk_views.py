@@ -45,6 +45,28 @@ class KioskNoPinGuardTests(TestCase):
         self.assertTrue(self.client.session.get("kiosk_authenticated"))
 
 
+class CheckoutThrottleTests(TestCase):
+    """Repeated wrong security codes get throttled (anti-brute-force)."""
+
+    def setUp(self):
+        from django.core.cache import cache
+        cache.clear()
+        self.user = get_user_model().objects.create_user(username="couser", password="pw")
+        self.session = CheckInSession.objects.create(
+            name="S", date=timezone.localdate(),
+            checkin_opens=time(0, 0), checkin_closes=time(23, 50),
+            event_starts=time(0, 5), event_ends=time(23, 55), is_active=True,
+        )
+        self.client.force_login(self.user)
+
+    def test_blocks_after_repeated_wrong_codes(self):
+        url = reverse("checkin:checkout_lookup", args=[self.session.pk])
+        for _ in range(10):
+            self.client.post(url, {"security_code": "ZZZZ"})
+        resp = self.client.post(url, {"security_code": "ZZZZ"})
+        self.assertContains(resp, "Too many incorrect codes")
+
+
 class KioskFlowTests(TestCase):
     def setUp(self):
         self.config = CheckInConfiguration.objects.create(

@@ -1,5 +1,7 @@
 from django import forms
 from django.contrib.auth import get_user_model
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError as DjangoValidationError
 
 from .models import OrganizationSettings, UserProfile
 
@@ -25,6 +27,12 @@ class CreateUserForm(forms.Form):
         cleaned = super().clean()
         if cleaned.get("password") != cleaned.get("confirm_password"):
             self.add_error("confirm_password", "Passwords do not match.")
+        pw = cleaned.get("password")
+        if pw:
+            try:
+                validate_password(pw)
+            except DjangoValidationError as exc:
+                self.add_error("password", exc)
         return cleaned
 
 
@@ -51,6 +59,12 @@ class SetPasswordForm(forms.Form):
         cleaned = super().clean()
         if cleaned.get("new_password") != cleaned.get("confirm_password"):
             self.add_error("confirm_password", "Passwords do not match.")
+        pw = cleaned.get("new_password")
+        if pw:
+            try:
+                validate_password(pw)
+            except DjangoValidationError as exc:
+                self.add_error("new_password", exc)
         return cleaned
 
 

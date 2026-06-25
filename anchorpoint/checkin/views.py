@@ -8,6 +8,7 @@ from django.views.decorators.http import require_http_methods, require_POST
 from django.contrib.auth import logout
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from django.core.cache import cache
 from django.utils import timezone
 from django.utils.dateparse import parse_date
 from django.db.models import Count, Q
@@ -612,7 +613,12 @@ def checkout_lookup(request, session_id):
     checkins = None
     if request.method == "POST":
         form = SecurityCodeLookupForm(request.POST)
-        if form.is_valid():
+        # Throttle wrong-code guessing: security codes are short (4 chars), so
+        # cap failed attempts per session+user before allowing more.
+        fail_key = f"checkout-fail:{session_id}:{request.user.id}"
+        if cache.get(fail_key, 0) >= 10:
+            form.add_error("security_code", "Too many incorrect codes. Please wait a few minutes and try again.")
+        elif form.is_valid():
             code = form.cleaned_data["security_code"]
             # Only people who actually arrived can be checked out — a pre-staged
             # (printed-but-not-arrived) record must not be checkout-able.
@@ -624,6 +630,7 @@ def checkout_lookup(request, session_id):
             ).select_related("person", "room")
 
             if not checkins.exists():
+                cache.set(fail_key, cache.get(fail_key, 0) + 1, 300)  # 10 fails / 5 min
                 form.add_error("security_code", "No active check-ins found with this code.")
     else:
         form = SecurityCodeLookupForm()
