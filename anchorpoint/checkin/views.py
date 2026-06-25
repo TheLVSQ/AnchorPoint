@@ -13,7 +13,9 @@ from django.utils.dateparse import parse_date
 from django.db.models import Count, Q
 
 from core.models import OrganizationSettings
-from core.permissions import checkin_admin_required, checkin_team_required, staff_required
+from core.permissions import (
+    checkin_admin_required, checkin_team_required, is_staff_or_above, staff_required,
+)
 from groups.models import GroupMembership
 from households.models import Household, HouseholdMember
 from people.models import Person, normalize_phone
@@ -104,7 +106,16 @@ def _next_upcoming_window():
 
 def kiosk_unlock(request):
     org = OrganizationSettings.load()
+    pin_set = bool((org.kiosk_pin or "").strip())
+    # SECURITY: with no PIN configured the kiosk would be wide open to any
+    # passer-by (family lookup, rosters, self-check-in). Refuse to unlock for
+    # the public until a PIN is set; let signed-in staff bootstrap/test.
+    if not pin_set and not is_staff_or_above(request.user):
+        return render(request, "checkin/kiosk/unlock.html", {"org": org, "needs_pin": True})
     if request.method == "POST":
+        if not pin_set:
+            request.session[KIOSK_SESSION_KEY] = True  # staff bootstrap, no PIN yet
+            return redirect("checkin:kiosk_lookup")
         form = KioskPinForm(request.POST, expected_pin=org.kiosk_pin)
         if form.is_valid():
             request.session[KIOSK_SESSION_KEY] = True
