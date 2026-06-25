@@ -302,6 +302,15 @@ class RegistrationQueueViewTests(TestCase):
             is_minor=True,
         )
 
+    def test_queue_blocks_non_staff(self):
+        # Now gated by the role system (@staff_required), not a Django model perm.
+        vol = get_user_model().objects.create_user(username="qvol", password="pw")
+        vol.profile.role = UserProfile.Role.VOLUNTEER
+        vol.profile.save()
+        self.client.force_login(vol)
+        resp = self.client.get(reverse("events:registration_queue"))
+        self.assertNotEqual(resp.status_code, 200)
+
     def test_queue_assigns_existing_person(self):
         person = Person.objects.create(
             first_name="Jordan",
