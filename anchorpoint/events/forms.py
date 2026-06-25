@@ -388,6 +388,8 @@ EventRegistrationAttendeeFormSet = formset_factory(
     extra=1,
     min_num=1,
     validate_min=True,
+    max_num=20,        # cap one public submission so it can't create huge batches
+    validate_max=True,
 )
 
 

@@ -9,6 +9,9 @@
 # Local DB backups (written by the backup sidecar on the host)
 docker/backups/
 
+# Local dev credentials — must not be tracked
+docker/test_creds.txt
+
 # Python
 __pycache__/
 *.py[cod]

@@ -1,5 +1,4 @@
 from django.contrib import messages
-from django.contrib.auth.decorators import permission_required
 from django.db import transaction
 from django.db.models import Min
 from django.shortcuts import get_object_or_404, redirect, render
@@ -9,7 +8,8 @@ from django.utils import timezone
 import csv
 import io
 
-from core.permissions import staff_required
+from core.permissions import is_staff_or_above, staff_required
+from core.ratelimit import too_many
 from people.models import Person
 
 from .forms import (
@@ -58,9 +58,7 @@ def event_manage_list(request):
         .order_by("-created_at")[:5]
     )
     pending_match_count = 0
-    show_match_queue = request.user.has_perm(
-        "events.change_eventregistrationattendee"
-    )
+    show_match_queue = is_staff_or_above(request.user)
     if show_match_queue:
         pending_match_count = EventRegistrationAttendee.objects.filter(
             match_status=EventRegistrationAttendee.MATCH_STATUS_PENDING
@@ -303,9 +301,7 @@ def _find_guardian_person(attendee):
     return None
 
 
-@permission_required(
-    "events.change_eventregistrationattendee", raise_exception=True
-)
+@staff_required
 def event_registration_queue(request):
     attendees = (
         EventRegistrationAttendee.objects.select_related("event", "registration")
@@ -418,7 +414,14 @@ def public_event_register(request, registration_token):
         attendee_formset = EventRegistrationAttendeeFormSet(
             request.POST, prefix="attendee"
         )
-        if form.is_valid() and attendee_formset.is_valid():
+        ip = _get_client_ip(request) or "unknown"
+        if too_many(f"evt-reg:{event.pk}:{ip}", limit=8, window_seconds=600):
+            # Blunt junk-registration / email-amplification abuse from one source.
+            messages.error(
+                request,
+                "Too many registration attempts. Please wait a few minutes and try again.",
+            )
+        elif form.is_valid() and attendee_formset.is_valid():
             registration = form.save(commit=False)
             registration.event = event
             attendee_count = 0

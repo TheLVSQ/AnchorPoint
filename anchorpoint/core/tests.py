@@ -10,6 +10,48 @@ from .forms import OrganizationSettingsForm
 from .models import UserProfile
 
 
+class PasswordValidationTests(TestCase):
+    """Password changes must enforce Django's configured validators."""
+
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(
+            username="pwuser", password="OldPass!234"
+        )
+        self.client.force_login(self.user)
+
+    def test_self_service_change_rejects_weak_password(self):
+        self.client.post(reverse("profile"), {
+            "update_password": "1",
+            "current_password": "OldPass!234",
+            "new_password": "12345678",      # all-numeric → NumericPasswordValidator
+            "confirm_password": "12345678",
+        })
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password("OldPass!234"))  # unchanged
+
+    def test_set_password_form_rejects_weak(self):
+        from .forms import SetPasswordForm
+        form = SetPasswordForm(data={"new_password": "12345678", "confirm_password": "12345678"})
+        self.assertFalse(form.is_valid())
+        self.assertIn("new_password", form.errors)
+
+    def test_set_password_form_accepts_strong(self):
+        from .forms import SetPasswordForm
+        form = SetPasswordForm(data={"new_password": "Str0ng!Pass9", "confirm_password": "Str0ng!Pass9"})
+        self.assertTrue(form.is_valid(), form.errors)
+
+
+class RateLimitTests(TestCase):
+    def setUp(self):
+        from django.core.cache import cache
+        cache.clear()
+
+    def test_too_many_trips_after_limit(self):
+        from core.ratelimit import too_many
+        results = [too_many("test:rl", limit=3, window_seconds=60) for _ in range(5)]
+        self.assertEqual(results, [False, False, False, True, True])
+
+
 class OrganizationSettingsFormTests(TestCase):
     def test_twilio_fields_present(self):
         form = OrganizationSettingsForm()

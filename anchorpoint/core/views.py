@@ -3,6 +3,8 @@ from django.contrib import messages
 from django.contrib.auth import authenticate, get_user_model, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import update_session_auth_hash
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -160,6 +162,14 @@ def profile(request):
             # Validate new password match
             if new_password != confirm_password:
                 messages.error(request, "New passwords do not match.")
+                return redirect("profile")
+
+            # Enforce Django's configured password validators (length, too-common,
+            # all-numeric, similar-to-user) instead of accepting anything.
+            try:
+                validate_password(new_password, user=request.user)
+            except ValidationError as exc:
+                messages.error(request, " ".join(exc.messages))
                 return redirect("profile")
 
             # Update password
