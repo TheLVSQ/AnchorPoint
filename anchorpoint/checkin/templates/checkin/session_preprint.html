@@ -32,7 +32,11 @@
     {% for group in groups %}
         <section class="detail-card" style="margin-bottom:1rem;">
             <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
-                <h2 style="margin:0;">{{ group.label }}</h2>
+                <label style="display:flex; align-items:center; gap:0.6rem; margin:0; cursor:pointer;">
+                    <input type="checkbox" class="family-select" data-group="{{ forloop.counter }}"
+                           style="width:20px; height:20px;" title="Select everyone in this family">
+                    <h2 style="margin:0;">{{ group.label }}</h2>
+                </label>
                 <div style="display:flex; gap:0.5rem; align-items:center;">
                     {% if rooms %}
                         <label class="stat-hint" style="margin:0;">Set all rooms:</label>
@@ -105,9 +109,14 @@
 <script>
 (function () {
     var boxes = Array.prototype.slice.call(document.querySelectorAll(".preprint-select"));
+    var familyBoxes = Array.prototype.slice.call(document.querySelectorAll(".family-select"));
     var master = document.getElementById("select-all");
     var countEl = document.getElementById("select-count");
     var wrap = document.querySelector(".preprint-selectall");
+
+    function groupBoxesFor(g) {
+        return boxes.filter(function (b) { return b.getAttribute("data-group") === g; });
+    }
 
     function refresh() {
         var checked = boxes.filter(function (b) { return b.checked; }).length;
@@ -116,7 +125,25 @@
             master.checked = boxes.length > 0 && checked === boxes.length;
             master.indeterminate = checked > 0 && checked < boxes.length;
         }
+        // Keep each family's header checkbox in sync with its members.
+        familyBoxes.forEach(function (fb) {
+            var gb = groupBoxesFor(fb.getAttribute("data-group"));
+            var gChecked = gb.filter(function (b) { return b.checked; }).length;
+            fb.disabled = gb.length === 0;  // family with nobody selectable
+            fb.checked = gb.length > 0 && gChecked === gb.length;
+            fb.indeterminate = gChecked > 0 && gChecked < gb.length;
+        });
     }
+
+    // A family header checkbox ticks/unticks just that family's members.
+    familyBoxes.forEach(function (fb) {
+        fb.addEventListener("change", function () {
+            groupBoxesFor(fb.getAttribute("data-group")).forEach(function (b) {
+                b.checked = fb.checked;
+            });
+            refresh();
+        });
+    });
 
     // "Set all rooms" applies a room to every row in that family's group and ticks them.
     document.querySelectorAll(".bulk-room").forEach(function (sel) {
