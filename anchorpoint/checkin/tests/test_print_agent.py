@@ -491,6 +491,13 @@ class AgentDistributionTests(TestCase):
         body = self.client.get(reverse("checkin:agent_install_script")).content
         self.assertIn(b"--printer-usb", body)
 
+    def test_install_script_handles_ipp_usb_printers(self):
+        # A USB Brother is fronted by ipp-usb (no raw usb:// device); --printer-usb
+        # must fall back to the ipp-usb local endpoint instead of erroring out.
+        body = self.client.get(reverse("checkin:agent_install_script")).content
+        self.assertIn(b"ipp-usb", body)
+        self.assertIn(b"localhost:", body)
+
     def test_agent_script_served(self):
         resp = self.client.get(reverse("checkin:agent_script"))
         self.assertEqual(resp.status_code, 200)

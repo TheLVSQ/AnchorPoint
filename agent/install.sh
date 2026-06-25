@@ -12,8 +12,9 @@
 #   2. Downloads the agent to /opt/anchorpoint-agent/
 #   3. Optionally creates a CUPS queue for the printer:
 #        --printer-uri ipp://IP/ipp/print   network (driverless)
-#        --printer-usb [--driver zebra]      auto-detect a USB printer; --driver
-#                                            picks a matching PPD (else driverless)
+#        --printer-usb [--driver zebra]      auto-detect a USB printer (incl.
+#                                            ipp-usb ones like the Brother QL);
+#                                            --driver picks a PPD (else driverless)
 #        --printer EXISTING-QUEUE            use a queue you already made
 #   4. Pairs the agent with your AnchorPoint server
 #   5. Installs + starts a systemd service so it survives reboots
@@ -93,6 +94,15 @@ setup_wifi_fallback() {
     echo "    comitup installed. Reboot to activate it."
 }
 
+# True if a USB printer is physically attached — USB interface class 07 is
+# "printer". Independent of whether CUPS shows a raw usb:// device, because
+# modern Brother / IPP-over-USB printers get claimed by ipp-usb and never appear
+# as usb:// (they're re-exposed as a local IPP service instead).
+usb_printer_present() {
+    grep -qsx 07 /sys/bus/usb/devices/*/bInterfaceClass 2>/dev/null \
+        || lpinfo -v 2>/dev/null | grep -qi '(usb)._ipp._tcp.local'
+}
+
 # Keep the printer reachable after the Pi sits idle. On a Pi print appliance the
 # two known culprits are USB autosuspend (powers the printer's USB port down; the
 # ipp-usb bridge to a Brother QL then won't wake, so the next check-in silently
@@ -161,14 +171,39 @@ fi
 if [[ "$PRINTER_USB" == "1" && -z "$PRINTER" ]]; then
     echo "==> Detecting USB printer..."
     USB_URI="$(lpinfo -v 2>/dev/null | awk '$2 ~ /^usb:/ {print $2; exit}')"
+    USE_IPP_USB=0
+
+    if [[ -z "$USB_URI" ]] && usb_printer_present; then
+        # A USB printer is attached but there's no raw usb:// backend — modern
+        # Brother / AirPrint-over-USB printers (e.g. QL-820NWB) get claimed by
+        # ipp-usb, which re-exposes them as a LOCAL IPP service instead. Install
+        # ipp-usb if needed and point the queue at its localhost endpoint.
+        echo "    No raw usb:// device, but a USB printer is attached — using ipp-usb."
+        apt-get install -y -qq ipp-usb >/dev/null 2>&1 || true
+        systemctl enable --now ipp-usb >/dev/null 2>&1 || true
+        IPP_PORT=""
+        for _ in $(seq 1 15); do   # ipp-usb needs a moment to bind the printer's port
+            IPP_PORT="$(ss -ltn 2>/dev/null | grep -oE '127\.0\.0\.1:600[0-9][0-9]' | grep -oE '600[0-9][0-9]' | sort -u | head -1 || true)"
+            if [[ -n "$IPP_PORT" ]]; then break; fi
+            sleep 1
+        done
+        IPP_PORT="${IPP_PORT:-60000}"   # ipp-usb's conventional first-printer port
+        USB_URI="ipp://localhost:${IPP_PORT}/ipp/print"
+        USE_IPP_USB=1
+        echo "    ipp-usb endpoint: $USB_URI"
+    fi
+
     if [[ -z "$USB_URI" ]]; then
         echo "ERROR: --printer-usb given but no USB printer found (plugged in and powered on?)."
         echo "       Devices CUPS can see:"
         lpinfo -v 2>/dev/null | sed 's/^/         /'
         exit 1
     fi
+
     PPD_ARG="-m everywhere"
-    if [[ -n "$DRIVER_MATCH" ]]; then
+    if [[ -n "$DRIVER_MATCH" && "$USE_IPP_USB" == "1" ]]; then
+        echo "    (ignoring --driver: ipp-usb printers are driverless IPP Everywhere)"
+    elif [[ -n "$DRIVER_MATCH" ]]; then
         PPD="$(lpinfo -m 2>/dev/null | grep -i -- "$DRIVER_MATCH" | head -1 | awk '{print $1}')"
         if [[ -n "$PPD" ]]; then
             PPD_ARG="-m $PPD"
@@ -177,7 +212,7 @@ if [[ "$PRINTER_USB" == "1" && -z "$PRINTER" ]]; then
             echo "    WARNING: no installed driver matched '$DRIVER_MATCH'; using driverless."
         fi
     fi
-    echo "==> Creating USB CUPS queue '$QUEUE_NAME' -> $USB_URI..."
+    echo "==> Creating CUPS queue '$QUEUE_NAME' -> $USB_URI..."
     # shellcheck disable=SC2086
     lpadmin -p "$QUEUE_NAME" -E -v "$USB_URI" $PPD_ARG
     cupsenable "$QUEUE_NAME" || true
