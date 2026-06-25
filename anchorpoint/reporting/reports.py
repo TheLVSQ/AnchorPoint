@@ -54,9 +54,9 @@ def all_reports():
 # --------------------------------------------------------------------------- #
 
 def _guardian(person):
-    """Best guardian for a person: the household's primary adult, else the
-    first adult member. Returns a Person or None."""
-    household = person.households.all().first()
+    """Best guardian for a person: the (deterministic) primary household's
+    primary adult, else its first adult member. Returns a Person or None."""
+    household = person.primary_household
     if household is None:
         return None
     if household.primary_adult_id:
@@ -66,6 +66,7 @@ def _guardian(person):
             relationship_type=HouseholdMember.RelationshipType.ADULT
         )
         .select_related("person")
+        .order_by("person__id")
         .first()
     )
     return membership.person if membership else None

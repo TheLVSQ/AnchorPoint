@@ -344,6 +344,17 @@ class CheckIn(models.Model):
 
     class Meta:
         ordering = ["-checked_in_at"]
+        constraints = [
+            # A person can have at most ONE active (not-checked-out) check-in per
+            # session — prevents concurrent double check-ins that split a family's
+            # pickup code across two rows. A checked-out row still allows a fresh
+            # re-check-in (the condition only covers checked_out_at IS NULL).
+            models.UniqueConstraint(
+                fields=["session", "person"],
+                condition=models.Q(checked_out_at__isnull=True),
+                name="uniq_active_checkin_per_person_session",
+            ),
+        ]
 
     def __str__(self):
         return f"{self.person} at {self.session}"

@@ -94,6 +94,21 @@ class PreprintRosterTests(PreprintFixture):
         resp = self.client.get(reverse("checkin:session_preprint", args=[self.session.pk]))
         self.assertContains(resp, 'class="family-select"')
 
+    def test_active_checkin_is_unique_per_person_session(self):
+        from django.db import IntegrityError, transaction
+        from django.utils import timezone
+        CheckIn.objects.create(session=self.session, person=self.kids[0],
+                               security_code="AAAA", arrived_at=timezone.now())
+        with self.assertRaises(IntegrityError):
+            with transaction.atomic():
+                CheckIn.objects.create(session=self.session, person=self.kids[0],
+                                       security_code="BBBB", arrived_at=timezone.now())
+        # A checked-out row must NOT block a fresh active check-in.
+        CheckIn.objects.filter(session=self.session, person=self.kids[0]).update(
+            checked_out_at=timezone.now())
+        CheckIn.objects.create(session=self.session, person=self.kids[0],
+                               security_code="CCCC", arrived_at=timezone.now())
+
     def test_requires_checkin_admin(self):
         staff = get_user_model().objects.create_user(username="plainstaff", password="pw")
         staff.profile.role = UserProfile.Role.VOLUNTEER
@@ -177,6 +192,21 @@ class PreprintArrivalTests(PreprintFixture):
             self.assertEqual(c.security_code, self.code)  # kept pre-printed code
         mock_enqueue.assert_not_called()
         self.assertEqual(self.session.total_checked_in(), 2)
+
+    @mock.patch("checkin.views.send_security_code_sms", return_value=0)
+    @mock.patch("checkin.views.enqueue_checkin_labels")
+    def test_arrival_clears_prior_no_show(self, _enqueue, _sms):
+        # A kid marked no-show who then actually arrives must count as present.
+        ci = CheckIn.objects.get(session=self.session, person=self.kids[0])
+        ci.no_show = True
+        ci.save(update_fields=["no_show"])
+        self.client.post(
+            reverse("checkin:kiosk_family_select", args=[self.family.pk]),
+            {f"select_{self.kids[0].pk}": "on"},
+        )
+        ci.refresh_from_db()
+        self.assertFalse(ci.no_show)
+        self.assertIsNotNone(ci.arrived_at)
 
     @mock.patch("checkin.views.send_security_code_sms", return_value=0)
     @mock.patch("checkin.views.enqueue_checkin_labels", return_value=1)

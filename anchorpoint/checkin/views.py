@@ -11,6 +11,7 @@ from django.contrib import messages
 from django.core.cache import cache
 from django.utils import timezone
 from django.utils.dateparse import parse_date
+from django.db import IntegrityError, transaction
 from django.db.models import Count, Q
 
 from core.models import OrganizationSettings
@@ -275,24 +276,38 @@ def kiosk_family_select(request, household_id):
                         was_expected = checkin.arrived_at is None
                         if checkin.arrived_at is None:
                             checkin.arrived_at = timezone.now()
+                        # A pre-staged no-show who actually shows up is here now —
+                        # clear no_show so they count as present, not absent.
+                        checkin.no_show = False
                         # Keep a pre-staged member's pre-assigned room; only a
                         # walk-in/re-print submits a room to apply.
                         if room is not None:
                             checkin.room = room
                         checkin.security_code = security_code
-                        checkin.save(update_fields=["room", "security_code", "arrived_at"])
+                        checkin.save(update_fields=["room", "security_code", "arrived_at", "no_show"])
                         # A pre-staged arrival is already printed — don't reprint.
                         if not was_expected:
                             to_print_ids.append(checkin.pk)
                     else:
-                        checkin = CheckIn.objects.create(
-                            session=session,
-                            person=person,
-                            room=room,
-                            security_code=security_code,
-                            arrived_at=timezone.now(),
-                        )
-                        to_print_ids.append(checkin.pk)
+                        try:
+                            with transaction.atomic():
+                                checkin = CheckIn.objects.create(
+                                    session=session,
+                                    person=person,
+                                    room=room,
+                                    security_code=security_code,
+                                    arrived_at=timezone.now(),
+                                )
+                            to_print_ids.append(checkin.pk)
+                        except IntegrityError:
+                            # Raced a concurrent check-in for the same person — use
+                            # the row that won, don't double-create or double-print.
+                            checkin = CheckIn.objects.filter(
+                                session=session, person=person,
+                                checked_out_at__isnull=True,
+                            ).first()
+                            if checkin is None:
+                                raise
                     checkin_ids.append(checkin.pk)
 
                 # Auto-enroll: add everyone who checked in to the config's group
@@ -797,8 +812,8 @@ def session_list(request):
 
 
 def _person_household(person):
-    """The household to group a person under for pre-print (first, or None)."""
-    return person.households.all().first()
+    """The household to group a person under for pre-print (deterministic)."""
+    return person.primary_household
 
 
 def _family_code(session, household):
