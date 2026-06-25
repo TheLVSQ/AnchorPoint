@@ -89,6 +89,11 @@ class PreprintRosterTests(PreprintFixture):
         self.assertContains(resp, "Ben Walker")
         self.assertNotContains(resp, "Sue Walker")  # adult not in the VBS group
 
+    def test_each_family_has_a_select_all_checkbox(self):
+        # Per-family header checkbox to select that whole family at once.
+        resp = self.client.get(reverse("checkin:session_preprint", args=[self.session.pk]))
+        self.assertContains(resp, 'class="family-select"')
+
     def test_requires_checkin_admin(self):
         staff = get_user_model().objects.create_user(username="plainstaff", password="pw")
         staff.profile.role = UserProfile.Role.VOLUNTEER
