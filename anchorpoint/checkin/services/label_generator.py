@@ -111,7 +111,7 @@ def _draw_no_photo(draw, cx, cy, size, fill="#b91c1c"):
 def _guardian_phone(person):
     """Best guardian phone for a (minor) person: the household's primary adult,
     else the first adult member. Empty string if none."""
-    household = person.households.all().first()
+    household = person.primary_household
     if household is None:
         return ""
     adult = household.primary_adult
@@ -119,6 +119,7 @@ def _guardian_phone(person):
         membership = (
             household.memberships.filter(relationship_type="adult")
             .select_related("person")
+            .order_by("person__id")
             .first()
         )
         adult = membership.person if membership else None

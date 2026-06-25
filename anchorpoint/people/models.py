@@ -154,6 +154,21 @@ class Person(models.Model):
         return self.age < 18
 
     @property
+    def primary_household(self):
+        """A stable, guardian-preferring household for this person. A person can
+        belong to more than one household (blended families / shared custody), so
+        `households.first()` is non-deterministic and could resolve a child's
+        guardian/emergency phone to the wrong parent or flip between page loads.
+        Prefer a household that has a primary adult; tie-break by id."""
+        households = list(self.households.all().order_by("id"))
+        if not households:
+            return None
+        for household in households:
+            if household.primary_adult_id:
+                return household
+        return households[0]
+
+    @property
     def formatted_address(self):
         parts = [
             self.address_line1,
