@@ -184,6 +184,32 @@ class EnqueueTests(TestCase):
         for job in PrintJob.objects.all():
             self.assertTrue(bytes(job.image_data).startswith(b"\x89PNG"))
 
+    def test_offline_agent_queues_nothing(self):
+        # An agent that hasn't polled recently is offline; don't queue to a dead
+        # Pi — return 0 so the kiosk uses its browser-print fallback.
+        agent = PrintAgent.objects.create(name="Offline")
+        agent.complete_pairing()
+        PrintAgent.objects.filter(pk=agent.pk).update(
+            last_seen_at=timezone.now() - timedelta(seconds=3600)
+        )
+        self.assertEqual(enqueue_checkin_labels([self._checkin()], self.session), 0)
+        self.assertEqual(PrintJob.objects.count(), 0)
+
+    def test_offline_bound_agent_falls_back_to_online(self):
+        # A kiosk-bound agent that's offline should fall back to an online one.
+        online = PrintAgent.objects.create(name="Online")
+        online.complete_pairing()
+        offline = PrintAgent.objects.create(name="Offline")
+        offline.complete_pairing()
+        PrintAgent.objects.filter(pk=offline.pk).update(
+            last_seen_at=timezone.now() - timedelta(seconds=3600)
+        )
+        offline.refresh_from_db()  # pick up the stale last_seen (kiosk fetches fresh too)
+        count = enqueue_checkin_labels([self._checkin()], self.session, agent=offline)
+        self.assertEqual(count, 2)
+        self.assertEqual(PrintJob.objects.filter(agent=online).count(), 2)
+        self.assertEqual(PrintJob.objects.filter(agent=offline).count(), 0)
+
 
 class LabelRotationTests(TestCase):
     """Landscape artwork rotated per agent so one design fits both a wide
