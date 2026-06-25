@@ -17,6 +17,34 @@ from django.contrib.auth import get_user_model
 from core.models import UserProfile
 
 
+class KioskNoPinGuardTests(TestCase):
+    """With no kiosk PIN configured the kiosk must not be publicly unlockable."""
+
+    def setUp(self):
+        org = OrganizationSettings.load()
+        org.kiosk_pin = ""
+        org.save()
+
+    def test_blank_pin_blocks_public_unlock(self):
+        resp = self.client.post(reverse("checkin:kiosk_unlock"), {"pin": "anything"})
+        self.assertEqual(resp.status_code, 200)  # not redirected into the kiosk
+        self.assertFalse(self.client.session.get("kiosk_authenticated"))
+        self.assertContains(resp, "must be set")  # the "needs PIN" message
+
+    def test_blank_pin_get_shows_needs_pin(self):
+        resp = self.client.get(reverse("checkin:kiosk_unlock"))
+        self.assertContains(resp, "Kiosk not configured")
+
+    def test_staff_can_bootstrap_without_pin(self):
+        staff = get_user_model().objects.create_user(username="kstaff", password="pw")
+        staff.profile.role = UserProfile.Role.STAFF
+        staff.profile.save()
+        self.client.force_login(staff)
+        resp = self.client.post(reverse("checkin:kiosk_unlock"), {"pin": ""})
+        self.assertRedirects(resp, reverse("checkin:kiosk_lookup"))
+        self.assertTrue(self.client.session.get("kiosk_authenticated"))
+
+
 class KioskFlowTests(TestCase):
     def setUp(self):
         self.config = CheckInConfiguration.objects.create(

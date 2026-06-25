@@ -6,6 +6,9 @@
 .env.*
 !.env.production.example
 
+# Local DB backups (written by the backup sidecar on the host)
+docker/backups/
+
 # Python
 __pycache__/
 *.py[cod]

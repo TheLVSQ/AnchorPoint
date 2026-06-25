@@ -177,9 +177,11 @@ def _parse_request_id(stdout):
 
 
 def _wait_for_job(job_id, timeout=JOB_DONE_TIMEOUT_SECONDS):
-    """Block until CUPS job `job_id` leaves the active queue (printed or failed)
-    or `timeout` seconds elapse. Best-effort: if `lpstat` is unavailable we
-    return immediately rather than stalling the agent."""
+    """Wait for CUPS job `job_id` to leave the active queue. Returns True if it
+    cleared (printed), False if `timeout` elapsed with the job still queued — a
+    stuck printer (bad USB cable, wedged ipp-usb bridge, offline device) where
+    `lp` accepted the job but it never physically printed. If `lpstat` is
+    unavailable we can't tell, so we return True rather than false-fail."""
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
         try:
@@ -187,13 +189,14 @@ def _wait_for_job(job_id, timeout=JOB_DONE_TIMEOUT_SECONDS):
                 ["lpstat", "-W", "not-completed", "-o"],
                 capture_output=True, text=True, timeout=10,
             )
-        except Exception:  # noqa: BLE001 - can't query the queue; don't block the agent
-            return
+        except Exception:  # noqa: BLE001 - can't query the queue; don't block or false-fail
+            return True
         # `lpstat -o` lines begin with the request id ("ChurchLabel-34 user ...").
         active = [line.split(" ", 1)[0] for line in (out.stdout or "").splitlines()]
         if job_id not in active:
-            return
+            return True
         time.sleep(JOB_POLL_SECONDS)
+    return False  # timed out with the job still queued — the printer isn't draining
 
 
 def _print_png(png_bytes, printer, width_mm=DEFAULT_MEDIA_WIDTH_MM,
@@ -240,7 +243,14 @@ def _print_png(png_bytes, printer, width_mm=DEFAULT_MEDIA_WIDTH_MM,
         # printer mid-job (which wedges the ipp-usb USB bridge under batches).
         job_id = _parse_request_id(result.stdout)
         if job_id:
-            _wait_for_job(job_id)
+            if not _wait_for_job(job_id):
+                # lp accepted it but it never left the queue — the printer is
+                # stuck (bad cable, offline, wedged bridge). Report failure so it
+                # shows as failed and triggers self-heal, not a false "printed".
+                return False, (
+                    f"job accepted but never left the print queue after "
+                    f"{JOB_DONE_TIMEOUT_SECONDS}s — printer stuck or offline?"
+                )
             time.sleep(JOB_SETTLE_SECONDS)
         return True, ""
     except Exception as exc:  # noqa: BLE001 - report any failure back to the server

@@ -6,6 +6,9 @@ the LAN polls for them and prints. The server never talks to the printer.
 
 import io
 import logging
+from datetime import timedelta
+
+from django.utils import timezone
 
 from .label_generator import (
     CHILD_HEIGHT,
@@ -16,16 +19,19 @@ from .label_generator import (
     _centered,
     _font,
 )
-from ..models import PrintAgent, PrintJob
+from ..models import AGENT_ONLINE_WINDOW_SECONDS, PrintAgent, PrintJob
 
 logger = logging.getLogger(__name__)
 
 
 def get_active_agent():
-    """The agent that should receive jobs (Phase 1: the single active, paired
-    agent — most-recently-seen wins). None if no paired agent exists."""
+    """The agent that should receive jobs: the most-recently-seen paired agent
+    that is currently ONLINE. Returns None when no online agent exists — which
+    lets the kiosk fall back to browser printing instead of queuing labels to a
+    dead Pi, where they would silently never print."""
+    cutoff = timezone.now() - timedelta(seconds=AGENT_ONLINE_WINDOW_SECONDS)
     return (
-        PrintAgent.objects.filter(is_active=True)
+        PrintAgent.objects.filter(is_active=True, last_seen_at__gte=cutoff)
         .exclude(token_hash="")
         .order_by("-last_seen_at")
         .first()
@@ -54,6 +60,11 @@ def enqueue_checkin_labels(checkins, session, agent=None) -> int:
     fall back to browser printing).
     """
     agent = agent or get_active_agent()
+    # A kiosk-bound agent may be offline; don't queue to a dead Pi (the labels
+    # would silently never print). Fall back to any online agent, else return 0
+    # so the kiosk uses its browser-print fallback.
+    if agent is not None and not agent.is_online:
+        agent = get_active_agent()
     if agent is None:
         return 0
 
