@@ -344,6 +344,15 @@ class CheckIn(models.Model):
 
     class Meta:
         ordering = ["-checked_in_at"]
+        indexes = [
+            # The manager's 15s poll + session stats filter checkins by session
+            # and the arrived/checked-out state; index those so they don't scan
+            # the whole (growing) table on every poll.
+            models.Index(fields=["session", "arrived_at", "checked_out_at"],
+                         name="ck_checkin_session_state_idx"),
+            models.Index(fields=["session", "checked_out_at"],
+                         name="ck_checkin_session_out_idx"),
+        ]
         constraints = [
             # A person can have at most ONE active (not-checked-out) check-in per
             # session — prevents concurrent double check-ins that split a family's

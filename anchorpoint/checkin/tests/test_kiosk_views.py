@@ -135,6 +135,26 @@ class KioskFlowTests(TestCase):
         response = self.client.get(reverse("checkin:kiosk_lookup"))
         self.assertRedirects(response, reverse("checkin:kiosk_unlock"))
 
+    def test_lookup_prefetches_members_no_n_plus_1(self):
+        from django.db import connection
+        from django.test.utils import CaptureQueriesContext
+        # Many matching families, each with a member; the results page lists each
+        # family's members — without prefetch that's one query per family (N+1).
+        for i in range(12):
+            hh = Household.objects.create(name=f"Johnson {i} Family")
+            HouseholdMember.objects.create(
+                household=hh,
+                person=Person.objects.create(first_name=f"Kid{i}", last_name="Johnson"),
+                relationship_type=HouseholdMember.RelationshipType.CHILD,
+            )
+        self._unlock()
+        self.client.get(reverse("checkin:kiosk_lookup"), {"query": "Johnson"})  # warm: establish session
+        with CaptureQueriesContext(connection) as ctx:
+            resp = self.client.get(reverse("checkin:kiosk_lookup"), {"query": "Johnson"})
+        self.assertEqual(resp.status_code, 200)
+        # Prefetch fetches all members in one query regardless of result count.
+        self.assertLess(len(ctx.captured_queries), 15)
+
     def test_lookup_finds_family_by_name(self):
         self._unlock()
         response = self.client.get(
