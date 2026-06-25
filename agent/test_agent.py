@@ -151,8 +151,32 @@ class JobSerializationTests(unittest.TestCase):
         with mock.patch.object(agent.time, "monotonic", side_effect=fake_monotonic), \
                 mock.patch.object(agent.time, "sleep"), \
                 mock.patch.object(agent.subprocess, "run", side_effect=fake_run):
-            agent._wait_for_job("ChurchLabel-9", timeout=5)
-        # Reaching this line (no infinite loop) is the assertion.
+            result = agent._wait_for_job("ChurchLabel-9", timeout=5)
+        # No infinite loop, and a still-queued job at timeout reports False.
+        self.assertFalse(result)
+
+    def test_print_fails_when_job_never_drains(self):
+        # lp accepts the job but lpstat always shows it still queued — a stuck
+        # printer (bad cable / wedged bridge). _print_png must report failure, not
+        # a false success, so the dashboard shows it and self-heal can fire.
+        clock = {"t": 0.0}
+
+        def fake_monotonic():
+            clock["t"] += 5.0
+            return clock["t"]
+
+        def fake_run(cmd, *a, **kw):
+            if cmd[0] == "lpstat":
+                return mock.Mock(returncode=0, stdout="ChurchLabel-7 luke 1 Sun\n", stderr="")
+            return mock.Mock(returncode=0, stdout="request id is ChurchLabel-7 (1 file(s))", stderr="")
+
+        with mock.patch.object(agent, "_printer_supports_cut", return_value=False), \
+                mock.patch.object(agent.time, "monotonic", side_effect=fake_monotonic), \
+                mock.patch.object(agent.time, "sleep"), \
+                mock.patch.object(agent.subprocess, "run", side_effect=fake_run):
+            ok, err = agent._print_png(_fake_png(), "ChurchLabel")
+        self.assertFalse(ok)
+        self.assertIn("queue", err.lower())
 
 
 class RecoveryTests(unittest.TestCase):

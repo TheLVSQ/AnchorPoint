@@ -42,6 +42,22 @@ services:
       web:
         condition: service_healthy
 
+  # Daily DB backup sidecar. Dumps to ./backups on the host (a bind mount, so it
+  # survives `docker compose down -v`) and prunes old dumps. Uses postgres:16 so
+  # pg_dump matches the server. Off-box copy (Spaces/snapshot) still recommended.
+  backup:
+    image: postgres:16
+    restart: unless-stopped
+    env_file:
+      - .env.production
+    volumes:
+      - ./backups:/backups
+      - ./backup.sh:/usr/local/bin/backup.sh:ro
+    entrypoint: ["sh", "/usr/local/bin/backup.sh"]
+    depends_on:
+      db:
+        condition: service_healthy
+
   db:
     container_name: anchorpoint-postgres
     image: postgres:16
