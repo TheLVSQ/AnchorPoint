@@ -173,8 +173,11 @@ setup_brother_ql() {
         || python3 -m pip install -q brother_ql >/dev/null 2>&1 \
         || { echo "   ERROR: could not install brother_ql (pip)."; return 1; }
 
-    # ipp-usb fights for the USB device — disable it so brother_ql/pyusb can claim it.
-    systemctl disable --now ipp-usb >/dev/null 2>&1 || true
+    # ipp-usb fights for the USB device — stop it so brother_ql/pyusb can claim it.
+    # MASK, not just disable: ipp-usb is udev/socket-activated, so `disable` does not
+    # survive a reboot/replug (udev restarts it and it re-grabs the USB device, leaving
+    # brother_ql with "[Errno 16] Resource busy"). Masking blocks every activation path.
+    systemctl mask --now ipp-usb >/dev/null 2>&1 || true
 
     # Let the non-root agent reach the Brother USB device without sudo.
     cat > /etc/udev/rules.d/99-brother-ql.rules <<'RULE'
