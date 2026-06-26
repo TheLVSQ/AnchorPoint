@@ -255,5 +255,67 @@ class IdentityHeaderTests(unittest.TestCase):
         self.assertEqual(headers, {})
 
 
+class BrotherQLBackendTests(unittest.TestCase):
+    """Direct-USB Brother QL backend (bypasses CUPS/ipp-usb)."""
+
+    def test_label_width_fallback(self):
+        self.assertEqual(agent._ql_label_width("62"), 696)
+
+    def test_degrades_without_lib(self):
+        # No brother_ql/PIL (or bad bytes if present) -> a non-fatal failure, never a crash.
+        ok, err = agent._print_brother_ql(b"x", "QL-820NWB", "62", "usb://0x04f9:0x209c")
+        self.assertFalse(ok)
+        self.assertTrue(err)
+
+    def test_mocked_success_and_failure_paths(self):
+        import sys, types
+        sent = {}
+
+        class _Img:
+            width, height = 696, 300
+            def convert(self, _m): return self
+            def resize(self, size):
+                self.width, self.height = size
+                return self
+
+        pil = types.ModuleType("PIL"); pil_image = types.ModuleType("PIL.Image")
+        pil_image.open = lambda *a, **k: _Img(); pil.Image = pil_image
+        raster = types.ModuleType("brother_ql.raster")
+        raster.BrotherQLRaster = lambda model: types.SimpleNamespace(model=model)
+        conv = types.ModuleType("brother_ql.conversion")
+        conv.convert = lambda **kw: b"INSTR"
+        helpers = types.ModuleType("brother_ql.backends.helpers")
+        helpers.send = lambda **kw: sent.update(kw) or {"outcome": "printed"}
+        fakes = {
+            "PIL": pil, "PIL.Image": pil_image,
+            "brother_ql": types.ModuleType("brother_ql"),
+            "brother_ql.raster": raster, "brother_ql.conversion": conv,
+            "brother_ql.backends": types.ModuleType("brother_ql.backends"),
+            "brother_ql.backends.helpers": helpers,
+            "brother_ql.labels": types.ModuleType("brother_ql.labels"),
+        }
+        fakes["brother_ql.labels"].ALL_LABELS = []
+        saved = {k: sys.modules.get(k) for k in fakes}
+        sys.modules.update(fakes)
+        try:
+            ok, err = agent._print_brother_ql(b"PNG", "QL-820NWB", "62", "usb://0x04f9:0x209c")
+            self.assertTrue(ok, err)
+            self.assertEqual(sent.get("printer_identifier"), "usb://0x04f9:0x209c")
+
+            helpers.send = lambda **kw: {"outcome": "error-no-media"}
+            ok2, _ = agent._print_brother_ql(b"PNG", "QL-820NWB", "62", "usb://x")
+            self.assertFalse(ok2)
+
+            ok3, err3 = agent._print_brother_ql(b"PNG", "QL-820NWB", "62", "")  # no device
+            self.assertFalse(ok3)
+            self.assertIn("ql_device", err3)
+        finally:
+            for k, v in saved.items():
+                if v is None:
+                    sys.modules.pop(k, None)
+                else:
+                    sys.modules[k] = v
+
+
 if __name__ == "__main__":
     unittest.main()
