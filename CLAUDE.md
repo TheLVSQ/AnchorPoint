@@ -206,6 +206,35 @@ Last session focused on:
 - [ ] Import the real VBS signup CSV when it arrives (`import_signups`, dry-run → review → `--commit --group "VBS 2026"`).
 - [ ] **Printer-agnostic landscape labels (shipped):** labels now render as a canonical **76×51mm (3"×2") landscape** design (`label_generator.LABEL_WIDTH=898`). Each agent has a `label_rotation` (Print Agents page). Print as-is on a wide die-cut label; rotate 90°/270° to stand it up on a narrow continuous roll. **Config after deploy:** Zebra ZD500 (3"×2" die-cut) → width **76mm**, rotation **0°**; Brother QL-820NWB (62mm roll) → rotation **90°** + width **51mm** (true match, may need 51mm custom width accepted by the driver) **or** keep **62mm** width (prints ~62×93mm, proportional but larger). Until the Brother agent is reconfigured it will print the landscape art scaled into 62mm (smaller). Verify orientation on hardware — flip 90↔270 if it feeds upside-relative.
 
+## Print agent backends — CUPS vs brother_ql (Brother QL printers)
+
+The Pi print agent (`agent/anchorpoint_agent.py`) has two print backends, chosen by
+`print_backend` in its `config.json`:
+
+- **`cups`** (default) — prints via `lp` to a CUPS queue. Fine for network/driverless
+  printers. For a **USB Brother QL** it goes through **ipp-usb**, which is unreliable:
+  under check-in load it wedges and reports false `printed` (CUPS says done, no ink) —
+  the "labels don't print until I reboot the Pi" symptom. Self-heal + offline-agent
+  fallback mitigate but don't fully fix it (CUPS can't see ipp-usb's lie).
+- **`brother_ql`** (recommended for Brother QL) — talks **straight to the printer over
+  USB** via the `brother_ql` lib, no CUPS/ipp-usb. The send is blocking and returns the
+  printer's **real** status, so failures are accurate and there's nothing to wedge.
+  Validated reliable on a QL-820NWB where ipp-usb failed ~half the time.
+
+**Set it up (fresh install):** add `--brother-ql` to the install one-liner —
+`curl -fsSL <host>/checkin/agent/install.sh | sudo bash -s -- --server <host> --code XXXX --brother-ql`.
+That installs `brother_ql`+libusb, disables `ipp-usb`, adds a udev rule so the non-root
+agent can reach the USB device (vendor `04f9`, `MODE=0666`), auto-detects the device, and
+writes the config. Optional: `--ql-device usb://0x04f9:0xNNNN`, `--ql-label 62`,
+`--ql-model QL-820NWB`.
+
+**Switch an already-running Pi:** re-pull the agent, then set config keys
+`print_backend=brother_ql`, `ql_model`, `ql_label` (`62` = 62mm continuous), `ql_device`
+(`usb://0x04f9:0x<pid>` from `lsusb`), add the udev rule, `systemctl disable --now ipp-usb`,
+restart the service. Agent code: `_print_brother_ql` (fits the PNG to the label's printable
+width, `convert` + blocking `send`). `brother_ql`/PIL are imported lazily so cups-mode
+agents don't need them.
+
 ## TODO (Medium Priority)
 
 - [ ] Add `select_related`/`prefetch_related` to dashboard queries
