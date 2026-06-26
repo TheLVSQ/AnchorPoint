@@ -16,6 +16,12 @@
 #                                            ipp-usb ones like the Brother QL);
 #                                            --driver picks a PPD (else driverless)
 #        --printer EXISTING-QUEUE            use a queue you already made
+#        --brother-ql [--ql-device usb://0x04f9:0xNNNN] [--ql-label 62]
+#                                            Brother QL over DIRECT USB via the
+#                                            brother_ql driver — no CUPS, no
+#                                            ipp-usb. The reliable path for QL
+#                                            label printers (auto-detects the
+#                                            USB device if --ql-device omitted).
 #   4. Pairs the agent with your AnchorPoint server
 #   5. Installs + starts a systemd service so it survives reboots
 #   6. Installs the comitup WiFi fallback (skip with --no-wifi-fallback): if the
@@ -34,11 +40,15 @@ QUEUE_NAME="ChurchLabel"
 INSTALL_DIR="/opt/anchorpoint-agent"
 SERVICE_NAME="anchorpoint-agent"
 WIFI_FALLBACK=1
+BROTHER_QL=0
+QL_MODEL="QL-820NWB"
+QL_LABEL="62"
+QL_DEVICE=""
 # Pinned comitup repo-source package (adds davesteele's apt repo + signing key).
 COMITUP_APT_SOURCE_URL="https://davesteele.github.io/comitup/deb/davesteele-comitup-apt-source_1.3_all.deb"
 
 usage() {
-    grep "^#" "$0" | head -23
+    grep "^#" "$0" | head -29
     exit 1
 }
 
@@ -52,6 +62,10 @@ while [[ $# -gt 0 ]]; do
         --printer)          PRINTER="$2"; shift 2 ;;
         --queue-name)       QUEUE_NAME="$2"; shift 2 ;;
         --no-wifi-fallback) WIFI_FALLBACK=0; shift ;;
+        --brother-ql)       BROTHER_QL=1; shift ;;
+        --ql-model)         QL_MODEL="$2"; shift 2 ;;
+        --ql-label)         QL_LABEL="$2"; shift 2 ;;
+        --ql-device)        QL_DEVICE="$2"; shift 2 ;;
         *) echo "Unknown option: $1"; usage ;;
     esac
 done
@@ -147,6 +161,58 @@ SUDO
     fi
 }
 
+# Set up the brother_ql direct-USB backend for a Brother QL label printer. This
+# bypasses CUPS/ipp-usb entirely (ipp-usb is unreliable with these printers — it
+# wedges under load and reports false "printed"); the agent talks straight to the
+# printer over USB and gets real status back. Called after pairing so config.json
+# exists. Resolves the USB device automatically unless --ql-device was given.
+setup_brother_ql() {
+    echo "==> Setting up brother_ql direct-USB backend..."
+    apt-get install -y -qq python3-pip libusb-1.0-0 >/dev/null 2>&1 || true
+    python3 -m pip install --break-system-packages -q brother_ql >/dev/null 2>&1 \
+        || python3 -m pip install -q brother_ql >/dev/null 2>&1 \
+        || { echo "   ERROR: could not install brother_ql (pip)."; return 1; }
+
+    # ipp-usb fights for the USB device — disable it so brother_ql/pyusb can claim it.
+    systemctl disable --now ipp-usb >/dev/null 2>&1 || true
+
+    # Let the non-root agent reach the Brother USB device without sudo.
+    cat > /etc/udev/rules.d/99-brother-ql.rules <<'RULE'
+# AnchorPoint: allow the agent (non-root) to talk to the Brother QL over USB.
+SUBSYSTEM=="usb", ATTRS{idVendor}=="04f9", MODE="0666"
+RULE
+    udevadm control --reload-rules >/dev/null 2>&1 || true
+    udevadm trigger >/dev/null 2>&1 || true
+
+    # Resolve the USB device id if not supplied: usb://0x04f9:0x<product>.
+    if [[ -z "$QL_DEVICE" ]]; then
+        local pid
+        pid="$(lsusb 2>/dev/null | grep -oiE '04f9:[0-9a-f]{4}' | head -1 | cut -d: -f2)"
+        if [[ -n "$pid" ]]; then
+            QL_DEVICE="usb://0x04f9:0x${pid}"
+        else
+            echo "   WARNING: no Brother (04f9) USB device found; pass --ql-device manually."
+        fi
+    fi
+    echo "    model=$QL_MODEL  label=$QL_LABEL  device=${QL_DEVICE:-<unset>}"
+
+    # Merge the backend keys into the agent config (written by the pairing step).
+    QL_MODEL="$QL_MODEL" QL_LABEL="$QL_LABEL" QL_DEVICE="$QL_DEVICE" CFG="$CONFIG" \
+    python3 - <<'PY'
+import json, os
+p = os.environ["CFG"]
+c = json.load(open(p))
+c.update({
+    "print_backend": "brother_ql",
+    "ql_model": os.environ["QL_MODEL"],
+    "ql_label": os.environ["QL_LABEL"],
+    "ql_device": os.environ["QL_DEVICE"],
+})
+json.dump(c, open(p, "w"), indent=2)
+PY
+    chown "$RUN_USER":"$RUN_USER" "$CONFIG" 2>/dev/null || true
+}
+
 echo "==> Installing packages (CUPS + Python requests)..."
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -qq
@@ -219,7 +285,9 @@ if [[ "$PRINTER_USB" == "1" && -z "$PRINTER" ]]; then
     cupsaccept "$QUEUE_NAME" || true
     PRINTER="$QUEUE_NAME"
 fi
-if [[ -z "$PRINTER" ]]; then
+if [[ "$BROTHER_QL" == "1" ]]; then
+    :  # printing handled by the brother_ql backend, configured after pairing
+elif [[ -z "$PRINTER" ]]; then
     echo "NOTE: no --printer-uri/--printer-usb/--printer given; the agent will use the system default printer."
 elif lpoptions -p "$PRINTER" -l 2>/dev/null | grep -q "^CutMedia"; then
     # Brother QL roll printers: cut after every label, or batches come out as
@@ -235,6 +303,10 @@ CONFIG="$INSTALL_DIR/config.json"
 sudo -u "$RUN_USER" ANCHORPOINT_AGENT_CONFIG="$CONFIG" \
     python3 "$INSTALL_DIR/anchorpoint_agent.py" pair \
     --server "$SERVER" --code "$CODE" ${PRINTER:+--printer "$PRINTER"}
+
+if [[ "$BROTHER_QL" == "1" ]]; then
+    setup_brother_ql || echo "   WARNING: brother_ql setup hit a snag — set --ql-device and re-run."
+fi
 
 echo "==> Installing systemd service..."
 cat > "/etc/systemd/system/$SERVICE_NAME.service" <<UNIT
@@ -273,6 +345,9 @@ echo ""
 echo "✓ Print agent installed and running."
 echo "  Now open AnchorPoint > Check-In > Print Agents and click 'Test Print'."
 echo "  Watch logs any time with:  journalctl -u $SERVICE_NAME -f"
+if [[ "$BROTHER_QL" == "1" ]]; then
+    echo "  Print backend: brother_ql direct USB (device ${QL_DEVICE:-<unset>}, label $QL_LABEL)."
+fi
 if [[ "${WIFI_FALLBACK_DONE:-0}" == "1" ]]; then
     echo ""
     echo "  WiFi fallback (comitup) installed — REBOOT to activate:  sudo reboot"
