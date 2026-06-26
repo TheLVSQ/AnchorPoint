@@ -529,6 +529,10 @@ class AgentDistributionTests(TestCase):
         body = self.client.get(reverse("checkin:agent_install_script")).content
         self.assertIn(b"--brother-ql", body)
         self.assertIn(b"brother_ql", body)
+        # ipp-usb must be MASKED, not merely disabled: it is udev/socket-activated,
+        # so `disable` does not survive a reboot and it re-grabs the USB device,
+        # leaving brother_ql with "Resource busy". Masking blocks every restart path.
+        self.assertIn(b"mask --now ipp-usb", body)
 
     def test_agent_script_served(self):
         resp = self.client.get(reverse("checkin:agent_script"))

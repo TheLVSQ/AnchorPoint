@@ -223,14 +223,20 @@ The Pi print agent (`agent/anchorpoint_agent.py`) has two print backends, chosen
 
 **Set it up (fresh install):** add `--brother-ql` to the install one-liner —
 `curl -fsSL <host>/checkin/agent/install.sh | sudo bash -s -- --server <host> --code XXXX --brother-ql`.
-That installs `brother_ql`+libusb, disables `ipp-usb`, adds a udev rule so the non-root
+That installs `brother_ql`+libusb, **masks** `ipp-usb`, adds a udev rule so the non-root
 agent can reach the USB device (vendor `04f9`, `MODE=0666`), auto-detects the device, and
 writes the config. Optional: `--ql-device usb://0x04f9:0xNNNN`, `--ql-label 62`,
 `--ql-model QL-820NWB`.
 
+**Why `mask`, not `disable`:** `ipp-usb` is udev/socket-activated, so `systemctl disable`
+does **not** survive a reboot/replug — udev restarts it and it re-grabs the USB device,
+and `brother_ql` then fails with `[Errno 16] Resource busy` (every label fails until the
+Pi is touched). `systemctl mask --now ipp-usb` blocks every activation path. To recover a
+Pi already stuck this way: `sudo systemctl mask --now ipp-usb && sudo systemctl restart anchorpoint-agent`.
+
 **Switch an already-running Pi:** re-pull the agent, then set config keys
 `print_backend=brother_ql`, `ql_model`, `ql_label` (`62` = 62mm continuous), `ql_device`
-(`usb://0x04f9:0x<pid>` from `lsusb`), add the udev rule, `systemctl disable --now ipp-usb`,
+(`usb://0x04f9:0x<pid>` from `lsusb`), add the udev rule, `systemctl mask --now ipp-usb`,
 restart the service. Agent code: `_print_brother_ql` (fits the PNG to the label's printable
 width, `convert` + blocking `send`). `brother_ql`/PIL are imported lazily so cups-mode
 agents don't need them.
