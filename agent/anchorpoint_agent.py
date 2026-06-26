@@ -260,6 +260,53 @@ def _print_png(png_bytes, printer, width_mm=DEFAULT_MEDIA_WIDTH_MM,
             os.unlink(tmp_path)
 
 
+def _ql_label_width(label):
+    """Printable width in dots for a brother_ql label id (e.g. '62' -> 696).
+    Falls back to 696 (62mm @ 300dpi) if the label can't be looked up."""
+    try:
+        from brother_ql.labels import ALL_LABELS
+        for lb in ALL_LABELS:
+            if lb.identifier == label:
+                return lb.dots_printable[0]
+    except Exception:  # noqa: BLE001 - fall back below
+        pass
+    return 696
+
+
+def _print_brother_ql(png_bytes, model, label, device, cut=True):
+    """Print a label straight to a Brother QL over USB via the brother_ql driver
+    (no CUPS, no ipp-usb). The send is blocking and returns the printer's REAL
+    status, so a failure is reported accurately instead of a false 'printed' —
+    which is the whole point of using this over the ipp-usb bridge."""
+    try:
+        import io as _io
+        from PIL import Image
+        from brother_ql.raster import BrotherQLRaster
+        from brother_ql.conversion import convert
+        from brother_ql.backends.helpers import send
+    except Exception as exc:  # noqa: BLE001 - lib not installed on this agent
+        return False, f"brother_ql unavailable: {exc}"
+    if not device:
+        return False, "brother_ql: no ql_device configured (e.g. usb://0x04f9:0x209c)"
+    try:
+        img = Image.open(_io.BytesIO(png_bytes)).convert("RGB")
+        # The server already rotated the art for this agent; just fit it to the
+        # label's printable width and print as-is.
+        target_w = _ql_label_width(label)
+        if target_w and img.width != target_w:
+            img = img.resize((target_w, max(1, round(img.height * target_w / img.width))))
+        qlr = BrotherQLRaster(model)
+        instructions = convert(qlr=qlr, images=[img], label=label, rotate="0", cut=bool(cut))
+        result = send(instructions=instructions, printer_identifier=device,
+                      backend_identifier="pyusb", blocking=True) or {}
+        outcome = result.get("outcome")
+        if outcome and outcome != "printed":
+            return False, f"brother_ql outcome={outcome!r}"
+        return True, ""
+    except Exception as exc:  # noqa: BLE001 - report the real printer/USB error
+        return False, f"brother_ql error: {exc}"
+
+
 _last_recovery = 0.0
 
 
@@ -308,6 +355,12 @@ def cmd_run(args):
     # Cut after each label unless explicitly disabled (--no-cut, or
     # "cut_media": "" in the config). Default "EndOfPage".
     cut_media = "" if args.no_cut else config.get("cut_media", DEFAULT_CUT_MEDIA)
+    # Print backend: "cups" (default, via lp) or "brother_ql" (direct USB to a
+    # Brother QL, bypassing CUPS/ipp-usb — far more reliable for those printers).
+    print_backend = config.get("print_backend", "cups")
+    ql_model = config.get("ql_model", "QL-820NWB")
+    ql_label = config.get("ql_label", "62")
+    ql_device = config.get("ql_device", "")
     headers = {"Authorization": f"Bearer {token}"}
     # Tell the server where this Pi is (shown on the Print Agents page) so it can
     # be found without scanning the LAN. Computed once at startup; a restart
@@ -318,7 +371,10 @@ def cmd_run(args):
         os.makedirs(save_dir, exist_ok=True)
 
     print(f"AnchorPoint agent '{config.get('agent_name')}' polling {server}")
-    print(f"Output: {('saving PNGs to ' + save_dir) if save_dir else (printer or 'system default printer')}")
+    if print_backend == "brother_ql":
+        print(f"Output: brother_ql direct USB  model={ql_model} label={ql_label} device={ql_device}")
+    else:
+        print(f"Output: {('saving PNGs to ' + save_dir) if save_dir else (printer or 'system default printer')}")
 
     while True:
         try:
@@ -355,6 +411,9 @@ def cmd_run(args):
                 with open(path, "wb") as fh:
                     fh.write(img.content)
                 ok, err = True, ""
+            elif print_backend == "brother_ql":
+                ok, err = _print_brother_ql(
+                    img.content, ql_model, ql_label, ql_device, cut=bool(cut_media))
             else:
                 width_mm = job.get("media_width_mm") or DEFAULT_MEDIA_WIDTH_MM
                 ok, err = _print_png(img.content, printer, width_mm, cut_media)
@@ -363,9 +422,10 @@ def cmd_run(args):
             label = job.get("description") or job.get("kind")
             verb = "saved" if (save_dir and ok) else ("printed" if ok else f"FAILED ({err}):")
             print(f"{verb} {label}")
-            if not ok and not save_dir:
-                # Try to self-heal a wedged printer so the next check-in prints
-                # without a manual Pi reboot.
+            if not ok and not save_dir and print_backend == "cups":
+                # Self-heal a wedged CUPS/ipp-usb printer so the next check-in
+                # prints without a manual Pi reboot. (brother_ql has no ipp-usb to
+                # restart — it reports real failures and the server can reprint.)
                 _recover_print_subsystem(printer)
             # Loop straight to the next job. _print_png blocks until this label
             # has finished printing, so a batch feeds one label at a time instead
