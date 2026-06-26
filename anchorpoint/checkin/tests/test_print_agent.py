@@ -524,6 +524,12 @@ class AgentDistributionTests(TestCase):
         self.assertIn(b"ipp-usb", body)
         self.assertIn(b"localhost:", body)
 
+    def test_install_script_supports_brother_ql_backend(self):
+        # The reliable direct-USB path for Brother QL printers must be installable.
+        body = self.client.get(reverse("checkin:agent_install_script")).content
+        self.assertIn(b"--brother-ql", body)
+        self.assertIn(b"brother_ql", body)
+
     def test_agent_script_served(self):
         resp = self.client.get(reverse("checkin:agent_script"))
         self.assertEqual(resp.status_code, 200)
