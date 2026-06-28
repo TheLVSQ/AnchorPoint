@@ -302,6 +302,18 @@ class CheckInSession(models.Model):
             return False
         return self.checkin_opens <= now.time() <= self.checkin_closes
 
+    @property
+    def has_ended(self):
+        """True once the check-in window is in the past — the session's date is
+        before today, or it's today and past the close time. Independent of the
+        manual is_active flag (which an admin sets and never auto-clears)."""
+        now = timezone.localtime()
+        if self.date < now.date():
+            return True
+        if self.date == now.date():
+            return now.time() > self.checkin_closes
+        return False
+
     def total_checked_in(self):
         """People physically present right now (arrived and not checked out)."""
         return self.checkins.filter(
