@@ -802,8 +802,13 @@ def session_list(request):
     """List all check-in sessions."""
     sessions = (
         CheckInSession.objects
-        .all()
-        .prefetch_related("checkins")
+        # "Check-ins" = people who actually arrived. Excludes no-shows and
+        # pre-staged "expected" rows that never arrived (both have arrived_at NULL).
+        .annotate(
+            attended_count=Count(
+                "checkins", filter=Q(checkins__arrived_at__isnull=False)
+            )
+        )
         .order_by("-date", "-checkin_opens")
     )
 

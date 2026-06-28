@@ -18,10 +18,12 @@
                 <div>
                     <strong>{{ session.name }}</strong>
                     <span>{{ session.date|date:"M j, Y" }} &middot; {{ session.checkin_opens|time:"g:i A" }}</span>
-                    <p class="stat-hint">{{ session.checkins.count }} check-ins</p>
+                    <p class="stat-hint">{{ session.attended_count }} check-in{{ session.attended_count|pluralize }}</p>
                 </div>
                 <div style="display: flex; gap: 0.5rem; align-items: center;">
-                    {% if session.is_active %}
+                    {% if session.has_ended %}
+                        <span class="chip">Ended</span>
+                    {% elif session.is_active %}
                         <span class="chip" style="background: #dcfce7; color: #166534;">Active</span>
                     {% else %}
                         <span class="chip">Inactive</span>
