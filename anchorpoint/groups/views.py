@@ -34,13 +34,20 @@ def group_list(request):
 
     active_category_count = sum(1 for item in category_summary if item["count"] > 0)
 
-    page_obj = Paginator(groups.order_by("name"), 25).get_page(request.GET.get("page"))
+    category = request.GET.get("category", "")
+    listed = groups.annotate(member_count=Count("memberships", distinct=True))
+    if category in counts_by_category:
+        listed = listed.filter(category=category)
+    else:
+        category = ""
+    page_obj = Paginator(listed.order_by("-is_active", "name"), 25).get_page(request.GET.get("page"))
 
     context = {
         "page_obj": page_obj,
         "group_count": groups.count(),
         "category_summary": category_summary,
         "active_category_count": active_category_count,
+        "category": category,
     }
     return render(request, "groups/group_list.html", context)
 

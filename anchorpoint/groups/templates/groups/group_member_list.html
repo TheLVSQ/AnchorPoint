@@ -1,29 +1,23 @@
 <div id="member-list">
-    <p class="stat-hint" style="margin-bottom:0.75rem;">
-        {{ memberships|length }} individual{{ memberships|length|pluralize }} in this group
-    </p>
-    <div class="list-card__body">
+    <p class="muted-text mb-3">{{ memberships|length }} individual{{ memberships|length|pluralize }} in this group</p>
+    {% if memberships %}
+    <ul class="row-list">
         {% for membership in memberships %}
-            <div class="list-item">
-                <div>
-                    <strong>
-                        <a href="{% url 'people_detail' membership.person.pk %}" class="ghost-link">
-                            {{ membership.person.first_name }} {{ membership.person.last_name }}
-                        </a>
-                    </strong>
-                    <span class="chip" style="margin-left:0.5rem;">{{ membership.get_role_display }}</span>
-                </div>
-                <form method="post"
-                      action="{% url 'groups:member_remove' group.pk membership.pk %}"
-                      hx-post="{% url 'groups:member_remove' group.pk membership.pk %}"
-                      hx-target="#member-list"
-                      hx-swap="outerHTML">
-                    {% csrf_token %}
-                    <button type="submit" class="btn ghost" style="color:#dc2626;padding:0.25rem 0.75rem;">Remove</button>
-                </form>
+        <li class="row-list__item">
+            <span class="avatar" aria-hidden="true">{{ membership.person.first_name|slice:":1" }}{{ membership.person.last_name|slice:":1" }}</span>
+            <div class="row-list__main">
+                <a href="{% url 'people_detail' membership.person.pk %}"><strong>{{ membership.person.first_name }} {{ membership.person.last_name }}</strong></a>
             </div>
-        {% empty %}
-            <p class="empty-state">No members yet. Search above to add people.</p>
+            <span class="chip chip--neutral">{{ membership.get_role_display }}</span>
+            <form method="post" action="{% url 'groups:member_remove' group.pk membership.pk %}"
+                  hx-post="{% url 'groups:member_remove' group.pk membership.pk %}" hx-target="#member-list" hx-swap="outerHTML">
+                {% csrf_token %}
+                <button type="submit" class="btn ghost danger btn-sm">Remove</button>
+            </form>
+        </li>
         {% endfor %}
-    </div>
+    </ul>
+    {% else %}
+        <p class="empty-state">No members yet. Search to add people.</p>
+    {% endif %}
 </div>
