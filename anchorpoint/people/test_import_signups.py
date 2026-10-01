@@ -183,45 +183,45 @@ class ImportSignupsTests(TestCase):
         # VBS rosters carry no birthdate; a re-import must match the kid by name
         # within the parent's household instead of duplicating it.
         rows = [{
-            "parent_first_name": "Hannah", "parent_last_name": "Boreman",
-            "parent_phone": "330-260-0915",
-            "child_first_name": "Lilah", "child_grade": "4",  # no birthdate/last name
+            "parent_first_name": "Paula", "parent_last_name": "Sample",
+            "parent_phone": "330-555-0101",
+            "child_first_name": "Nora", "child_grade": "4",  # no birthdate/last name
         }]
         out1 = _run(self._csv(rows), "--commit")
         self.assertIn("CREATE child", out1)
         out2 = _run(self._csv(rows), "--commit")
         self.assertIn("MATCHED child", out2)
-        self.assertEqual(Person.objects.filter(first_name="Lilah").count(), 1)
+        self.assertEqual(Person.objects.filter(first_name="Nora").count(), 1)
 
     def test_emergency_contact_imported_and_not_overwritten(self):
         rows = [{
-            "parent_first_name": "Jess", "parent_last_name": "Adams",
-            "parent_phone": "330-432-6866",
-            "child_first_name": "Keegan", "child_grade": "pre-k",
-            "emergency_contact_name": "Kim Cantrell",
-            "emergency_contact_phone": "330-987-3065",
+            "parent_first_name": "Dana", "parent_last_name": "Example",
+            "parent_phone": "330-555-0102",
+            "child_first_name": "Milo", "child_grade": "pre-k",
+            "emergency_contact_name": "Tara Placeholder",
+            "emergency_contact_phone": "330-555-0103",
             "emergency_contact_relationship": "Aunt",
         }]
         _run(self._csv(rows), "--commit")
-        kid = Person.objects.get(first_name="Keegan")
-        self.assertEqual(kid.emergency_contact_name, "Kim Cantrell")
-        self.assertEqual(kid.emergency_contact_phone, "330-987-3065")
+        kid = Person.objects.get(first_name="Milo")
+        self.assertEqual(kid.emergency_contact_name, "Tara Placeholder")
+        self.assertEqual(kid.emergency_contact_phone, "330-555-0103")
         self.assertEqual(kid.emergency_contact_relationship, "Aunt")
         # Re-import with a different contact must NOT overwrite the recorded one.
         rows[0]["emergency_contact_name"] = "Someone Else"
         rows[0]["emergency_contact_phone"] = "000-000-0000"
         _run(self._csv(rows), "--commit")
         kid.refresh_from_db()
-        self.assertEqual(kid.emergency_contact_phone, "330-987-3065")
+        self.assertEqual(kid.emergency_contact_phone, "330-555-0103")
 
     def test_photo_consent_backfilled_on_match_when_unknown(self):
         existing = Person.objects.create(
-            first_name="Viper", last_name="Lund", birthdate=date(2015, 1, 1),
+            first_name="Robin", last_name="Mock", birthdate=date(2015, 1, 1),
         )  # photo_consent defaults "unknown"
         rows = [{
-            "parent_first_name": "Shelby", "parent_last_name": "Lund",
-            "parent_phone": "330-605-9195",
-            "child_first_name": "Viper", "child_birthdate": "2015-01-01",
+            "parent_first_name": "Casey", "parent_last_name": "Mock",
+            "parent_phone": "330-555-0104",
+            "child_first_name": "Robin", "child_birthdate": "2015-01-01",
             "photo_consent": "no",
         }]
         _run(self._csv(rows), "--commit")
