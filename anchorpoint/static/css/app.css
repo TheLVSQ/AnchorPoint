@@ -50,7 +50,8 @@
     --shadow-lg: 0 10px 30px rgba(24, 33, 43, 0.12);
     --focus-ring: 0 0 0 3px rgba(13, 110, 110, 0.28);
     /* Type */
-    --font: "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-heading: var(--font);
     --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
     --sidebar-w: 248px;
 
@@ -132,7 +133,7 @@ body {
 }
 a { color: var(--primary-text); text-underline-offset: 2px; }
 a:hover { color: var(--primary); }
-h1, h2, h3, h4 { line-height: 1.25; margin: 0 0 0.5rem; letter-spacing: -0.01em; }
+h1, h2, h3, h4 { font-family: var(--font-heading); line-height: 1.25; margin: 0 0 0.5rem; letter-spacing: -0.01em; }
 h1 { font-size: clamp(1.5rem, 3vw, 1.9rem); font-weight: 700; margin-bottom: 0.25rem; }
 h2 { font-size: 1.15rem; font-weight: 700; }
 h3 { font-size: 1rem; font-weight: 650; }
@@ -492,6 +493,7 @@ section.card.accent, .card.accent { border-color: var(--primary); }
     color: var(--muted);
 }
 .stat-value {
+    font-family: var(--font-heading);
     margin: 0; font-size: 2rem; font-weight: 750; line-height: 1.1;
     font-variant-numeric: tabular-nums;
 }
