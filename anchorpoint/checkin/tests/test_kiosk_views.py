@@ -15,6 +15,7 @@ from households.models import Household, HouseholdMember
 from people.models import Person
 from django.contrib.auth import get_user_model
 from core.models import UserProfile
+from checkin.tests.kiosk_helpers import unlock_kiosk
 
 
 class KioskNoPinGuardTests(TestCase):
@@ -115,7 +116,7 @@ class KioskFlowTests(TestCase):
 
     def _unlock(self):
         session = self.client.session
-        session["kiosk_authenticated"] = True
+        unlock_kiosk(session)
         session.save()
 
     def test_unlock_with_correct_pin(self):
@@ -255,7 +256,7 @@ class QuickRegistrationViewTests(TestCase):
 
     def _unlock(self):
         session = self.client.session
-        session["kiosk_authenticated"] = True
+        unlock_kiosk(session)
         session.save()
 
     def test_quick_register_creates_family(self):
@@ -318,7 +319,7 @@ class StandaloneSessionFallbackTests(TestCase):
 
     def _unlock(self):
         session = self.client.session
-        session["kiosk_authenticated"] = True
+        unlock_kiosk(session)
         session.save()
 
     def test_lookup_uses_standalone_session_when_no_open_configs(self):

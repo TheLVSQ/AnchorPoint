@@ -6,7 +6,6 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse, JsonResponse, HttpResponseForbidden
 from django.views.decorators.http import require_http_methods, require_POST
 from django.contrib.auth import logout
-from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.core.cache import cache
 from django.utils import timezone
@@ -14,9 +13,13 @@ from django.utils.dateparse import parse_date
 from django.db import IntegrityError, transaction
 from django.db.models import Count, Q
 
+from django.core import signing
+from django.utils.crypto import constant_time_compare, salted_hmac
+
 from core.models import OrganizationSettings
+from core.net import client_ip
 from core.permissions import (
-    checkin_admin_required, checkin_team_required, is_staff_or_above, staff_required,
+    checkin_admin_required, checkin_team_required, is_checkin_admin, staff_required,
 )
 from groups.models import GroupMembership
 from households.models import Household, HouseholdMember
@@ -45,6 +48,23 @@ logger = logging.getLogger(__name__)
 KIOSK_SESSION_KEY = "kiosk_authenticated"
 KIOSK_SESSION_ID_KEY = "kiosk_session_id"
 KIOSK_AGENT_ID_KEY = "kiosk_agent_id"  # this device's bound printer (optional)
+KIOSK_UNLOCKED_AT_KEY = "kiosk_unlocked_at"  # epoch seconds of the PIN unlock
+KIOSK_PIN_FP_KEY = "kiosk_pin_fp"  # fingerprint of the PIN used to unlock
+KIOSK_HOUSEHOLDS_KEY = "kiosk_household_ids"  # households this kiosk may open
+
+# An unlock lasts one long service day, then the kiosk must re-enter the PIN.
+KIOSK_UNLOCK_MAX_AGE = 12 * 60 * 60
+
+# PIN brute-force limits. Per client IP, plus a global cap that only blocks
+# *public* unlocks (signed-in check-in admins can always unlock), so an attacker
+# can't lock every kiosk out on a Sunday morning.
+KIOSK_PIN_IP_LIMIT = 5
+KIOSK_PIN_IP_WINDOW = 15 * 60
+KIOSK_PIN_GLOBAL_LIMIT = 50
+KIOSK_PIN_GLOBAL_WINDOW = 60 * 60
+
+CHECKOUT_TOKEN_SALT = "checkin.checkout"
+CHECKOUT_TOKEN_MAX_AGE = 10 * 60
 
 
 # =============================================================================
@@ -52,11 +72,79 @@ KIOSK_AGENT_ID_KEY = "kiosk_agent_id"  # this device's bound printer (optional)
 # =============================================================================
 
 
+def _pin_fingerprint(pin):
+    """Stable, non-reversible fingerprint of the kiosk PIN, so a PIN change
+    invalidates every kiosk unlocked with the old one."""
+    return salted_hmac("checkin.kiosk-pin", (pin or "").strip()).hexdigest()
+
+
+def _unlock_kiosk(request, pin):
+    request.session[KIOSK_SESSION_KEY] = True
+    request.session[KIOSK_UNLOCKED_AT_KEY] = int(timezone.now().timestamp())
+    request.session[KIOSK_PIN_FP_KEY] = _pin_fingerprint(pin)
+    request.session[KIOSK_HOUSEHOLDS_KEY] = []
+
+
+def _lock_kiosk_session(request):
+    for key in (KIOSK_SESSION_KEY, KIOSK_UNLOCKED_AT_KEY, KIOSK_PIN_FP_KEY,
+                KIOSK_HOUSEHOLDS_KEY):
+        request.session.pop(key, None)
+
+
 def _ensure_kiosk(request):
-    """Redirect to unlock if kiosk not authenticated."""
+    """Redirect to unlock unless this browser unlocked the kiosk with the
+    *current* PIN within the last KIOSK_UNLOCK_MAX_AGE seconds."""
     if not request.session.get(KIOSK_SESSION_KEY):
         return redirect("checkin:kiosk_unlock")
+    unlocked_at = request.session.get(KIOSK_UNLOCKED_AT_KEY) or 0
+    expired = timezone.now().timestamp() - unlocked_at > KIOSK_UNLOCK_MAX_AGE
+    pin_changed = not constant_time_compare(
+        request.session.get(KIOSK_PIN_FP_KEY, ""),
+        _pin_fingerprint(OrganizationSettings.load().kiosk_pin),
+    )
+    if expired or pin_changed:
+        _lock_kiosk_session(request)
+        return redirect("checkin:kiosk_unlock")
     return None
+
+
+def _allow_kiosk_household(request, household_id):
+    """Let this kiosk open a household (it came back from a lookup or was just
+    registered here)."""
+    allowed = request.session.get(KIOSK_HOUSEHOLDS_KEY) or []
+    if household_id not in allowed:
+        request.session[KIOSK_HOUSEHOLDS_KEY] = (allowed + [household_id])[-200:]
+
+
+def _kiosk_may_open_household(request, household_id):
+    """Households are reachable only via this kiosk's own search results (or a
+    family it just registered) — never by typing /kiosk/family/<id>/."""
+    return household_id in (request.session.get(KIOSK_HOUSEHOLDS_KEY) or [])
+
+
+def _pin_fail_keys(request):
+    return (
+        f"kiosk-pin-fail:ip:{client_ip(request) or 'unknown'}",
+        "kiosk-pin-fail:global",
+    )
+
+
+def _pin_locked_out(request):
+    ip_key, global_key = _pin_fail_keys(request)
+    return (
+        cache.get(ip_key, 0) >= KIOSK_PIN_IP_LIMIT
+        or cache.get(global_key, 0) >= KIOSK_PIN_GLOBAL_LIMIT
+    )
+
+
+def _record_pin_failure(request):
+    ip_key, global_key = _pin_fail_keys(request)
+    for key, window in ((ip_key, KIOSK_PIN_IP_WINDOW), (global_key, KIOSK_PIN_GLOBAL_WINDOW)):
+        if not cache.add(key, 1, window):
+            try:
+                cache.incr(key)
+            except ValueError:  # expired between add() and incr()
+                cache.set(key, 1, window)
 
 
 def _kiosk_agent(request):
@@ -109,19 +197,29 @@ def _next_upcoming_window():
 def kiosk_unlock(request):
     org = OrganizationSettings.load()
     pin_set = bool((org.kiosk_pin or "").strip())
+    # Check-in admins signed in on the device may bootstrap/unlock without the
+    # PIN lockout applying to them.
+    trusted = is_checkin_admin(request.user)
     # SECURITY: with no PIN configured the kiosk would be wide open to any
     # passer-by (family lookup, rosters, self-check-in). Refuse to unlock for
     # the public until a PIN is set; let signed-in staff bootstrap/test.
-    if not pin_set and not is_staff_or_above(request.user):
+    if not pin_set and not trusted:
         return render(request, "checkin/kiosk/unlock.html", {"org": org, "needs_pin": True})
     if request.method == "POST":
         if not pin_set:
-            request.session[KIOSK_SESSION_KEY] = True  # staff bootstrap, no PIN yet
+            _unlock_kiosk(request, "")  # staff bootstrap, no PIN yet
             return redirect("checkin:kiosk_lookup")
         form = KioskPinForm(request.POST, expected_pin=org.kiosk_pin)
-        if form.is_valid():
-            request.session[KIOSK_SESSION_KEY] = True
+        if not trusted and _pin_locked_out(request):
+            # Don't even evaluate the PIN while locked out.
+            return render(request, "checkin/kiosk/unlock.html", {
+                "form": KioskPinForm(), "org": org, "locked_out": True,
+            })
+        elif form.is_valid():
+            _unlock_kiosk(request, org.kiosk_pin)
             return redirect("checkin:kiosk_lookup")
+        elif not trusted:
+            _record_pin_failure(request)
     else:
         form = KioskPinForm()
     return render(request, "checkin/kiosk/unlock.html", {"form": form, "org": org})
@@ -206,6 +304,8 @@ def kiosk_lookup(request):
             )
             results_capped = len(households) > MAX_RESULTS
             households = households[:MAX_RESULTS]
+            for h in households:
+                _allow_kiosk_household(request, h.pk)
         else:
             query = request.GET.get("query", "")
     else:
@@ -230,6 +330,8 @@ def kiosk_family_select(request, household_id):
     session = _get_active_session(request)
     if not session:
         return redirect("checkin:kiosk_lookup")
+    if not _kiosk_may_open_household(request, household_id):
+        return redirect("checkin:kiosk_lookup")
 
     household = get_object_or_404(Household, pk=household_id)
     config = session.configuration
@@ -251,6 +353,16 @@ def kiosk_family_select(request, household_id):
         ).select_related("room")
     }
     prestaged_ids = set(prestaged.keys())
+    # Already here (arrived, not checked out). The kiosk can't re-check them in
+    # or reprint for them: that would print/show the family's live pickup code
+    # to whoever is at the kiosk. Lost labels are reprinted by a volunteer.
+    present_ids = set(
+        session.checkins.filter(
+            person__households=household,
+            arrived_at__isnull=False,
+            checked_out_at__isnull=True,
+        ).values_list("person_id", flat=True)
+    )
 
     if request.method == "POST":
         form = FamilyMemberSelectForm(
@@ -258,49 +370,41 @@ def kiosk_family_select(request, household_id):
             members_with_eligibility=members_with_eligibility,
             rooms=rooms,
             prestaged_ids=prestaged_ids,
+            present_ids=present_ids,
         )
         if form.is_valid():
             selected = form.get_selected()
             if not selected:
                 form.add_error(None, "Please select at least one person.")
             else:
-                # One code per family: reuse the pre-printed code if this
-                # household already has one, so walk-in siblings share it.
-                security_code = _family_code(session, household)
+                # Walk-ins get a FRESH code (one per submission, shared by the
+                # siblings checked in together). Reusing the household's active
+                # code would print it on a label for whoever is at the kiosk.
+                # Pre-staged arrivals keep the code already printed on their tag.
+                walkin_code = None
                 checkin_ids = []
-                to_print_ids = []  # only walk-ins / re-prints; pre-staged already printed
+                to_print_ids = []  # walk-ins only; pre-staged were printed ahead
                 for person_id, room_id in selected:
                     person = Person.objects.get(pk=person_id)
                     room = Room.objects.get(pk=room_id) if room_id else None
-                    checkin = CheckIn.objects.filter(
-                        session=session,
-                        person=person,
-                        checked_out_at__isnull=True,
-                    ).first()
-                    if checkin:
-                        was_expected = checkin.arrived_at is None
-                        if checkin.arrived_at is None:
-                            checkin.arrived_at = timezone.now()
+                    prestaged_checkin = prestaged.get(person_id)
+                    if prestaged_checkin is not None:
+                        checkin = prestaged_checkin
+                        checkin.arrived_at = timezone.now()
                         # A pre-staged no-show who actually shows up is here now —
                         # clear no_show so they count as present, not absent.
                         checkin.no_show = False
-                        # Keep a pre-staged member's pre-assigned room; only a
-                        # walk-in/re-print submits a room to apply.
-                        if room is not None:
-                            checkin.room = room
-                        checkin.security_code = security_code
-                        checkin.save(update_fields=["room", "security_code", "arrived_at", "no_show"])
-                        # A pre-staged arrival is already printed — don't reprint.
-                        if not was_expected:
-                            to_print_ids.append(checkin.pk)
+                        checkin.save(update_fields=["arrived_at", "no_show"])
                     else:
+                        if walkin_code is None:
+                            walkin_code = generate_unique_security_code(session)
                         try:
                             with transaction.atomic():
                                 checkin = CheckIn.objects.create(
                                     session=session,
                                     person=person,
                                     room=room,
-                                    security_code=security_code,
+                                    security_code=walkin_code,
                                     arrived_at=timezone.now(),
                                 )
                             to_print_ids.append(checkin.pk)
@@ -328,7 +432,9 @@ def kiosk_family_select(request, household_id):
                         )
 
                 request.session["kiosk_checkin_ids"] = checkin_ids
-                request.session["kiosk_security_code"] = security_code
+                request.session["kiosk_print_ids"] = to_print_ids
+                # Only a code minted by this submission is ever shown on screen.
+                request.session["kiosk_security_code"] = walkin_code or ""
                 # Queue labels only for walk-ins / re-prints. No-op if no agent
                 # is paired; never block check-in on a printing problem.
                 queued = 0
@@ -352,14 +458,15 @@ def kiosk_family_select(request, household_id):
 
                 # Text the pickup code to opted-in household adults. Best-effort:
                 # a Twilio problem must never block the check-in line.
+                # One text per code: walk-ins share the fresh code, pre-staged
+                # arrivals keep theirs.
                 sms_sent = 0
                 try:
-                    ordered_checkins = CheckIn.objects.filter(
-                        pk__in=checkin_ids
-                    ).select_related("person")
-                    sms_sent = send_security_code_sms(
-                        household, ordered_checkins, security_code, session
-                    )
+                    by_code = {}
+                    for c in CheckIn.objects.filter(pk__in=checkin_ids).select_related("person"):
+                        by_code.setdefault(c.security_code, []).append(c)
+                    for code, group in by_code.items():
+                        sms_sent += send_security_code_sms(household, group, code, session)
                 except Exception:
                     logger.exception("Failed to send check-in code SMS")
                 request.session["kiosk_sms_sent"] = sms_sent > 0
@@ -377,10 +484,12 @@ def kiosk_family_select(request, household_id):
     members_display = []
     for person, eligible in members_with_eligibility:
         routed = None
-        if eligible and person.pk not in prestaged_ids:
+        if eligible and person.pk not in prestaged_ids and person.pk not in present_ids:
             m = match_room(person, rooms)
             routed = m.pk if m else None
-        members_display.append((person, eligible, prestaged.get(person.pk), routed))
+        members_display.append(
+            (person, eligible, prestaged.get(person.pk), routed, person.pk in present_ids)
+        )
 
     return render(request, "checkin/kiosk/family_select.html", {
         "household": household,
@@ -424,6 +533,8 @@ def kiosk_family_add_child(request, household_id):
         return redir
     session = _get_active_session(request)
     if not session:
+        return redirect("checkin:kiosk_lookup")
+    if not _kiosk_may_open_household(request, household_id):
         return redirect("checkin:kiosk_lookup")
     household = get_object_or_404(Household, pk=household_id)
 
@@ -472,10 +583,14 @@ def kiosk_confirmation(request):
         return redir
 
     checkin_ids = request.session.pop("kiosk_checkin_ids", [])
+    print_ids = request.session.pop("kiosk_print_ids", [])
     security_code = request.session.pop("kiosk_security_code", "")
     labels_queued = request.session.pop("kiosk_labels_queued", False)
     sms_sent = request.session.pop("kiosk_sms_sent", False)
     checkins = CheckIn.objects.filter(pk__in=checkin_ids).select_related("person", "room")
+    # Labels (and the browser-print fallback) cover only check-ins minted by
+    # this submission — never a pre-staged child's already-issued code.
+    print_checkins = [c for c in checkins if c.pk in set(print_ids)]
     org = OrganizationSettings.load()
     session = _get_active_session(request)
 
@@ -484,10 +599,11 @@ def kiosk_confirmation(request):
         # produce duplicates when both an agent and a printer are configured.
         printer_ok = True
     else:
-        printer_ok = PrintService().print_checkins(checkins, session)
+        printer_ok = PrintService().print_checkins(print_checkins, session) if print_checkins else True
 
     return render(request, "checkin/kiosk/confirmation.html", {
         "checkins": checkins,
+        "print_checkins": print_checkins,
         "security_code": security_code,
         "session": session,
         "org": org,
@@ -550,6 +666,7 @@ def kiosk_quick_register(request):
                 phone_opt_in=parent_form.cleaned_data.get("phone_opt_in", False),
                 children=children_data,
             )
+            _allow_kiosk_household(request, result["household"].pk)
             return redirect("checkin:kiosk_family_select", household_id=result["household"].pk)
     else:
         parent_form = QuickRegistrationForm()
@@ -610,7 +727,7 @@ def kiosk_printer(request):
 
 
 def kiosk_lock(request):
-    request.session.pop(KIOSK_SESSION_KEY, None)
+    _lock_kiosk_session(request)
     request.session.pop(KIOSK_SESSION_ID_KEY, None)
     request.session.pop(KIOSK_AGENT_ID_KEY, None)
     # Also drop any staff login, so a shared tablet can never be left both
@@ -625,12 +742,13 @@ def kiosk_lock(request):
 # =============================================================================
 
 
-@login_required
+@checkin_team_required
 def checkout_lookup(request, session_id):
     """Look up check-ins by security code for checkout."""
     session = get_object_or_404(CheckInSession, pk=session_id)
 
     checkins = None
+    checkout_token = ""
     if request.method == "POST":
         form = SecurityCodeLookupForm(request.POST)
         # Throttle wrong-code guessing: security codes are short (4 chars), so
@@ -652,6 +770,13 @@ def checkout_lookup(request, session_id):
             if not checkins.exists():
                 cache.set(fail_key, cache.get(fail_key, 0) + 1, 300)  # 10 fails / 5 min
                 form.add_error("security_code", "No active check-ins found with this code.")
+            else:
+                # The confirm step only accepts the check-ins this code unlocked,
+                # proven by a short-lived signed token (not the raw ids).
+                checkout_token = signing.dumps(
+                    {"s": session.pk, "ids": sorted(c.pk for c in checkins)},
+                    salt=CHECKOUT_TOKEN_SALT,
+                )
     else:
         form = SecurityCodeLookupForm()
 
@@ -662,17 +787,39 @@ def checkout_lookup(request, session_id):
             "session": session,
             "form": form,
             "checkins": checkins,
+            "checkout_token": checkout_token,
         },
     )
 
 
-@login_required
+@checkin_team_required
 @require_POST
 def checkout_confirm(request, session_id):
-    """Confirm checkout for selected check-ins."""
+    """Confirm checkout for selected check-ins.
+
+    Only check-ins unlocked by a pickup code in checkout_lookup may be checked
+    out: the POST must carry that lookup's signed token, and the selected ids
+    are intersected with the ids it covers.
+    """
     session = get_object_or_404(CheckInSession, pk=session_id)
 
-    checkin_ids = request.POST.getlist("checkin_ids")
+    try:
+        token = signing.loads(
+            request.POST.get("checkout_token", ""),
+            salt=CHECKOUT_TOKEN_SALT,
+            max_age=CHECKOUT_TOKEN_MAX_AGE,
+        )
+    except signing.BadSignature:  # includes SignatureExpired
+        token = None
+    if not token or token.get("s") != session.pk:
+        messages.error(request, "That checkout expired. Please enter the pickup code again.")
+        return redirect("checkin:checkout_lookup", session_id=session_id)
+
+    allowed_ids = set(token.get("ids") or [])
+    checkin_ids = [
+        int(i) for i in request.POST.getlist("checkin_ids")
+        if str(i).isdigit() and int(i) in allowed_ids
+    ]
     checkins = CheckIn.objects.filter(
         id__in=checkin_ids,
         session=session,

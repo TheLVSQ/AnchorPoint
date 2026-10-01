@@ -11,6 +11,7 @@ from checkin.services.print_queue import enqueue_checkin_labels
 from core.models import UserProfile
 from households.models import Household, HouseholdMember
 from people.models import Person
+from checkin.tests.kiosk_helpers import unlock_kiosk
 
 
 def _session():
@@ -347,7 +348,7 @@ class KioskPrinterBindingTests(TestCase):
 
     def _unlock(self):
         s = self.client.session
-        s["kiosk_authenticated"] = True
+        unlock_kiosk(s)
         s.save()
 
     def test_requires_kiosk_unlock(self):

@@ -8,6 +8,7 @@ from checkin.models import CheckInConfiguration, CheckInSession
 from groups.models import Group, GroupMembership
 from households.models import Household, HouseholdMember
 from people.models import Person
+from checkin.tests.kiosk_helpers import unlock_kiosk
 
 
 class AutoEnrollTests(TestCase):
@@ -32,7 +33,7 @@ class AutoEnrollTests(TestCase):
 
     def _unlock(self):
         s = self.client.session
-        s["kiosk_authenticated"] = True
+        unlock_kiosk(s)
         s["kiosk_session_id"] = self.session.pk
         s.save()
 

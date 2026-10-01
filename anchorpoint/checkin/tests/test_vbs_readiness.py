@@ -18,6 +18,7 @@ from core.models import OrganizationSettings, UserProfile
 from households.models import Household, HouseholdMember
 from messaging.models import CommunicationLog
 from people.models import Person
+from checkin.tests.kiosk_helpers import unlock_kiosk
 
 
 def _open_window(config):
@@ -79,7 +80,7 @@ class KioskFixtureMixin:
 
     def _unlock(self):
         session = self.client.session
-        session["kiosk_authenticated"] = True
+        unlock_kiosk(session)
         session.save()
 
     def _start_kiosk_session(self):

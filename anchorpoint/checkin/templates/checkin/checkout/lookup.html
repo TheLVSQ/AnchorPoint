@@ -36,6 +36,7 @@
 
         <form method="post" action="{% url 'checkin:checkout_confirm' session.pk %}">
             {% csrf_token %}
+            <input type="hidden" name="checkout_token" value="{{ checkout_token }}">
 
             {% for checkin in checkins %}
                 <label style="display: flex; align-items: center; gap: 1rem; padding: 1rem; background: var(--gray-100); border-radius: 8px; margin-bottom: 0.5rem; cursor: pointer;">
