@@ -279,6 +279,25 @@ class CheckoutToggleTests(KioskFixture):
         self.assertTrue(ben_ci.security_code)
 
 
+class ManagerRosterGroupingTests(KioskFixture):
+    def test_each_room_listed_once_even_with_equal_sort_order(self):
+        from checkin.views import _present_checkins
+        self.room_a.sort_order = self.room_b.sort_order = 0
+        self.room_a.save(); self.room_b.save()
+        from people.models import Person
+        cal = Person.objects.create(first_name="Cal", last_name="Walker")
+        # Ava (room A), Ben (room B), Cal (room A): name order alone interleaves rooms.
+        CheckIn.objects.create(session=self.session, person=self.ben, room=self.room_b,
+                               security_code="ZZ22", arrived_at=timezone.now())
+        CheckIn.objects.create(session=self.session, person=cal, room=self.room_a,
+                               security_code="ZZ33", arrived_at=timezone.now())
+        rooms = [c.room_id for c in _present_checkins(self.session)]
+        self.assertEqual(len(rooms), 3)
+        # contiguous: once a room ends it never reappears
+        self.assertEqual(len(rooms), len(set(rooms)) + sum(
+            1 for i in range(1, len(rooms)) if rooms[i] == rooms[i - 1]))
+
+
 class ClientIpTests(TestCase):
     def test_prefers_cloudflare_header_and_ignores_forwarded_for(self):
         rf = RequestFactory()

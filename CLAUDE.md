@@ -105,6 +105,21 @@ absolute audio + Twilio status-callback URLs. Phone-blast audio (uploaded or rec
 in-browser via `MediaRecorder`) is transcoded to MP3 with `ffmpeg` so Twilio's `<Play>`
 can fetch it.
 
+## UI / design system ("Harbor")
+
+- All app styling lives in `anchorpoint/static/css/app.css` (tokens at the top: colors for light +
+  dark via `prefers-color-scheme`, radius, shadows, `--font` = Figtree, `--font-heading`).
+  `templates/base.html` is just the shell: navy sidebar on desktop (≥1024px), drawer on phones,
+  public top bar when logged out. **Don't add new inline `style=""` or per-template `<style>`** —
+  add a class to `app.css` using the tokens. (Inline-style count is the sweep's progress metric.)
+- Sidebar links are role-aware via the `nav` context (`core/context_processors.py`): only show
+  pages the user can open. Active section = longest URL-prefix match in `_NAV_SECTIONS`.
+- Patterns: `.page-header` (stacked) / `.page-header--split` (title left, actions right),
+  `.btn` / `.btn.ghost` / `.btn.danger` / `.btn-sm`, `.card`, `.data-table` (wrap in `.table-wrap`),
+  `.chip` (+ `--warning/--danger/--success/--neutral`), `.empty-state`, `.message.<tag>`.
+- Static files use `STORAGES` (hashed + gzipped by whitenoise in prod; plain in tests/DEBUG).
+  The kiosk (`checkin/kiosk/base.html`), labels, and emails have their own styling — out of scope.
+
 ## Maintenance alerts
 
 - **Daily health email** — `manage.py system_health` (cron sidecar, daily) checks disk %, backup

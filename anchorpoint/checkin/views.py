@@ -1482,7 +1482,10 @@ def _present_checkins(session):
         session.checkins
         .filter(arrived_at__isnull=False, checked_out_at__isnull=True)
         .select_related("person", "room")
-        .order_by("room__sort_order", "person__last_name", "person__first_name")
+        # room name/id break sort_order ties: the roster {% regroup %}s by room,
+        # so rooms sharing a sort_order must still be contiguous.
+        .order_by("room__sort_order", "room__name", "room_id",
+                  "person__last_name", "person__first_name")
     )
 
 
