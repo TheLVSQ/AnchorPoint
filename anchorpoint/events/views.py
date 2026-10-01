@@ -1,6 +1,6 @@
 from django.contrib import messages
 from django.db import transaction
-from django.db.models import Min
+from django.db.models import Count, F, Max, Min, Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.http import HttpResponse
 from django.utils import timezone
@@ -45,18 +45,16 @@ def _has_valid_occurrence(formset):
 
 @staff_required
 def event_manage_list(request):
+    # One query: next upcoming start + registration count per event (the old
+    # template did both per row). Upcoming first by date, then unscheduled/past.
+    now = timezone.now()
     events = (
-        Event.objects.prefetch_related("occurrences", "registrations")
-        .order_by("title")
-    )
-    upcoming_events = (
-        Event.objects.upcoming()
-        .annotate(next_start=Min("occurrences__starts_at"))
-        .order_by("next_start")[:5]
-    )
-    recent_registrations = (
-        EventRegistration.objects.select_related("event")
-        .order_by("-created_at")[:5]
+        Event.objects.annotate(
+            next_start=Min("occurrences__starts_at", filter=Q(occurrences__starts_at__gte=now)),
+            last_start=Max("occurrences__starts_at"),
+            registration_count=Count("registrations", distinct=True),
+        )
+        .order_by(F("next_start").asc(nulls_last=True), F("last_start").desc(nulls_last=True), "title")
     )
     pending_match_count = 0
     show_match_queue = is_staff_or_above(request.user)
@@ -66,8 +64,7 @@ def event_manage_list(request):
         ).count()
     context = {
         "events": events,
-        "upcoming_events": upcoming_events,
-        "recent_registrations": recent_registrations,
+        "now": now,
         "show_match_queue": show_match_queue,
         "pending_match_count": pending_match_count,
     }
@@ -250,17 +247,16 @@ def event_roster_export(request, pk):
 
 
 def public_event_list(request):
+    # Next *upcoming* start (a plain Min would pick a past occurrence of a
+    # recurring event and show/sort it by an old date).
     events = (
         Event.objects.upcoming()
-        .annotate(next_start=Min("occurrences__starts_at"))
-        .prefetch_related("occurrences", "photos")
+        .annotate(next_start=Min("occurrences__starts_at",
+                                 filter=Q(occurrences__starts_at__gte=timezone.now())))
+        .prefetch_related("photos")
         .order_by("next_start")
     )
-    featured_event = events.first()
-    context = {
-        "events": events,
-        "featured_event": featured_event,
-    }
+    context = {"events": events}
     return render(request, "events/public/event_list.html", context)
 
 

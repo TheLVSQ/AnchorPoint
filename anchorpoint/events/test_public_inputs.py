@@ -97,3 +97,15 @@ class CsvFormulaInjectionTests(TestCase):
         body = resp.content.decode()
         self.assertIn("'=HYPERLINK", body)
         self.assertNotIn(",=HYPERLINK", body)
+
+
+class PublicEventListTests(TestCase):
+    def test_recurring_event_shows_next_upcoming_date_not_a_past_one(self):
+        e = Event.objects.create(title="Small Group", summary="s", description="d", is_published=True)
+        past = timezone.now() - timedelta(days=30)
+        future = timezone.now() + timedelta(days=5)
+        EventOccurrence.objects.create(event=e, starts_at=past, ends_at=past + timedelta(hours=1))
+        EventOccurrence.objects.create(event=e, starts_at=future, ends_at=future + timedelta(hours=1))
+        resp = self.client.get(reverse("events:public_list"))
+        self.assertEqual(resp.context["events"][0].next_start, future)
+        self.assertContains(resp, timezone.localtime(future).strftime("%A, %B %-d"))
