@@ -181,13 +181,12 @@ coverage (~195 tests); `events/tests.py` covers registration matching.
 Prod shell (once SSH'd into the droplet):
 `cd /home/deploy/anchorpoint/docker && docker compose exec -T web python manage.py shell`.
 
-## Production config to verify (carried over from the June go-live checklist; status unknown)
+## Production config status (checked on prod 2026-10-01)
 
-None of these were confirmed after June 2026. Check them on prod before relying on them.
-- **Kiosk PIN set** (Settings → Organization). It was empty in June, so the kiosk wasn't PIN-gated.
-- **Print agent label config** (Print Agents page). Zebra ZD500 (3"×2" die-cut): width 76mm. Brother QL-820NWB (62mm roll): rotation 90° with width 51mm, or 62mm width (prints larger).
-- **Backups**: the backup sidecar is writing dumps to `docker/backups/` on the droplet.
-- **Brother printer**: uses the `brother_ql` backend with `ipp-usb` masked (see below).
+- [x] **Kiosk PIN** is set (Settings → Organization).
+- [x] **Backups**: the backup sidecar writes a daily `pg_dump` to `docker/backups/` on the droplet (~88 MB gzipped).
+- [x] **Brother agent** ("Pi Print Monitor 1", host `bcc-print-pi-1`): 62mm width, 90° rotation (prints the landscape label ~62×93mm).
+- **Zebra ZD500**: retired (printer recycled, Oct 2026). The Brother is the only printer in use. The "Printer 2: Zebra ZD500" agent record on prod is now unused.
 
 ## Label rendering
 
