@@ -1,56 +1,45 @@
 # AnchorPoint TODO
 
-## Enhancements to Add
+The one backlog for the project. `CLAUDE.md` is reference only; open work goes here.
 
-- [x] Google Authentication (SSO)
+## Top priority
+
+- [ ] **UI refresh.** Modernize the look without making it busier. Sweep every page for consistency.
+- [ ] **Security review.** Do a full pass before making the repo public. Cover auth and role gates, IDOR on every `<id>` URL, kiosk/agent endpoints, file uploads, secrets in history, dependency versions.
+
+## Next up
+
+- [ ] **Nightly family/person hygiene job + admin review page.** Run at 2–3am via the cron sidecar.
+  - Detect orphaned households (0 members, or no adults).
+  - Detect likely duplicate people and households (same normalized phone, address, or last name).
+  - Write the findings to a review queue. Add an **admin-only page** that lists them, with merge, edit, delete and dismiss actions.
+  - The merge service already exists (#59). It re-points HouseholdMembers, check-ins and event registrations.
+- [ ] **Address verification on person add.** Compare USPS Web Tools API (free, US-only) with Smarty/Lob (paid, easier).
+  - Pattern: normalize, autocomplete on blur, store a `verified` flag.
+  - Degrade gracefully when no API is configured.
+- [ ] **Email sending.** Transactional plus blast, alongside the existing SMS/phone blasts.
+  - Log every send to `CommunicationLog`.
+  - Respect opt-in and blackout rules.
+- [ ] **Bulk import API.** The spec is at `docs/superpowers/specs/2026-05-07-bulk-import-api-design.md`. Reuse the `import_signups` matching logic.
+- [ ] **REST API.** Rebuild it on main. The May attempt (people, households, groups, events, check-in session endpoints in `anchorpoint/api/`) diverged too far to merge. It's preserved as the tag `archive/development`; view it with `git show archive/development:anchorpoint/api/viewsets.py`. DRF is already pinned in `docker/requirements.txt` but isn't in `INSTALLED_APPS`.
+
+## Backlog
+
+### Features
 - [ ] Embed code generator for event info
-- [x] Add live results to people search
-- [ ] Review design: modernize to be visually appealing but not overwhelming
+- [ ] Check-in: Create Room flow → age/grade auto-assignment
+  - Min/Max as a K-12 dropdown
+  - Make the "Active" checkbox sit next to the word "Active" and hard to miss
+- [ ] User permissions page: something better than an all-users view
+- [ ] Add Person form: phone number input formatting
+- [ ] Add Person form: email format validation
 
-- [ ] Email: Add ability to send emails (transactional + blast)
-
-## Check-in
--- [ ] Printer connection/setup
--- [ ] Create Room flow > Age/Grade Auto-Assignment
---- [ ] Change Min/Max to a dropdown with values for K-12
---- [ ] Make the 'Active' checkbox for the room availability next to the word 'Active' and make it hard to miss
-
-## User Permissions
--- [x] Change page to show only one save button, not one save per person
--- [ ] Update page to be something other than all users view.
-
-## UI Enhancements
--- [x] Add Favicon
--- [ ] Overall UI Review and refresh
--- [x] Create Group Form -> Group Status: change status checkbox to dropdown
--- [x] Phone Blasts: show stats (answered, no answer, etc)
--- [x] Phone Blasts: show live progress
--- [ ] Add Person menu:
---- [x] Make "Status" a dropdown with pre-populated choices instead of a free-form text box.
---- [ ] Phone number entry box could use some formatting (dynamic or other)
---- [ ] Email entry box should check for email in correct format, error if not
--- [x] Add User Page:
---- [x] Check to see if info matches a current person record as it is being entered
---- [x] Login should be user's email address, email address should not be optional
---- [x] State selection for address should be a pre-populated dropdown of states to ensure consistency
---- [x] If a Person exists for a new User, merge or allow the Person/User records to coexist
---- [x] When updating a user's Role, clicking the save should have a confirmation alert
-
-
-## Security
--- [ ] Overall security review before making repo public
-
-## Bugs to Squash
-
-- [x] Mobile navigation menu doesn't scroll on mobile
-- [x] Groups list page doesn't allow you to view details of a group
-- [x] Groups: Unclear how to manage group users
-
-## In Progress
-
-- [ ] Beta testing with users
-- [ ] Bulk import API (spec written, plan written — implementation pending)
-
+### Tech debt
+- [ ] `select_related`/`prefetch_related` on dashboard queries
+- [ ] Refactor fat views into service layers (people, households, groups)
+- [ ] Indexes on `Event.slug` and `Event.registration_token` (`Person.email` is done)
+- [ ] Pagination on the remaining long lists (people and groups are done)
+- [ ] SMS delivery-status webhooks (only phone calls track status today)
 
 ## Completed
 
@@ -68,3 +57,9 @@
 - [x] Mobile nav scroll fix
 - [x] Media files served in production
 - [x] Org logo display fix
+- [x] Favicon; group status dropdown; person status dropdown; single save on permissions page
+- [x] Family management UI (/families/), people tile view, "join existing family" fix
+- [x] Person/Household merge service (#59)
+- [x] Check-in: pre-print, kiosk PIN gate, offline-agent fallback, Brother QL direct-USB backend
+- [x] Reports: group roster, session attendance, birthday/VBS postcards, missing data
+- [x] Local dev/test environment (`scripts/dev-setup.sh`)

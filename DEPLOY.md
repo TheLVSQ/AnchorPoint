@@ -78,17 +78,14 @@ docker compose logs -f cron
 # Run migrations
 docker compose exec web python manage.py migrate
 
-# Create beta test users (save the output!)
-docker compose exec web python manage.py setup_beta_users \
-    --admin-username=luke \
-    --admin-email=luke@example.com \
-    --tester1-username=tester1 \
-    --tester1-email=tester1@example.com \
-    --tester2-username=tester2 \
-    --tester2-email=tester2@example.com
+# Create your admin account (prints a generated password if you omit --password)
+docker compose exec web python manage.py create_admin \
+    --username=admin \
+    --email=you@example.com \
+    --name="First Last"
 ```
 
-**IMPORTANT:** Save the passwords that are printed! They won't be shown again.
+**IMPORTANT:** Save the printed password; it won't be shown again.
 
 ## Step 5: Set Up Cloudflare Tunnel
 

@@ -5,25 +5,31 @@
 AnchorPoint is a lightweight church operations platform for small-to-mid-sized churches. It's inspired by Rock RMS but designed to be simpler, more portable, and maintainable by non-developers.
 
 **Tech Stack:**
-- Backend: Django 5.2 with Django REST Framework
+- Backend: Django 5.2 (DRF is pinned in requirements but not wired up; no API on main yet, see `TODO.md`)
 - Frontend: Django templates + HTMX (minimal JavaScript)
 - Database: PostgreSQL 16
-- Deployment: Docker Compose with Cloudflare Tunnel
+- Deployment: Docker Compose with Cloudflare Tunnel on a DigitalOcean droplet. Deploys run through the manual `Deploy to Production` GitHub Action (`.github/workflows/deploy.yml`).
+
+**Backlog lives in `TODO.md`.** This file is reference only.
 
 ## Project Structure
 
 ```
-anchorpoint/
+anchorpoint/              # Django project root (manage.py, .env)
 ├── anchorpoint/          # Django project config (settings, urls, wsgi)
 ├── core/                 # Auth, user profiles, organization settings, permissions
-├── people/               # Person/contact management
-├── households/           # Family groupings and relationships
+├── people/               # Person/contact management, merge service
+├── households/           # Family groupings and relationships (/families/)
 ├── groups/               # Volunteer teams, check-in classrooms, community groups
 ├── events/               # Events, registrations, attendee matching
 ├── checkin/              # Check-in kiosk system, label printing, print agents
 ├── messaging/            # SMS and phone blast communications (Twilio)
+├── reporting/            # Report registry + CSV export
 ├── templates/            # Global templates
 └── media/                # Uploaded files
+agent/                    # Raspberry Pi print agent (standalone, own tests)
+docker/                   # Production Dockerfile, compose, cron, backups
+scripts/                  # dev-setup.sh, load test, VBS CSV transform
 ```
 
 ## Key Design Decisions
@@ -149,62 +155,47 @@ cp ../.env.production.example ../.env.production
 docker compose build
 docker compose up -d
 docker compose exec web python manage.py migrate
-docker compose exec web python manage.py setup_beta_users
+docker compose exec web python manage.py create_admin --username <u> --email <e>
 ```
 
-## Testing
+(Migrations also run automatically on container start via `docker/entrypoint.sh`.)
 
-Run tests with:
+## Local dev & testing
+
+One idempotent script sets everything up: Postgres 16 in OrbStack/Docker on **localhost:5433**
+(container `anchorpoint-dev-db`), a Python 3.12 `.venv/` at the repo root, and `anchorpoint/.env`
+(it's written only if missing).
+
 ```bash
-python manage.py test
+scripts/dev-setup.sh          # set up / start everything
+scripts/dev-setup.sh test     # ...and run the Django + print-agent test suites
 ```
 
-Key test files:
-- `events/tests.py` - Most comprehensive, covers registration matching
-- `people/tests.py` - Basic CRUD tests
-- `core/tests.py` - Auth tests
+Manual equivalents, from `anchorpoint/`:
+- `../.venv/bin/python manage.py test`
+- `cd ../agent && ../.venv/bin/python -m unittest test_agent`
 
-## Recent Changes (Session Context)
+Baseline (2026-10-01): 516 Django tests + 22 agent tests, all passing. `checkin` has the most
+coverage (~195 tests); `events/tests.py` covers registration matching.
 
-Last session focused on:
-1. Fixed IDOR vulnerability in release document deletion
-2. Fixed SECRET_KEY security (removed fallback)
-3. Added `normalized_phone` field for O(1) phone lookups
-4. Created centralized permission system with decorators
-5. Production Docker setup (gunicorn, whitenoise, health checks)
-6. Cloudflare Tunnel configuration support
-7. Fixed phone blast audio URL for Twilio (needs absolute URL)
-8. Created `setup_beta_users` management command
+Prod shell (once SSH'd into the droplet):
+`cd /home/deploy/anchorpoint/docker && docker compose exec -T web python manage.py shell`.
 
-## TODO — Family/People UX (queued 2026-06-12, from VBS testing)
+## Production config to verify (carried over from the June go-live checklist; status unknown)
 
-- [x] **Person form: "Join an existing family"** — fixed: hx-boost killed the DOMContentLoaded toggle script; selection now validated server-side.
-- [x] **Family management UI** — shipped: /families/ list/detail/edit + member ops.
-  Original note: **Family management UI** — list/view/edit all households. Direction to evaluate: a dedicated Families page under People (households are already their own model; surfacing them as a Group type conflates two concepts), plus household section on each person's profile. Edit = rename, add/remove members, change roles/primary adult.
-- [ ] **Nightly family-hygiene job (2-3am via cron sidecar)** — detect orphaned households (0 members or no adults) and likely duplicates (same normalized phone/address/last name); write findings to a review queue where admins can merge/edit/delete. Merge needs care: re-point HouseholdMembers, check-ins, event registrations.
-- [x] **Person status displays raw value** — fixed (get_status_display).
-  Original note: **Person status displays raw value** — "regular_attendee" with underscores; templates should use `get_status_display`.
-- [ ] **Address verification on person add** — evaluate: USPS Web Tools API (free, US-only) vs Smarty/Lob (paid, easier). Likely pattern: normalize + autocomplete-on-blur, store verified flag; degrade gracefully when API not configured.
-- [x] **People page tile view** — shipped: age + family link + status chip, prefetched; pagination already existed.
-  Original note: **People page tile view** — show age, family/household name, status chip alongside name/email. At scale: server-side pagination (~50/page) + the existing search as primary navigation; consider an A-Z last-name filter rail.
+None of these were confirmed after June 2026. Check them on prod before relying on them.
+- **Kiosk PIN set** (Settings → Organization). It was empty in June, so the kiosk wasn't PIN-gated.
+- **Print agent label config** (Print Agents page). Zebra ZD500 (3"×2" die-cut): width 76mm. Brother QL-820NWB (62mm roll): rotation 90° with width 51mm, or 62mm width (prints larger).
+- **Backups**: the backup sidecar is writing dumps to `docker/backups/` on the droplet.
+- **Brother printer**: uses the `brother_ql` backend with `ipp-usb` masked (see below).
 
-## Go-live checklist (queued 2026-06-21 from pre-flight; do before Sunday/VBS)
+## Label rendering
 
-- [ ] **Set a kiosk PIN** — Settings → Organization (`kiosk_pin` is currently empty, so the kiosk isn't PIN-gated).
-- [ ] **Zebra agent width 62 → 76mm** on the Print Agents page (it's a 3"×2" printer; rotation 180° is correct).
-- [ ] **Reboot the Zebra Pi** (`bcc-printmon-2`) to activate the comitup WiFi fallback.
-- [ ] **Brother end-to-end test** — one real check-in → confirm the landscape label prints right-side-up, cuts, and routes to the right room (Brother hasn't printed a real label since the landscape redesign).
-- [ ] **Bind the Sunday kiosk to the Brother** (kiosk lookup → "Change" printer) so the Zebra being online doesn't matter.
-- [ ] **DB backup before Sunday** — `pg_dump` or a DigitalOcean snapshot (890 people just migrated).
-- [ ] **VBS: set the config's auto-enroll group** to "VBS 2026 Participants" (Check-In config screen) so walk-ins land on the next day's pre-print.
-- [ ] **VBS: add a check-in window per upcoming VBS date** — the existing window is dated 2026-06-18 (past), so sessions won't auto-create.
-- [x] **Sunday "BKids" config eligibility** corrected to age 0–12 / grade Pre-K–6 (was 0–3, which blocked nearly everyone) — fixed on prod 2026-06-21.
-
-## Pending operational follow-ups
-
-- [x] Label cutting between labels: the print agent now passes `-o CutMedia=EndOfPage` per job (only on queues that expose CutMedia — a no-op elsewhere), so cutting no longer depends on the queue default. `install.sh` still sets `CutMedia-default=EndOfPage` on the resolved printer as belt-and-suspenders. To apply on an already-running Pi: update the agent (`curl -fsSL <host>/checkin/agent/install.sh | sudo bash -s -- ...` or re-pull `anchorpoint_agent.py` + `systemctl restart`); the immediate manual equivalent is `sudo lpadmin -p <queue> -o CutMedia-default=EndOfPage`.
-- [ ] Import the real VBS signup CSV when it arrives (`import_signups`, dry-run → review → `--commit --group "VBS 2026"`).
-- [ ] **Printer-agnostic landscape labels (shipped):** labels now render as a canonical **76×51mm (3"×2") landscape** design (`label_generator.LABEL_WIDTH=898`). Each agent has a `label_rotation` (Print Agents page). Print as-is on a wide die-cut label; rotate 90°/270° to stand it up on a narrow continuous roll. **Config after deploy:** Zebra ZD500 (3"×2" die-cut) → width **76mm**, rotation **0°**; Brother QL-820NWB (62mm roll) → rotation **90°** + width **51mm** (true match, may need 51mm custom width accepted by the driver) **or** keep **62mm** width (prints ~62×93mm, proportional but larger). Until the Brother agent is reconfigured it will print the landscape art scaled into 62mm (smaller). Verify orientation on hardware — flip 90↔270 if it feeds upside-relative.
+Labels render as a canonical **76×51mm (3"×2") landscape** design (`label_generator.LABEL_WIDTH=898`).
+Each print agent has a `label_rotation`: print as-is on a wide die-cut label, or rotate 90°/270° to
+stand it up on a narrow continuous roll (flip 90↔270 if it feeds upside down). The agent
+passes `-o CutMedia=EndOfPage` per job on queues that expose CutMedia. `install.sh` also sets
+`CutMedia-default=EndOfPage` as a backup.
 
 ## Print agent backends — CUPS vs brother_ql (Brother QL printers)
 
@@ -240,23 +231,3 @@ Pi already stuck this way: `sudo systemctl mask --now ipp-usb && sudo systemctl 
 restart the service. Agent code: `_print_brother_ql` (fits the PNG to the label's printable
 width, `convert` + blocking `send`). `brother_ql`/PIL are imported lazily so cups-mode
 agents don't need them.
-
-## TODO (Medium Priority)
-
-- [ ] Add `select_related`/`prefetch_related` to dashboard queries
-- [ ] Extract duplicate recipient query logic in messaging forms
-- [ ] Refactor fat views into service layer
-- [ ] Add database indexes (Event.slug, Event.registration_token, Person.email)
-- [ ] Add tests for messaging services
-- [ ] Implement proper pagination
-- [ ] Create service layers for people, households, groups modules
-
-## graphify
-
-This project has a graphify knowledge graph at graphify-out/.
-
-Rules:
-- Before answering architecture or codebase questions, read graphify-out/GRAPH_REPORT.md for god nodes and community structure
-- If graphify-out/wiki/index.md exists, navigate it instead of reading raw files
-- For cross-module "how does X relate to Y" questions, prefer `graphify query "<question>"`, `graphify path "<A>" "<B>"`, or `graphify explain "<concept>"` over grep — these traverse the graph's EXTRACTED + INFERRED edges instead of scanning files
-- After modifying code files in this session, run `graphify update .` to keep the graph current (AST-only, no API cost)
