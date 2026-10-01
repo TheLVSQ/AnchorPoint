@@ -7,7 +7,7 @@
     <h1>{{ title }}</h1>
 </div>
 
-<div class="detail-card" style="max-width: 600px;">
+<div class="detail-card narrow">
     <form method="post">
         {% csrf_token %}
 
@@ -53,19 +53,19 @@
         <div class="form-field">
             {{ form.rooms.label_tag }}
             {{ form.rooms }}
-            <p class="stat-hint" style="margin-top: 0.5rem;">
+            <p class="stat-hint mt-2">
                 <a href="{% url 'checkin:room_list' %}">Manage rooms</a>
             </p>
         </div>
 
-        <div class="checkbox-field" style="margin-top: 0.5rem;">
+        <div class="checkbox-field mt-2">
             <label>
                 {{ form.is_active }}
                 Active — this session is available for check-in
             </label>
         </div>
 
-        <div class="checkbox-field" style="margin-top: 0.5rem;">
+        <div class="checkbox-field mt-2">
             <label>
                 {{ form.print_emergency_phone }}
                 Print the guardian's emergency phone on minors' labels (use for VBS / off-site events)

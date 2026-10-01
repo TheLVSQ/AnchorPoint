@@ -8,14 +8,14 @@
     <p class="page-subtitle">{{ session.name }} &middot; {{ session.date|date:"M j, Y" }}</p>
 </div>
 
-<div class="detail-card" style="max-width: 500px;">
+<div class="detail-card narrow">
     <h2>Enter Security Code</h2>
 
     <form method="post">
         {% csrf_token %}
 
         {% if form.errors %}
-            <div style="background: #fef2f2; color: #991b1b; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+            <div class="message error">
                 {% for error in form.security_code.errors %}
                     {{ error }}
                 {% endfor %}
@@ -26,12 +26,12 @@
             {{ form.security_code }}
         </div>
 
-        <button type="submit" class="btn" style="width: 100%;">Look Up</button>
+        <button type="submit" class="btn w-full">Look Up</button>
     </form>
 </div>
 
 {% if checkins %}
-    <div class="detail-card" style="max-width: 500px; margin-top: 2rem;">
+    <div class="detail-card narrow mt-4">
         <h2>Ready for Checkout</h2>
 
         <form method="post" action="{% url 'checkin:checkout_confirm' session.pk %}">
@@ -39,21 +39,21 @@
             <input type="hidden" name="checkout_token" value="{{ checkout_token }}">
 
             {% for checkin in checkins %}
-                <label style="display: flex; align-items: center; gap: 1rem; padding: 1rem; background: var(--gray-100); border-radius: 8px; margin-bottom: 0.5rem; cursor: pointer;">
-                    <input type="checkbox" name="checkin_ids" value="{{ checkin.pk }}" checked style="width: 20px; height: 20px;">
-                    <div style="flex: 1;">
+                <label class="select-row">
+                    <input class="check-lg" type="checkbox" name="checkin_ids" value="{{ checkin.pk }}" checked>
+                    <div class="flex-1">
                         <strong>{{ checkin.person.first_name }} {{ checkin.person.last_name }}</strong>
                         <p class="stat-hint">
                             {% if checkin.room %}{{ checkin.room.name }}{% else %}No room{% endif %}
                         </p>
                         {% if checkin.person.allergies %}
-                            <p style="color: #ea580c; font-size: 0.85rem;">⚠️ {{ checkin.person.allergies }}</p>
+                            <p class="text-warning small m-0">⚠️ {{ checkin.person.allergies }}</p>
                         {% endif %}
                     </div>
                 </label>
             {% endfor %}
 
-            <button type="submit" class="btn" style="width: 100%; margin-top: 1rem; background: #16a34a;">
+            <button type="submit" class="btn btn-block mt-3 btn-success">
                 ✓ Confirm Checkout
             </button>
         </form>

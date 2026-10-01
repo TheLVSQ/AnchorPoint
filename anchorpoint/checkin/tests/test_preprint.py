@@ -93,7 +93,7 @@ class PreprintRosterTests(PreprintFixture):
     def test_each_family_has_a_select_all_checkbox(self):
         # Per-family header checkbox to select that whole family at once.
         resp = self.client.get(reverse("checkin:session_preprint", args=[self.session.pk]))
-        self.assertContains(resp, 'class="family-select"')
+        self.assertContains(resp, 'class="family-select')  # may carry extra classes
 
     def test_active_checkin_is_unique_per_person_session(self):
         from django.db import IntegrityError, transaction

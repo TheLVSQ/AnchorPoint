@@ -1,99 +1,49 @@
 {% extends "base.html" %}
+{% block title %}Check-In{% endblock %}
 {% block content %}
 
-<div class="page-header">
-    <h1>Check-In Dashboard</h1>
-    <p class="page-subtitle">{{ today|date:"l, F j, Y" }}</p>
+<div class="page-header page-header--split">
+    <div>
+        <h1>Check-In</h1>
+        <p class="page-subtitle">{{ today|date:"l, F j, Y" }}
+            {% if agent %} · {% if agent.is_online %}<span class="chip chip--success">🖨 {{ agent.name }} online</span>{% else %}<span class="chip chip--danger">🖨 {{ agent.name }} offline</span>{% endif %}{% endif %}
+        </p>
+    </div>
+    <div class="page-actions">
+        <a href="{% url 'checkin:kiosk_lookup' %}" class="btn ghost" target="_blank" rel="noopener">Open kiosk ↗</a>
+        <a href="{% url 'checkin:session_create' %}" class="btn">Create session</a>
+    </div>
 </div>
 
-<div class="hero-actions" style="margin-bottom: 2rem;">
-    <a href="{% url 'checkin:session_create' %}" class="btn">Create Session</a>
-    <a href="{% url 'checkin:configuration_list' %}" class="btn ghost">Configurations</a>
-    <a href="{% url 'checkin:room_list' %}" class="btn ghost">Rooms</a>
-    <a href="{% url 'checkin:printer_list' %}" class="btn ghost">Printers</a>
-    <a href="{% url 'checkin:print_agents' %}" class="btn ghost">Print Agents</a>
-    {% if agent %}
-        {% if agent.is_online %}
-            <span class="chip" style="background:#dcfce7;color:#166534;align-self:center;">🖨 {{ agent.name }} online</span>
-        {% else %}
-            <span class="chip" style="background:#fee2e2;color:#991b1b;align-self:center;">🖨 {{ agent.name }} offline</span>
-        {% endif %}
-    {% endif %}
-</div>
-
+<h2 class="section-title">Today</h2>
 {% if sessions %}
-    <div class="detail-grid">
+    <div class="session-cards">
         {% for session in sessions %}
-            <section class="detail-card">
-                <h2>{{ session.name }}</h2>
-                <p class="stat-hint">{{ session.checkin_opens|time:"g:i A" }} - {{ session.checkin_closes|time:"g:i A" }}</p>
-
-                <div style="display: flex; gap: 2rem; margin: 1.5rem 0;">
-                    <div>
-                        <div style="font-size: 2.5rem; font-weight: 700; color: var(--primary);">
-                            {{ session.total_checked_in }}
-                        </div>
-                        <div class="stat-hint">Checked In</div>
-                    </div>
+            <section class="card session-card">
+                <div class="card__head">
+                    <h2><a href="{% url 'checkin:session_detail' session.pk %}">{{ session.name }}</a></h2>
+                    <span class="muted-text">{{ session.checkin_opens|time:"g:i A" }} – {{ session.checkin_closes|time:"g:i A" }}</span>
                 </div>
-
-                <div class="hero-actions">
-                    <a href="{% url 'checkin:session_detail' session.pk %}" class="btn">View Details</a>
+                <p class="stat-value">{{ session.total_checked_in }} <span>checked in</span></p>
+                <div class="action-row">
+                    <a href="{% url 'checkin:checkin_manager' session.pk %}" class="btn">Manager</a>
+                    <a href="{% url 'checkin:session_detail' session.pk %}" class="btn ghost">Details</a>
                     {% if session.checkout_enabled %}<a href="{% url 'checkin:checkout_lookup' session.pk %}" class="btn ghost">Checkout</a>{% endif %}
-                    <a href="{% url 'checkin:kiosk_lookup' %}" class="btn ghost" target="_blank">Open Kiosk</a>
                 </div>
             </section>
         {% endfor %}
     </div>
 {% else %}
-    <div class="detail-card">
-        <p class="empty-state">No check-in sessions for today.</p>
-        <a href="{% url 'checkin:session_create' %}" class="btn" style="margin-top: 1rem;">Create Session</a>
-    </div>
+    <p class="empty-state">No check-in sessions today. Sessions open automatically from a configuration's schedule, or <a href="{% url 'checkin:session_create' %}">create one</a>.</p>
 {% endif %}
 
-<section class="detail-card" style="margin-top: 2rem;">
-    <h2>Quick Links</h2>
-    <ul class="detail-list">
-        <li>
-            <a href="{% url 'checkin:configuration_list' %}">Configurations</a>
-            <span>Schedule windows, eligibility filters, and room assignments</span>
-        </li>
-        <li>
-            <a href="{% url 'checkin:session_list' %}">All Sessions</a>
-            <span>View past check-in sessions</span>
-        </li>
-        <li>
-            <a href="{% url 'checkin:room_list' %}">Room Setup</a>
-            <span>Configure rooms for check-in</span>
-        </li>
-        <li>
-            <a href="{% url 'checkin:printer_list' %}">Printer Setup</a>
-            <span>Configure label printers</span>
-        </li>
-        <li>
-            <a href="{% url 'checkin:print_agents' %}">Print Agents</a>
-            <span>Pair a local print agent for hands-free label printing</span>
-        </li>
-        <li>
-            <a href="{% url 'checkin:kiosk_unlock' %}" target="_blank">Kiosk Mode</a>
-            <span>Open self-service check-in</span>
-        </li>
-    </ul>
-</section>
-
-<section class="detail-card" style="margin-top: 1.5rem;">
-    <h2>Kiosk PIN</h2>
-    <p class="stat-hint" style="margin-bottom: 0.75rem;">
-        The kiosk PIN is required to unlock the check-in screen on a shared device.
-        Set or change it in Organization Settings. For a true single-purpose tablet,
-        don't sign the iPad into a staff account — just open the kiosk URL and enter
-        the PIN — and lock it to that screen with iOS <strong>Guided Access</strong>
-        (Settings → Accessibility → Guided Access, then triple-click the side button).
-    </p>
-    <a href="{% url 'organization_settings' %}#kiosk-pin" class="ghost-link">
-        Go to Organization Settings &rarr;
-    </a>
-</section>
-
+<h2 class="section-title">Setup</h2>
+<div class="report-grid">
+    <a class="report-card" href="{% url 'checkin:configuration_list' %}"><h2>Configurations</h2><p>Schedules, eligibility (age, grade, groups), rooms, and checkout.</p><span class="ghost-link">Open →</span></a>
+    <a class="report-card" href="{% url 'checkin:session_list' %}"><h2>Sessions</h2><p>Past and upcoming check-in sessions, with stats.</p><span class="ghost-link">Open →</span></a>
+    <a class="report-card" href="{% url 'checkin:room_list' %}"><h2>Rooms</h2><p>Classrooms, capacities, and age/grade ranges.</p><span class="ghost-link">Open →</span></a>
+    <a class="report-card" href="{% url 'checkin:print_agents' %}"><h2>Print agents</h2><p>Raspberry Pi label printers — pairing, label size, rotation.</p><span class="ghost-link">Open →</span></a>
+    <a class="report-card" href="{% url 'checkin:printer_list' %}"><h2>Printers</h2><p>Direct printer connections (legacy; most churches use print agents).</p><span class="ghost-link">Open →</span></a>
+    <a class="report-card" href="{% url 'organization_settings' %}#kiosk-pin"><h2>Kiosk PIN</h2><p>Required to unlock a kiosk. On an iPad, lock it to the kiosk with Guided Access.</p><span class="ghost-link">Open →</span></a>
+</div>
 {% endblock %}
