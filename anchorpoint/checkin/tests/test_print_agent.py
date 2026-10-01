@@ -92,11 +92,36 @@ class JobApiTests(TestCase):
         self.assertEqual(self.client.get(reverse("checkin:print_next"), **self.auth).status_code, 204)
 
     def test_image_returns_png_bytes(self):
-        job = self._job()
+        job = self._job(status=PrintJob.CLAIMED)  # agent claims via /next first
         resp = self.client.get(reverse("checkin:print_job_image", args=[job.pk]), **self.auth)
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(resp["Content-Type"], "image/png")
         self.assertEqual(resp.content, b"\x89PNG-fake")
+
+    def test_image_only_served_while_claimed(self):
+        for status in (PrintJob.PENDING, PrintJob.PRINTED, PrintJob.FAILED):
+            with self.subTest(status=status):
+                job = self._job(status=status)
+                resp = self.client.get(reverse("checkin:print_job_image", args=[job.pk]), **self.auth)
+                self.assertEqual(resp.status_code, 404)
+
+    def test_ack_clears_stored_label_image(self):
+        job = self._job(status=PrintJob.CLAIMED)
+        self.client.post(reverse("checkin:print_ack", args=[job.pk]),
+                         data='{"status": "printed"}', content_type="application/json", **self.auth)
+        job.refresh_from_db()
+        self.assertEqual(bytes(job.image_data), b"")
+
+    def test_purge_command_clears_old_images(self):
+        from datetime import timedelta
+        from django.core.management import call_command
+        old = self._job()
+        PrintJob.objects.filter(pk=old.pk).update(created_at=timezone.now() - timedelta(hours=25))
+        fresh = self._job()
+        call_command("purge_print_images", stdout=__import__("io").StringIO())
+        old.refresh_from_db(); fresh.refresh_from_db()
+        self.assertEqual(bytes(old.image_data), b"")
+        self.assertEqual(bytes(fresh.image_data), b"\x89PNG-fake")
 
     def test_ack_printed(self):
         job = self._job(status=PrintJob.CLAIMED)

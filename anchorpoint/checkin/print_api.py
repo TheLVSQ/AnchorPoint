@@ -112,8 +112,12 @@ def next_job(request):
 @require_GET
 def job_image(request, job_id):
     """Return the PNG bytes for a claimed job (authed; not via public media)."""
-    job = PrintJob.objects.filter(pk=job_id, agent=request.print_agent).first()
-    if job is None:
+    # Only while the agent is printing it: finished jobs' images are purged and
+    # never re-served (labels carry names, allergies, and pickup codes).
+    job = PrintJob.objects.filter(
+        pk=job_id, agent=request.print_agent, status=PrintJob.CLAIMED
+    ).first()
+    if job is None or not job.image_data:
         return JsonResponse({"detail": "Not found."}, status=404)
     return HttpResponse(bytes(job.image_data), content_type="image/png")
 
@@ -137,5 +141,6 @@ def ack_job(request, job_id):
     else:
         job.status = PrintJob.FAILED
         job.error_message = (body.get("error") or "")[:2000]
-    job.save(update_fields=["status", "printed_at", "error_message"])
+    job.image_data = b""  # done with it — don't keep children's labels around
+    job.save(update_fields=["status", "printed_at", "error_message", "image_data"])
     return JsonResponse({"ok": True})

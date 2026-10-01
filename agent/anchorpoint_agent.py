@@ -286,6 +286,10 @@ def _print_brother_ql(png_bytes, model, label, device, cut=True):
         from brother_ql.backends.helpers import send
     except Exception as exc:  # noqa: BLE001 - lib not installed on this agent
         return False, f"brother_ql unavailable: {exc}"
+    # brother_ql 0.9.4 calls Image.ANTIALIAS (removed in Pillow 10) when it has
+    # to resize; alias it so a Pi with a newer Pillow never trips over it.
+    if not hasattr(Image, "ANTIALIAS") and hasattr(Image, "LANCZOS"):
+        Image.ANTIALIAS = Image.LANCZOS
     if not device:
         return False, "brother_ql: no ql_device configured (e.g. usb://0x04f9:0x209c)"
     try:
