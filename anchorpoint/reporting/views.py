@@ -1,4 +1,5 @@
-import csv
+
+from core.csv_safe import SafeCsvWriter
 
 from django.http import Http404, HttpResponse
 from django.shortcuts import render
@@ -133,7 +134,7 @@ def report_export(request, slug):
     stamp = timezone.localdate().isoformat()
     response = HttpResponse(content_type="text/csv")
     response["Content-Disposition"] = f'attachment; filename="{slug}-{stamp}.csv"'
-    writer = csv.writer(response)
+    writer = SafeCsvWriter(response)
     writer.writerow([header for _key, header in columns])
     for row in rows:
         writer.writerow([row.get(key, "") for key, _header in columns])

@@ -5,10 +5,11 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.http import HttpResponse
 from django.utils import timezone
 
-import csv
 import io
 
 from core.permissions import is_staff_or_above, staff_required
+from core.csv_safe import SafeCsvWriter
+from core.net import client_ip
 from core.ratelimit import too_many
 from people.models import Person
 
@@ -203,7 +204,7 @@ def event_roster_export(request, pk):
         "last_name", "first_name"
     )
     buffer = io.StringIO()
-    writer = csv.writer(buffer)
+    writer = SafeCsvWriter(buffer)
     writer.writerow(
         [
             "Event",
@@ -279,13 +280,6 @@ def public_event_detail(request, slug):
             "can_register": event.can_register(),
         },
     )
-
-
-def _get_client_ip(request):
-    forwarded = request.META.get("HTTP_X_FORWARDED_FOR")
-    if forwarded:
-        return forwarded.split(",")[0].strip()
-    return request.META.get("REMOTE_ADDR")
 
 
 def _find_guardian_person(attendee):
@@ -414,8 +408,14 @@ def public_event_register(request, registration_token):
         attendee_formset = EventRegistrationAttendeeFormSet(
             request.POST, prefix="attendee"
         )
-        ip = _get_client_ip(request) or "unknown"
-        if too_many(f"evt-reg:{event.pk}:{ip}", limit=8, window_seconds=600):
+        ip = client_ip(request) or "unknown"
+        if request.POST.get("website"):
+            # Honeypot: humans never see this field; bots fill every input.
+            # Pretend success so the bot learns nothing, and save/send nothing.
+            submitted = True
+            form = None
+            attendee_formset = None
+        elif too_many(f"evt-reg:{ip}", limit=8, window_seconds=600):
             # Blunt junk-registration / email-amplification abuse from one source.
             messages.error(
                 request,
@@ -434,7 +434,7 @@ def public_event_register(request, registration_token):
                 attendee_count += 1
                 attendees_to_save.append(attendee)
             registration.number_of_attendees = attendee_count
-            ip_address = _get_client_ip(request)
+            ip_address = client_ip(request)
             user_agent = request.META.get("HTTP_USER_AGENT", "")
             form.apply_release_metadata(registration, ip_address, user_agent)
             registration.save()
