@@ -27,7 +27,7 @@ urlpatterns = [
     path("configurations/<int:pk>/", views.configuration_edit, name="configuration_edit"),
     path("configurations/<int:pk>/delete/", views.configuration_delete, name="configuration_delete"),
 
-    # Dashboard and admin (staff_required)
+    # Dashboard and admin (checkin_admin_required)
     path("", views.dashboard, name="dashboard"),
     path("sessions/", views.session_list, name="session_list"),
     path("sessions/new/", views.session_create, name="session_create"),
