@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="card">
+    <div class="page-header">
+        <span class="chip">Permissions</span>
+        <h1>Manage Team Roles</h1>
+        <p class="page-subtitle">
+            Assign roles so each teammate has the right level of access.
+        </p>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="message">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+
+    <form method="post" onsubmit="return confirm('Save role changes for all users?')">
+        {% csrf_token %}
+
+        <div class="permissions-card">
+            <table class="permissions-table">
+                <thead>
+                    <tr>
+                        <th scope="col">User</th>
+                        <th scope="col">Role</th>
+                        <th scope="col">Communications</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                        <tr>
+                            <td>
+                                <strong>{{ user.get_full_name|default:user.username }}</strong>
+                                <div class="muted-text">{{ user.email|default:"—" }}</div>
+                            </td>
+                            <td>
+                                <select name="role_{{ user.pk }}">
+                                    {% for value, label in role_choices %}
+                                        <option value="{{ value }}" {% if user.profile.role == value %}selected{% endif %}>
+                                            {{ label }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </td>
+                            <td>
+                                <label class="toggle">
+                                    <input type="checkbox"
+                                           name="comms_{{ user.pk }}"
+                                           {% if user.profile.can_manage_communications %}checked{% endif %}>
+                                    <span>Can send SMS &amp; calls</span>
+                                </label>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="4">No users found.</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="hero-actions" style="margin-top:1.5rem;">
+            <button type="submit" class="btn">Save All Changes</button>
+        </div>
+    </form>
+</section>
+
+<style>
+    .permissions-card {
+        overflow-x: auto;
+    }
+    .permissions-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    .permissions-table th,
+    .permissions-table td {
+        padding: 0.85rem 0.5rem;
+        border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+        text-align: left;
+        vertical-align: middle;
+    }
+    .permissions-table th {
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+    }
+    .permissions-table tr:last-child td {
+        border-bottom: none;
+    }
+    .permissions-table select {
+        padding: 0.5rem 0.75rem;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+    }
+    .toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        font-weight: 600;
+        color: var(--text);
+    }
+    .toggle input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+    }
+    .muted-text {
+        color: var(--muted);
+        font-size: 0.85rem;
+    }
+</style>
+{% endblock %}

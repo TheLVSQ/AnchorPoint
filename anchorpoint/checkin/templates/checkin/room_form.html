@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block content %}
+
+<a class="ghost-link" href="{% url 'checkin:room_list' %}">&larr; Back to Rooms</a>
+
+<div class="page-header">
+    <h1>{{ title }}</h1>
+</div>
+
+<div class="detail-card" style="max-width: 600px;">
+    <form method="post">
+        {% csrf_token %}
+
+        <div class="form-grid">
+            <div class="form-field">
+                {{ form.name.label_tag }}
+                {{ form.name }}
+            </div>
+            <div class="form-field">
+                {{ form.building.label_tag }}
+                {{ form.building }}
+            </div>
+        </div>
+
+        <div class="form-grid">
+            <div class="form-field">
+                {{ form.capacity.label_tag }}
+                {{ form.capacity }}
+                <p class="stat-hint">Leave blank for unlimited</p>
+            </div>
+            <div class="form-field">
+                {{ form.sort_order.label_tag }}
+                {{ form.sort_order }}
+                <p class="stat-hint">Lower numbers appear first</p>
+            </div>
+        </div>
+
+        <div class="checkbox-field" style="margin-top: 0.5rem;">
+            <label>
+                {{ form.is_active }}
+                Active — this room is available for check-in
+            </label>
+        </div>
+
+        <div class="hero-actions">
+            <button type="submit" class="btn">Save Room</button>
+            <a href="{% url 'checkin:room_list' %}" class="btn ghost">Cancel</a>
+        </div>
+    </form>
+</div>
+
+{% endblock %}

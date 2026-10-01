@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="hero">
+    <div class="hero-content">
+        <p class="chip">AnchorPoint Events</p>
+        <h1>Gatherings that move our church forward.</h1>
+        <p class="page-subtitle">Share a night of worship, a volunteer rally, or a family festival. Every event below is updated in real time from AnchorPoint.</p>
+        <div class="hero-actions">
+            <a class="btn" href="{% url 'events:public_list' %}">All Events</a>
+            {% if featured_event %}
+                <a class="btn ghost" href="{% url 'events:public_detail' featured_event.slug %}">Next Up</a>
+            {% endif %}
+        </div>
+    </div>
+    <div class="hero-panel">
+        {% if featured_event %}
+            <span class="hero-panel__label">Next Highlight</span>
+            <div>
+                <strong>{{ featured_event.title }}</strong>
+                {% with next=featured_event.next_occurrence %}
+                    {% if next %}
+                        <p>{{ next.starts_at|date:"l, F j @ g:ia" }}</p>
+                    {% endif %}
+                {% endwith %}
+                <a class="ghost-link" href="{% url 'events:public_detail' featured_event.slug %}">View details →</a>
+            </div>
+        {% else %}
+            <p class="empty-state">New events are coming soon.</p>
+        {% endif %}
+    </div>
+</section>
+
+<section class="stat-grid">
+    {% for event in events %}
+        <div class="stat-card">
+            <div class="stat-label">{{ event.display_cost }}</div>
+            <h2>{{ event.title }}</h2>
+            <p>{{ event.summary|default:event.description|truncatewords:24 }}</p>
+            {% with next=event.next_occurrence %}
+                {% if next %}
+                    <p><strong>{{ next.starts_at|date:"M j" }}</strong> • {{ next.starts_at|date:"g:ia" }}</p>
+                {% endif %}
+            {% endwith %}
+            <a class="ghost-link" href="{% url 'events:public_detail' event.slug %}">View Event →</a>
+        </div>
+    {% empty %}
+        <p class="empty-state">No published events yet.</p>
+    {% endfor %}
+</section>
+{% endblock %}

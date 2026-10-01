@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="card">
+    <div class="page-header">
+        <span class="chip">SMS</span>
+        <h1>Compose SMS Message</h1>
+        <p class="page-subtitle">
+            Texts are limited to plain text. Recipients must have a phone number and opt-in. Leave the schedule blank to send immediately.
+        </p>
+    </div>
+    {% if not twilio_ready %}
+        <div class="highlight-note">
+            Twilio is not configured. Set your credentials in <a href="{% url 'organization_settings' %}">Organization Settings</a> before sending.
+        </div>
+    {% endif %}
+    <form method="post" class="person-form">
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+            <div class="message">
+                {{ form.non_field_errors.0 }}
+            </div>
+        {% endif %}
+        <div class="form-section">
+            <h2>Recipients</h2>
+            <div class="form-grid">
+                <div class="form-field form-field--full">
+                    <label for="{{ form.target_type.id_for_label }}">Send to</label>
+                    {{ form.target_type }}
+                </div>
+                <div class="form-field" data-field="person">
+                    <label for="{{ form.person.id_for_label }}">Person</label>
+                    {{ form.person }}
+                    <p class="help-text">Select when sending to a single individual.</p>
+                    {% if form.person.errors %}
+                        <p class="error-text">{{ form.person.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                <div class="form-field" data-field="group">
+                    <label for="{{ form.group.id_for_label }}">Group</label>
+                    {{ form.group }}
+                    <p class="help-text">Select when you want to reach a whole group.</p>
+                    {% if form.group.errors %}
+                        <p class="error-text">{{ form.group.errors.0 }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="form-section">
+            <h2>Message</h2>
+            <div class="form-grid">
+                <div class="form-field form-field--full">
+                    <label for="{{ form.body.id_for_label }}">Text</label>
+                    {{ form.body }}
+                    {% if form.body.errors %}
+                        <p class="error-text">{{ form.body.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                <div class="form-field">
+                    <label for="{{ form.scheduled_for.id_for_label }}">Schedule</label>
+                    {{ form.scheduled_for }}
+                    <p class="help-text">Leave blank to send immediately.</p>
+                    {% if form.scheduled_for.errors %}
+                        <p class="error-text">{{ form.scheduled_for.errors.0 }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="form-actions">
+            <button type="submit">Save &amp; Send</button>
+        </div>
+    </form>
+</section>
+
+<script>
+    (function() {
+        const targetSelect = document.getElementById("{{ form.target_type.id_for_label }}");
+        const personField = document.querySelector("[data-field='person']");
+        const groupField = document.querySelector("[data-field='group']");
+
+        function refresh() {
+            const value = targetSelect ? targetSelect.value : "";
+            if (!personField || !groupField) {
+                return;
+            }
+            personField.style.display = value === "person" ? "block" : "none";
+            groupField.style.display = value === "group" ? "block" : "none";
+        }
+
+        if (targetSelect) {
+            targetSelect.addEventListener("change", refresh);
+            refresh();
+        }
+    })();
+</script>
+{% endblock %}

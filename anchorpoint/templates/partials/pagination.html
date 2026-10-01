@@ -1,0 +1,21 @@
+{% if page_obj.paginator.num_pages > 1 %}
+<div style="display:flex;align-items:center;justify-content:space-between;margin-top:1.5rem;padding-top:1rem;border-top:1px solid var(--gray-200);">
+    <div>
+        {% if page_obj.has_previous %}
+            <a href="?page={{ page_obj.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" class="btn ghost">&larr; Previous</a>
+        {% else %}
+            <span class="btn ghost" style="opacity:0.4;pointer-events:none;">&larr; Previous</span>
+        {% endif %}
+    </div>
+
+    <span class="stat-hint">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+
+    <div>
+        {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" class="btn ghost">Next &rarr;</a>
+        {% else %}
+            <span class="btn ghost" style="opacity:0.4;pointer-events:none;">Next &rarr;</span>
+        {% endif %}
+    </div>
+</div>
+{% endif %}

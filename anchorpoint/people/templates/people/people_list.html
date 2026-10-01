@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h1>People</h1>
+
+<form method="GET" style="margin-bottom: 20px;">
+    <input type="text"
+           name="q"
+           placeholder="Search..."
+           value="{{ query }}"
+           autocomplete="off"
+           hx-get="{% url 'people_search' %}"
+           hx-trigger="keyup changed delay:300ms"
+           hx-target="#people-results"
+           hx-swap="outerHTML">
+    <button type="submit">Search</button>
+    <a href="{% url 'people_add' %}" style="margin-left: 10px;">Add Person</a>
+</form>
+
+{% include "people/partials/people_results.html" %}
+
+{% endblock %}

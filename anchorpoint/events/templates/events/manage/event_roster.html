@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>Roster · {{ event.title }}</h1>
+        <p class="page-subtitle">Everyone linked to this event, including matched profiles.</p>
+    </div>
+    <div class="hero-actions">
+        <a class="btn ghost" href="{% url 'events:roster_export' event.pk %}">Download CSV</a>
+        <a class="btn ghost" href="{% url 'events:registrations' event.pk %}">View Registrations</a>
+        <a class="btn ghost" href="{% url 'events:manage_list' %}">Back</a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="list-card__header">
+        <div>
+            <h2>Attendees ({{ attendees|length }})</h2>
+            {% if group %}
+                <p class="page-subtitle">Group: {{ group.name }}</p>
+            {% endif %}
+        </div>
+        {% if group %}
+            <span class="detail-pill">{{ group.category|title }}</span>
+        {% endif %}
+    </div>
+    {% if attendees %}
+        <div class="list-card__body">
+            {% for attendee in attendees %}
+                <div class="list-item">
+                    <div>
+                        <strong>{{ attendee.full_name }}</strong>
+                        <div class="page-subtitle">
+                            {% if attendee.person %}
+                                Linked to {{ attendee.person.first_name }} {{ attendee.person.last_name }}
+                            {% else %}
+                                Awaiting match
+                            {% endif %}
+                            · {{ attendee.email|default:"No email" }}
+                            {% if attendee.phone %}· {{ attendee.phone }}{% endif %}
+                        </div>
+                        <div class="page-subtitle">
+                            {% if attendee.registration.liability_release_accepted_at %}
+                                <span class="detail-pill">Liability Signed</span>
+                            {% else %}
+                                <span class="detail-pill">Liability Pending</span>
+                            {% endif %}
+                            {% if attendee.registration.media_release_accepted_at %}
+                                <span class="detail-pill">Media Signed</span>
+                            {% else %}
+                                <span class="detail-pill">Media Pending</span>
+                            {% endif %}
+                        </div>
+                        {% if attendee.is_minor %}
+                            <p class="highlight-note">Minor — Guardian: {{ attendee.parent_guardian_name|default:"Unknown" }}</p>
+                        {% endif %}
+                    </div>
+                    {% if attendee.person %}
+                        <a class="ghost-link" href="{% url 'people_detail' attendee.person.pk %}">Open Profile →</a>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p class="empty-state">No attendees yet.</p>
+    {% endif %}
+</div>
+{% endblock %}

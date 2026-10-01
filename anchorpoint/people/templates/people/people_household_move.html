@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="page-header">
+    <a class="ghost-link" href="{% url 'people_detail' person.pk %}">&larr; Back to {{ person.first_name }} {{ person.last_name }}</a>
+    <h1>Move {{ person.first_name }} to another family</h1>
+    <p class="page-subtitle">
+        Currently in <strong>{{ source_membership.household.name }}</strong>
+        as {{ source_membership.get_relationship_type_display }}.
+    </p>
+</div>
+
+<section class="card">
+    <form method="POST">
+        {% csrf_token %}
+
+        <div class="form-section">
+            <h3>Target Household</h3>
+            <div class="form-field">
+                <label for="target_household">Move to family</label>
+                <select name="target_household" id="target_household" required>
+                    <option value="">— Select a family —</option>
+                    {% for hh in other_households %}
+                        <option value="{{ hh.pk }}">{{ hh.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-field">
+                <label for="relationship_type">Relationship in new family</label>
+                <select name="relationship_type" id="relationship_type">
+                    {% for value, label in relationship_choices %}
+                        <option value="{{ value }}" {% if value == source_membership.relationship_type %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h3>What should happen to the original?</h3>
+            <div class="household-choice">
+                <label class="radio-option">
+                    <input type="radio" name="move_action" value="move" checked>
+                    <span>Remove from {{ source_membership.household.name }}</span>
+                </label>
+                <label class="radio-option">
+                    <input type="radio" name="move_action" value="copy">
+                    <span>Keep in {{ source_membership.household.name }} (add to both)</span>
+                </label>
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn">Confirm</button>
+            <a href="{% url 'people_detail' person.pk %}" class="btn ghost">Cancel</a>
+        </div>
+    </form>
+</section>
+
+{% endblock %}

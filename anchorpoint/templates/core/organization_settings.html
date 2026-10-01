@@ -1,0 +1,240 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="card">
+    <div class="page-header">
+        <span class="chip">Organization</span>
+        <h1>Church Details</h1>
+        <p class="page-subtitle">
+            Keep your contact information up to date so we can reuse it across check-in receipts, communications, and reports.
+        </p>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="message">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+
+    <form method="post" enctype="multipart/form-data" class="person-form">
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+            <p class="error-text">{{ form.non_field_errors.0 }}</p>
+        {% endif %}
+
+        <div class="form-section">
+            <h2>Identity</h2>
+            <div class="photo-upload">
+                <div class="photo-preview">
+                    {% if settings_instance.logo %}
+                        <img src="{{ settings_instance.logo.url }}" alt="{{ settings_instance.name|default:'Organization logo' }}">
+                    {% else %}
+                        <span>{{ settings_instance.name|default:"Logo" }}</span>
+                    {% endif %}
+                </div>
+                <div class="photo-upload__text">
+                    <strong>Logo</strong>
+                    <p>Upload your church mark. Square PNG/SVG looks best.</p>
+                    {{ form.logo }}
+                    {% if form.logo.errors %}
+                        <p class="error-text">{{ form.logo.errors.0 }}</p>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="form-grid">
+                <div class="form-field form-field--full">
+                    <label for="{{ form.name.id_for_label }}">Church Name</label>
+                    {{ form.name }}
+                    {% if form.name.errors %}
+                        <p class="error-text">{{ form.name.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                <div class="form-field">
+                    <label for="{{ form.phone_number.id_for_label }}">Phone Number</label>
+                    {{ form.phone_number }}
+                    {% if form.phone_number.errors %}
+                        <p class="error-text">{{ form.phone_number.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                <div class="form-field">
+                    <label for="{{ form.email.id_for_label }}">Contact Email</label>
+                    {{ form.email }}
+                    {% if form.email.errors %}
+                        <p class="error-text">{{ form.email.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                <div class="form-field form-field--full">
+                    <label for="{{ form.website.id_for_label }}">Website</label>
+                    {{ form.website }}
+                    {% if form.website.errors %}
+                        <p class="error-text">{{ form.website.errors.0 }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h2>Address</h2>
+            <div class="form-grid">
+                <div class="form-field form-field--full">
+                    <label for="{{ form.address_line1.id_for_label }}">Address Line 1</label>
+                    {{ form.address_line1 }}
+                    {% if form.address_line1.errors %}
+                        <p class="error-text">{{ form.address_line1.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                <div class="form-field form-field--full">
+                    <label for="{{ form.address_line2.id_for_label }}">Address Line 2</label>
+                    {{ form.address_line2 }}
+                    {% if form.address_line2.errors %}
+                        <p class="error-text">{{ form.address_line2.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                <div class="form-field">
+                    <label for="{{ form.city.id_for_label }}">City</label>
+                    {{ form.city }}
+                    {% if form.city.errors %}
+                        <p class="error-text">{{ form.city.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                <div class="form-field">
+                    <label for="{{ form.state.id_for_label }}">State / Province</label>
+                    {{ form.state }}
+                    {% if form.state.errors %}
+                        <p class="error-text">{{ form.state.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                <div class="form-field">
+                    <label for="{{ form.postal_code.id_for_label }}">Postal Code</label>
+                    {{ form.postal_code }}
+                    {% if form.postal_code.errors %}
+                        <p class="error-text">{{ form.postal_code.errors.0 }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h2>Communications</h2>
+            <p class="page-subtitle">
+                Connect your Twilio account and define texting blackout windows so scheduled messages stay respectful.
+            </p>
+            <div class="form-grid">
+                <div class="form-field">
+                    <label for="{{ form.twilio_account_sid.id_for_label }}">Twilio Account SID</label>
+                    {{ form.twilio_account_sid }}
+                    {% if form.twilio_account_sid.errors %}
+                        <p class="error-text">{{ form.twilio_account_sid.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                <div class="form-field">
+                    <label for="{{ form.twilio_auth_token.id_for_label }}">Twilio Auth Token</label>
+                    {{ form.twilio_auth_token }}
+                    {% if form.twilio_auth_token.errors %}
+                        <p class="error-text">{{ form.twilio_auth_token.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                <div class="form-field">
+                    <label for="{{ form.twilio_phone_number.id_for_label }}">Messaging Phone Number</label>
+                    {{ form.twilio_phone_number }}
+                    {% if form.twilio_phone_number.errors %}
+                        <p class="error-text">{{ form.twilio_phone_number.errors.0 }}</p>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="form-grid">
+                <div class="form-field">
+                    <label for="{{ form.sms_blackout_start.id_for_label }}">Blackout Start</label>
+                    {{ form.sms_blackout_start }}
+                    <p class="help-text">Time of day (local) when sends should pause.</p>
+                    {% if form.sms_blackout_start.errors %}
+                        <p class="error-text">{{ form.sms_blackout_start.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                <div class="form-field">
+                    <label for="{{ form.sms_blackout_end.id_for_label }}">Blackout End</label>
+                    {{ form.sms_blackout_end }}
+                    <p class="help-text">Time when queued sends can resume.</p>
+                    {% if form.sms_blackout_end.errors %}
+                        <p class="error-text">{{ form.sms_blackout_end.errors.0 }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="form-section" id="kiosk-pin">
+            <h2>Kiosk Security</h2>
+            <p class="page-subtitle">Set a PIN volunteers must enter before using check-in mode.</p>
+            <div class="form-grid">
+                <div class="form-field">
+                    <label for="{{ form.kiosk_pin.id_for_label }}">Kiosk PIN</label>
+                    {{ form.kiosk_pin }}
+                    <p class="help-text">Leave blank to disable the PIN requirement.</p>
+                    {% if form.kiosk_pin.errors %}
+                        <p class="error-text">{{ form.kiosk_pin.errors.0 }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit">Save Settings</button>
+        </div>
+    </form>
+</section>
+
+<section class="card" style="margin-top:2rem;">
+    <div class="page-header">
+        <span class="chip">Release Library</span>
+        <h2>Standard Release Documents</h2>
+        <p class="page-subtitle">Upload liability and media releases once, then reuse them on any event registration.</p>
+    </div>
+    {% if release_documents %}
+        <div class="detail-list" style="margin-bottom:1rem;">
+            {% for document in release_documents %}
+                <div class="list-item">
+                    <div>
+                        <strong>{{ document.name }}</strong>
+                        <span>{{ document.get_category_display }}</span>
+                    </div>
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="form_type" value="delete_release">
+                        <input type="hidden" name="document_id" value="{{ document.id }}">
+                        <button type="submit" class="btn ghost danger">Delete</button>
+                    </form>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p class="empty-state">No release documents uploaded yet.</p>
+    {% endif %}
+    <form method="post" enctype="multipart/form-data" class="form-grid">
+        {% csrf_token %}
+        <input type="hidden" name="form_type" value="release">
+        <div class="form-field">
+            <label for="{{ release_form.name.id_for_label }}">Document Name</label>
+            {{ release_form.name }}
+            {% for error in release_form.name.errors %}<p class="error-text">{{ error }}</p>{% endfor %}
+        </div>
+        <div class="form-field">
+            <label for="{{ release_form.category.id_for_label }}">Category</label>
+            {{ release_form.category }}
+            {% for error in release_form.category.errors %}<p class="error-text">{{ error }}</p>{% endfor %}
+        </div>
+        <div class="form-field form-field--full">
+            <label for="{{ release_form.file.id_for_label }}">File</label>
+            {{ release_form.file }}
+            {% for error in release_form.file.errors %}<p class="error-text">{{ error }}</p>{% endfor %}
+        </div>
+        <div class="form-field form-field--full">
+            <label for="{{ release_form.description.id_for_label }}">Notes</label>
+            {{ release_form.description }}
+        </div>
+        <div class="form-actions">
+            <button type="submit" class="btn ghost">Upload Document</button>
+        </div>
+    </form>
+</section>
+{% endblock %}
