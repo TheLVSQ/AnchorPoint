@@ -1199,7 +1199,10 @@
                 <h3>Account</h3>
                 <div class="nav-drawer__links">
                     <a href="{% url 'profile' %}">Manage Profile</a>
-                    <a href="{% url 'logout' %}">Logout</a>
+                    <form method="post" action="{% url 'logout' %}" style="margin:0;">
+                        {% csrf_token %}
+                        <button type="submit" style="background:none;border:0;padding:0;font:inherit;color:inherit;cursor:pointer;text-align:left;">Logout</button>
+                    </form>
                 </div>
             </div>
         {% endif %}

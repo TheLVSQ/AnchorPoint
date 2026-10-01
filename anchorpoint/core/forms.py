@@ -78,6 +78,13 @@ class RoleAssignmentForm(forms.Form):
 
 
 class ProfileForm(forms.ModelForm):
+    # Email is the sign-in identifier: changing it needs the current password,
+    # so an unattended or hijacked session can't quietly take over the account.
+    current_password = forms.CharField(
+        required=False, widget=forms.PasswordInput(attrs={"autocomplete": "current-password"}),
+        label="Current password (required to change your email)",
+    )
+
     class Meta:
         model = User
         fields = ["first_name", "last_name", "email"]
@@ -86,6 +93,24 @@ class ProfileForm(forms.ModelForm):
             "last_name": forms.TextInput(attrs={"placeholder": "Last name"}),
             "email": forms.EmailInput(attrs={"placeholder": "your@email.com"}),
         }
+
+    def clean(self):
+        cleaned = super().clean()
+        new_email = (cleaned.get("email") or "").strip().lower()
+        old_email = (User.objects.filter(pk=self.instance.pk)
+                     .values_list("email", flat=True).first() or "").lower()
+        if self.instance.pk and new_email and new_email != old_email:
+            if not self.instance.check_password(cleaned.get("current_password") or ""):
+                self.add_error("current_password", "Enter your current password to change your email.")
+        return cleaned
+
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        if user.email:
+            user.username = user.email  # keep the login identifier in sync (as user_edit does)
+        if commit:
+            user.save()
+        return user
 
 
 class UserProfileForm(forms.ModelForm):

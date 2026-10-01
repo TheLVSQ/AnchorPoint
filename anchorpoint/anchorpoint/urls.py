@@ -18,6 +18,7 @@ Including another URLconf
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
+from core.login_throttle import throttled_admin_login
 from django.http import JsonResponse
 from django.urls import include, path
 from core import views as core_views
@@ -31,6 +32,8 @@ def health_check(request):
 
 urlpatterns = [
     path("health/", health_check, name="health_check"),
+    # Throttled admin login must come before admin.site.urls to take precedence.
+    path("admin/login/", throttled_admin_login),
     path("admin/", admin.site.urls),
     path("login/", core_views.login_view, name="login"),
     path("logout/", core_views.logout_view, name="logout"),
@@ -66,8 +69,9 @@ urlpatterns = [
 # Serve media files directly — Django's static() helper only works with DEBUG=True,
 # so we wire up the serve view explicitly for production compatibility.
 # For high-traffic deployments replace this with nginx or a CDN.
-from django.views.static import serve
+# Access-controlled: only explicitly public folders are open (core/media.py).
 from django.urls import re_path
+from core.media import serve_media
 urlpatterns += [
-    re_path(r"^media/(?P<path>.*)$", serve, {"document_root": settings.MEDIA_ROOT}),
+    re_path(r"^media/(?P<path>.*)$", serve_media),
 ]

@@ -5,7 +5,8 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseForbidden
+from django.utils.crypto import constant_time_compare
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
@@ -26,7 +27,8 @@ from .forms import (
     UserProfileForm,
 )
 from .models import OrganizationSettings, UserProfile
-from .permissions import admin_required
+from .login_throttle import login_locked_out, record_login_failure
+from .permissions import admin_required, is_staff_or_above
 
 
 def login_view(request):
@@ -36,6 +38,11 @@ def login_view(request):
     if request.method == "POST":
         email = request.POST.get("username", "").strip()
         password = request.POST.get("password", "")
+        if login_locked_out(request, email):
+            messages.error(request, "Too many failed sign-in attempts. Please wait 15 minutes and try again.")
+            return render(request, "core/login.html", {
+                "google_client_id": settings.GOOGLE_CLIENT_ID,
+            })
         # filter().first() (not get()) so a stray duplicate email can never 500
         # the login page; emails are also uniqueness-constrained at the DB level.
         user = User.objects.filter(email__iexact=email).first()
@@ -44,6 +51,7 @@ def login_view(request):
             login(request, user, backend="django.contrib.auth.backends.ModelBackend")
             return redirect("dashboard")
         else:
+            record_login_failure(request, email)
             messages.error(request, "Invalid email or password.")
 
     return render(request, "core/login.html", {
@@ -52,6 +60,9 @@ def login_view(request):
 
 
 def logout_view(request):
+    # POST only: a GET logout can be triggered by any page (<img src=/logout/>).
+    if request.method != "POST":
+        return redirect("dashboard" if request.user.is_authenticated else "login")
     logout(request)
     return redirect("login")
 
@@ -69,6 +80,14 @@ def google_auth_callback(request):
     credential = request.POST.get("credential", "")
     client_id = settings.GOOGLE_CLIENT_ID
 
+    # Google's double-submit CSRF check for redirect mode: the g_csrf_token
+    # cookie (set on our login page) must match the posted value.
+    csrf_cookie = request.COOKIES.get("g_csrf_token", "")
+    csrf_body = request.POST.get("g_csrf_token", "")
+    if not csrf_cookie or not constant_time_compare(csrf_cookie, csrf_body):
+        messages.error(request, "Google sign-in failed. Please try again.")
+        return redirect("login")
+
     if not credential or not client_id:
         messages.error(request, "Google sign-in is not available.")
         return redirect("login")
@@ -85,12 +104,18 @@ def google_auth_callback(request):
 
     email = idinfo.get("email", "").lower()
 
-    if not email.endswith("@bolivar.church"):
+    # Require a verified address on the church's own Google Workspace (the
+    # `hd` claim), not just an email string that ends in the domain.
+    if (
+        idinfo.get("email_verified") is not True
+        or idinfo.get("hd") != "bolivar.church"
+        or not email.endswith("@bolivar.church")
+    ):
         messages.error(request, "Only @bolivar.church accounts may sign in with Google.")
         return redirect("login")
 
     UserModel = get_user_model()
-    user = UserModel.objects.filter(email__iexact=email).first()
+    user = UserModel.objects.filter(email__iexact=email, is_active=True).first()
     if user is None:
         messages.error(
             request,
@@ -113,7 +138,10 @@ def dashboard(request):
     from checkin.models import CheckIn
 
     people_count = Person.objects.count()
-    recent_people = Person.objects.order_by("-id")[:4]
+    # The directory is staff-only; don't leak the newest records to volunteers.
+    recent_people = (
+        Person.objects.order_by("-id")[:4] if is_staff_or_above(request.user) else []
+    )
     checked_in_today = CheckIn.objects.filter(
         session__date=timezone.localdate(),
         arrived_at__isnull=False,
@@ -361,6 +389,8 @@ def user_person_check(request):
 @admin_required
 def user_edit(request, user_id):
     target_user = get_object_or_404(User, pk=user_id)
+    if target_user.is_superuser and not request.user.is_superuser:
+        return HttpResponseForbidden("Only a superuser can edit a superuser.")
     profile, _ = UserProfile.objects.get_or_create(user=target_user)
 
     if request.method == "POST":
@@ -388,6 +418,8 @@ def user_edit(request, user_id):
 @admin_required
 def user_set_password(request, user_id):
     target_user = get_object_or_404(User, pk=user_id)
+    if target_user.is_superuser and not request.user.is_superuser:
+        return HttpResponseForbidden("Only a superuser can reset a superuser's password.")
 
     if request.method == "POST":
         form = SetPasswordForm(request.POST)

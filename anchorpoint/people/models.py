@@ -3,6 +3,8 @@ from datetime import date
 
 from django.db import models
 
+from core.validators import person_photo_upload_path, validate_image_size
+
 
 def normalize_phone(phone: str) -> str:
     """Strip all non-digit characters from a phone number."""
@@ -73,7 +75,8 @@ class Person(models.Model):
         max_length=20, choices=GENDER_CHOICES, blank=True, null=True
     )
     profile_photo = models.ImageField(
-        upload_to="people/photos/", blank=True, null=True
+        upload_to=person_photo_upload_path, blank=True, null=True,
+        validators=[validate_image_size],
     )
     address_line1 = models.CharField(
         "Address line 1", max_length=255, blank=True, null=True
