@@ -953,3 +953,25 @@ label + .help-text, label + small.help-text { display: block; margin: -0.15rem 0
 .th-sort { display: inline-flex; gap: 0.25rem; align-items: center; color: inherit !important; text-decoration: none !important; }
 .th-sort span { opacity: 0.35; font-size: 0.85em; }
 .th-sort.is-active, .th-sort.is-active span { color: var(--text) !important; opacity: 1; }
+
+/* ---------------------------------------------------- Settings + auth -- */
+.auth-card {
+    max-width: 420px; margin: clamp(1.5rem, 6vw, 4rem) auto; padding: clamp(1.5rem, 4vw, 2.25rem);
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow);
+}
+.auth-card__brand { text-align: center; margin-bottom: 1.5rem; }
+.auth-card__brand .brand-mark { width: 48px; height: 48px; border-radius: 12px; margin: 0 auto 0.75rem; font-size: 1rem; }
+.auth-card__brand h1 { margin-bottom: 0.15rem; }
+.auth-card__google { display: flex; justify-content: center; margin-bottom: 1.25rem; min-height: 44px; }
+.divider { display: flex; align-items: center; gap: 0.75rem; margin: 0 0 1.25rem; color: var(--muted); font-size: 0.83rem; }
+.divider::before, .divider::after { content: ""; flex: 1; border-top: 1px solid var(--border); }
+.block { display: block; }
+.permissions-table select { margin: 0; min-height: 36px; width: auto; }
+.toggle { display: inline-flex; align-items: center; gap: 0.4rem; font-weight: 600; margin: 0; }
+.profile-form .form-actions { justify-content: flex-end; }
+.profile-form--password { margin-top: 1.5rem; }
+.match-box {
+    margin-top: 0.5rem; padding: 0.9rem 1rem; border-radius: var(--radius-sm);
+    background: var(--primary-soft); border: 1px solid var(--border);
+}
+.mb-2 { margin-bottom: 0.5rem; } .h-sub { font-size: 1rem; margin: 0 0 1rem; }

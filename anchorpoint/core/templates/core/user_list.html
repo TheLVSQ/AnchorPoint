@@ -1,48 +1,45 @@
 {% extends "base.html" %}
+{% block title %}Users{% endblock %}
 {% block content %}
-
-<div class="page-header">
-    <h1>Users</h1>
-    <p class="page-subtitle">Manage who has access to AnchorPoint</p>
-</div>
-
-<div class="hero-actions" style="margin-bottom: 2rem;">
-    <a href="{% url 'user_create' %}" class="btn">+ Add User</a>
-</div>
-
-<div class="list-card">
-    <div class="list-card__body">
-        {% for user in users %}
-            <div class="list-item">
-                <div>
-                    <strong>{{ user.get_full_name|default:user.username }}</strong>
-                    <span>@{{ user.username }}{% if user.email %} &middot; {{ user.email }}{% endif %}</span>
-                    <p class="stat-hint">
-                        {% with role=user.profile.get_role_display %}
-                            {% if role %}{{ role }}{% else %}No role{% endif %}
-                        {% endwith %}
-                        {% if user.profile.can_manage_communications %}
-                            &middot; Communications access
-                        {% endif %}
-                    </p>
-                </div>
-                <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
-                    {% if user == request.user %}
-                        <span class="chip">You</span>
-                    {% endif %}
-                    {% if user.is_active %}
-                        <span class="chip" style="background: #dcfce7; color: #166534;">Active</span>
-                    {% else %}
-                        <span class="chip" style="background: #fee2e2; color: #991b1b;">Inactive</span>
-                    {% endif %}
-                    <a href="{% url 'user_edit' user.pk %}" class="ghost-link">Edit</a>
-                    <a href="{% url 'user_set_password' user.pk %}" class="ghost-link">Set Password</a>
-                </div>
-            </div>
-        {% empty %}
-            <p class="empty-state">No users found.</p>
-        {% endfor %}
+<div class="page-header page-header--split">
+    <div>
+        <h1>Users</h1>
+        <p class="page-subtitle">Who can sign in to AnchorPoint. Change roles in bulk on <a href="{% url 'manage_roles' %}">Permissions</a>.</p>
     </div>
+    <div class="page-actions"><a href="{% url 'user_create' %}" class="btn">Add user</a></div>
 </div>
 
+{% if users %}
+<div class="table-wrap">
+    <table class="data-table data-table--stack">
+        <thead><tr><th>User</th><th>Role</th><th>Status</th><th class="text-right">Actions</th></tr></thead>
+        <tbody>
+        {% for user in users %}
+            <tr{% if not user.is_active %} class="is-past"{% endif %}>
+                <td data-label="User">
+                    <div class="person-cell">
+                        <span class="avatar" aria-hidden="true">{{ user.first_name|slice:":1"|default:user.username|slice:":1" }}{{ user.last_name|slice:":1" }}</span>
+                        <span><strong>{{ user.get_full_name|default:user.username }}</strong>{% if user == request.user %} <span class="chip chip--neutral">You</span>{% endif %}
+                            <span class="muted-text block">{{ user.email|default:user.username }}</span></span>
+                    </div>
+                </td>
+                <td data-label="Role">
+                    {% with role=user.profile.get_role_display %}<span class="chip{% if not role %} chip--neutral{% endif %}">{{ role|default:"No role" }}</span>{% endwith %}
+                    {% if user.profile.can_manage_communications %}<span class="chip chip--neutral">Communications</span>{% endif %}
+                </td>
+                <td data-label="Status">{% if user.is_active %}<span class="chip chip--success">Active</span>{% else %}<span class="chip chip--danger">Inactive</span>{% endif %}</td>
+                <td data-label="Actions" class="text-right">
+                    <div class="row-actions">
+                        <a href="{% url 'user_edit' user.pk %}" class="btn ghost btn-sm">Edit</a>
+                        <a href="{% url 'user_set_password' user.pk %}" class="btn ghost btn-sm">Set password</a>
+                    </div>
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+    <p class="empty-state">No users found.</p>
+{% endif %}
 {% endblock %}

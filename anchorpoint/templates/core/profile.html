@@ -9,11 +9,6 @@
         <p class="page-subtitle">Update your contact details and share a short bio so teammates know how to reach you.</p>
     </div>
 
-    {% if messages %}
-        {% for message in messages %}
-            <div class="message">{{ message }}</div>
-        {% endfor %}
-    {% endif %}
 
     <!-- PROFILE INFO -->
     <form method="POST" class="profile-form">
@@ -155,24 +150,5 @@
     </form>
 </section>
 
-<style>
-    .profile-form {
-        display: flex;
-        flex-direction: column;
-        gap: 1.5rem;
-        margin-bottom: 2.5rem;
-    }
-    .profile-form--password {
-        margin-top: 3rem;
-    }
-    .form-section h2 {
-        margin: 0;
-        font-size: 1.1rem;
-    }
-    .form-actions {
-        display: flex;
-        justify-content: flex-end;
-    }
-</style>
 
 {% endblock %}
