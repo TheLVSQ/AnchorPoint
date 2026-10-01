@@ -1,117 +1,154 @@
 {% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
 
 {% block content %}
-
-<section class="card hero">
-    <div class="hero-content">
-        <span class="chip">Dashboard</span>
-        <h1>Welcome back, {{ request.user.first_name|default:request.user.username }}.</h1>
-        <p class="page-subtitle">
-            Keep a pulse on your people, events, and check-ins from a single place that
-            feels at home on desktop or an iPad in the lobby.
-        </p>
-        <div class="hero-actions">
-            <a class="btn" href="{% url 'people_list' %}">Open People Hub</a>
-        </div>
+<div class="page-header page-header--split">
+    <div>
+        <p class="eyebrow">{{ today|date:"l, F j" }}</p>
+        <h1>{{ greeting }}, {{ request.user.first_name|default:request.user.username }}.</h1>
     </div>
-    <div class="hero-panel">
-        <p class="hero-panel__label">Today</p>
-        <div class="hero-panel__stat">
-            <span>Team on duty</span>
-            <strong>{{ request.user.get_full_name|default:request.user.username }}</strong>
-        </div>
-        <div class="hero-panel__stat">
-            <span>Next action</span>
-            <strong>Review new households</strong>
-        </div>
-        <div class="hero-panel__stat hero-panel__stat--muted">
-            <span>Need check-in?</span>
-            <strong>Tap the kiosk quick action below.</strong>
-        </div>
+    <div class="page-actions">
+        {% if is_staff %}<a class="btn ghost" href="{% url 'people_add' %}">Add person</a>{% endif %}
+        {% if is_checkin_admin %}<a class="btn" href="{% url 'checkin:kiosk_lookup' %}">Open kiosk</a>{% endif %}
     </div>
-</section>
-
-<section class="stat-grid">
-    <article class="stat-card">
-        <p class="stat-label">People Directory</p>
-        <p class="stat-value">{{ people_count }}</p>
-        <span class="stat-hint">Profiles currently in AnchorPoint</span>
-    </article>
-    <article class="stat-card">
-        <p class="stat-label">Last Sign-In</p>
-        {% if request.user.last_login %}
-            <p class="stat-value">
-                {{ request.user.last_login|date:"M j" }}
-                <span>{{ request.user.last_login|date:"g:ia" }}</span>
-            </p>
-            <span class="stat-hint">Thanks for keeping things moving.</span>
-        {% else %}
-            <p class="stat-value">—</p>
-            <span class="stat-hint">Looks like this is your first time here.</span>
-        {% endif %}
-    </article>
-    <article class="stat-card upcoming">
-        <p class="stat-label">Checked In Today</p>
-        <p class="stat-value">{{ checked_in_today }}</p>
-        <span class="stat-hint">Active check-ins across today's sessions</span>
-    </article>
-</section>
-
-<section class="quick-actions">
-    <article class="quick-card">
-        <div>
-            <p class="quick-label">Directory</p>
-            <h3>Search & filter people</h3>
-            <p>Lookup contact info, add notes, or group families with one tap.</p>
-        </div>
-        <a class="ghost-link" href="{% url 'people_list' %}">Go to People →</a>
-    </article>
-    <article class="quick-card accent">
-        <div>
-            <p class="quick-label">Check-In</p>
-            <h3>Kiosk-friendly mode</h3>
-            <p>Open the sleek kiosk layout on an iPad for secure child check-in.</p>
-        </div>
-        <a class="ghost-link" href="{% url 'checkin:configuration_list' %}">Launch kiosk &rarr;</a>
-    </article>
-    <article class="quick-card neutral">
-        <div>
-            <p class="quick-label">Messaging</p>
-            <h3>Stay connected</h3>
-            <p>Send SMS or email updates to parents, teams, or your whole church.</p>
-        </div>
-        <a class="ghost-link" href="#">Compose message →</a>
-    </article>
-</section>
-
-<div class="cards dashboard-split">
-
-    <section class="card list-card">
-        <div class="list-card__header">
-            <div>
-                <p class="quick-label">Latest Activity</p>
-                <h2>Recently added people</h2>
-            </div>
-            <a class="ghost-link" href="{% url 'people_add' %}">Add new</a>
-        </div>
-        <div class="list-card__body">
-            {% for person in recent_people %}
-                <div class="list-item">
-                    <div>
-                        <strong>{{ person.first_name }} {{ person.last_name }}</strong>
-                        <span>
-                            {{ person.get_status_display }}
-                            {% if person.email %} · {{ person.email }}{% endif %}
-                        </span>
-                    </div>
-                    <a class="ghost-link" href="{% url 'people_detail' person.pk %}">View →</a>
-                </div>
-            {% empty %}
-                <p class="empty-state">Add your first person to see activity here.</p>
-            {% endfor %}
-        </div>
-    </section>
-
 </div>
 
+{% if attention %}
+<section class="attention" aria-label="Needs attention">
+    {% for item in attention %}
+        <a class="attention__item" href="{{ item.url }}">
+            <span class="attention__count">{{ item.count }}</span>
+            <span class="attention__text"><strong>{{ item.label }}</strong><span>{{ item.detail }}</span></span>
+            <span class="attention__go" aria-hidden="true">→</span>
+        </a>
+    {% endfor %}
+</section>
+{% endif %}
+
+{% if is_staff %}
+<div class="stat-grid">
+    <a class="stat-card stat-card--link" href="{% url 'people_list' %}">
+        <p class="stat-label">People</p>
+        <p class="stat-value">{{ stats.people }}</p>
+    </a>
+    <a class="stat-card stat-card--link" href="{% url 'households:family_list' %}">
+        <p class="stat-label">Families</p>
+        <p class="stat-value">{{ stats.families }}</p>
+    </a>
+    <a class="stat-card stat-card--link" href="{% url 'groups:list' %}">
+        <p class="stat-label">Groups</p>
+        <p class="stat-value">{{ stats.groups }}</p>
+    </a>
+</div>
+{% endif %}
+
+<div class="dash-grid">
+    <div class="dash-grid__main">
+        {% if sessions_today is not None %}
+        <section class="card">
+            <div class="card__head">
+                <h2>Check-in today</h2>
+                {% if is_checkin_admin %}<a class="ghost-link" href="{% url 'checkin:dashboard' %}">All check-in →</a>{% endif %}
+            </div>
+            {% if sessions_today %}
+                <ul class="row-list">
+                {% for s in sessions_today %}
+                    <li class="row-list__item">
+                        <div class="row-list__main">
+                            <strong>{{ s.name }}</strong>
+                            <span class="muted-text">{{ s.checkin_opens|time:"g:i A" }} – {{ s.checkin_closes|time:"g:i A" }}{% if s.configuration and not s.configuration.checkout_enabled %} · no checkout{% endif %}</span>
+                        </div>
+                        <div class="metric-trio">
+                            <span><strong>{{ s.present }}</strong> here</span>
+                            {% if s.expected %}<span><strong>{{ s.expected }}</strong> expected</span>{% endif %}
+                            <span><strong>{{ s.checked_out }}</strong> out</span>
+                        </div>
+                        <a class="btn ghost btn-sm" href="{% url 'checkin:checkin_manager' s.pk %}">Manager</a>
+                    </li>
+                {% endfor %}
+                </ul>
+            {% else %}
+                <p class="empty-state">No check-in sessions today.</p>
+            {% endif %}
+        </section>
+        {% endif %}
+
+        {% if is_staff %}
+        <section class="card">
+            <div class="card__head">
+                <h2>Upcoming events</h2>
+                <a class="ghost-link" href="{% url 'events:manage_list' %}">All events →</a>
+            </div>
+            {% if upcoming_events %}
+                <ul class="row-list">
+                {% for e in upcoming_events %}
+                    <li class="row-list__item">
+                        <div class="date-badge" aria-hidden="true">
+                            <span>{{ e.next_start|date:"M" }}</span><strong>{{ e.next_start|date:"j" }}</strong>
+                        </div>
+                        <div class="row-list__main">
+                            <a href="{% url 'events:registrations' e.pk %}"><strong>{{ e.title }}</strong></a>
+                            <span class="muted-text">{{ e.next_start|date:"D, M j · g:i A" }}</span>
+                        </div>
+                        <span class="chip{% if not e.registration_count %} chip--neutral{% endif %}">{{ e.registration_count }} registration{{ e.registration_count|pluralize }}</span>
+                    </li>
+                {% endfor %}
+                </ul>
+            {% else %}
+                <p class="empty-state">No upcoming published events.</p>
+            {% endif %}
+        </section>
+        {% endif %}
+
+        {% if not is_staff and not sessions_today %}
+        <section class="card">
+            <h2>Welcome</h2>
+            <p class="muted-text">There's nothing scheduled for you today. Update your contact details any time from <a href="{% url 'profile' %}">My profile</a>.</p>
+        </section>
+        {% endif %}
+    </div>
+
+    {% if is_staff %}
+    <div class="dash-grid__side">
+        <section class="card">
+            <div class="card__head">
+                <h2>Recent registrations</h2>
+            </div>
+            {% if recent_registrations %}
+                <ul class="row-list row-list--compact">
+                {% for r in recent_registrations %}
+                    <li class="row-list__item">
+                        <div class="row-list__main">
+                            <strong>{{ r.first_name }} {{ r.last_name }}</strong>
+                            <span class="muted-text">{{ r.event.title }} · {{ r.created_at|timesince }} ago</span>
+                        </div>
+                    </li>
+                {% endfor %}
+                </ul>
+            {% else %}
+                <p class="empty-state">No registrations yet.</p>
+            {% endif %}
+        </section>
+
+        <section class="card">
+            <div class="card__head">
+                <h2>Newest people</h2>
+                <a class="ghost-link" href="{% url 'people_list' %}">Directory →</a>
+            </div>
+            <ul class="row-list row-list--compact">
+            {% for p in recent_people %}
+                <li class="row-list__item">
+                    <div class="row-list__main">
+                        <a href="{% url 'people_detail' p.pk %}"><strong>{{ p.first_name }} {{ p.last_name }}</strong></a>
+                        <span class="muted-text">{{ p.get_status_display|default:"" }}</span>
+                    </div>
+                </li>
+            {% empty %}
+                <li class="empty-state">No people yet.</li>
+            {% endfor %}
+            </ul>
+        </section>
+    </div>
+    {% endif %}
+</div>
 {% endblock %}
