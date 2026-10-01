@@ -19,7 +19,7 @@ from django.utils.crypto import constant_time_compare, salted_hmac
 from core.models import OrganizationSettings
 from core.net import client_ip
 from core.permissions import (
-    checkin_admin_required, checkin_team_required, is_checkin_admin, staff_required,
+    checkin_admin_required, checkin_team_required, is_checkin_admin,
 )
 from groups.models import GroupMembership
 from households.models import Household, HouseholdMember
@@ -891,7 +891,7 @@ def _config_form(request, instance):
 # =============================================================================
 
 
-@staff_required
+@checkin_admin_required
 def dashboard(request):
     """Check-in dashboard showing current sessions."""
     today = timezone.localdate()
@@ -914,7 +914,7 @@ def dashboard(request):
     )
 
 
-@staff_required
+@checkin_admin_required
 def session_detail(request, session_id):
     """Detailed view of a check-in session."""
     session = get_object_or_404(CheckInSession, pk=session_id)
@@ -944,7 +944,7 @@ def session_detail(request, session_id):
     )
 
 
-@staff_required
+@checkin_admin_required
 def session_list(request):
     """List all check-in sessions."""
     sessions = (
@@ -1169,7 +1169,7 @@ def _matching_window(config, date):
     return None
 
 
-@staff_required
+@checkin_admin_required
 def session_create(request):
     """Create a new check-in session."""
     if request.method == "POST":
@@ -1207,7 +1207,7 @@ def session_create(request):
     )
 
 
-@staff_required
+@checkin_admin_required
 def session_edit(request, session_id):
     """Edit a check-in session."""
     session = get_object_or_404(CheckInSession, pk=session_id)
@@ -1232,7 +1232,7 @@ def session_edit(request, session_id):
     )
 
 
-@staff_required
+@checkin_admin_required
 def room_list(request):
     """List all rooms."""
     rooms = Room.objects.all().order_by("sort_order", "name")
@@ -1246,7 +1246,7 @@ def room_list(request):
     )
 
 
-@staff_required
+@checkin_admin_required
 def room_create(request):
     """Create a new room."""
     if request.method == "POST":
@@ -1268,7 +1268,7 @@ def room_create(request):
     )
 
 
-@staff_required
+@checkin_admin_required
 def room_edit(request, room_id):
     """Edit a room."""
     room = get_object_or_404(Room, pk=room_id)
@@ -1293,7 +1293,7 @@ def room_edit(request, room_id):
     )
 
 
-@staff_required
+@checkin_admin_required
 def printer_list(request):
     """List configured printers."""
     printers = PrinterConfiguration.objects.all()
@@ -1307,7 +1307,7 @@ def printer_list(request):
     )
 
 
-@staff_required
+@checkin_admin_required
 def printer_create(request):
     """Configure a new printer."""
     if request.method == "POST":
@@ -1329,7 +1329,7 @@ def printer_create(request):
     )
 
 
-@staff_required
+@checkin_admin_required
 def printer_edit(request, printer_id):
     """Edit printer configuration."""
     printer = get_object_or_404(PrinterConfiguration, pk=printer_id)
@@ -1354,7 +1354,7 @@ def printer_edit(request, printer_id):
     )
 
 
-@staff_required
+@checkin_admin_required
 @require_POST
 def printer_test(request, printer_id):
     """Test print to a configured printer."""
@@ -1426,7 +1426,7 @@ def _session_stats(session):
     }
 
 
-@staff_required
+@checkin_admin_required
 def session_stats(request, session_id):
     """HTMX partial: live stats block for a session. Polls while check-in is open."""
     session = get_object_or_404(CheckInSession, pk=session_id)
@@ -1438,7 +1438,7 @@ def session_stats(request, session_id):
     })
 
 
-@staff_required
+@checkin_admin_required
 def api_session_stats(request, session_id):
     """Get real-time stats for a session (AJAX). Staff-only — exposes
     attendance counts and per-room occupancy."""
@@ -1578,13 +1578,13 @@ def checkin_reprint(request, session_id, checkin_id):
 # =============================================================================
 
 
-@staff_required
+@checkin_admin_required
 def print_agent_list(request):
     agents = PrintAgent.objects.all()
     return render(request, "checkin/agents/list.html", {"agents": agents})
 
 
-@staff_required
+@checkin_admin_required
 @require_POST
 def print_agent_create(request):
     name = (request.POST.get("name") or "").strip()
@@ -1600,7 +1600,7 @@ def print_agent_create(request):
     return redirect("checkin:print_agents")
 
 
-@staff_required
+@checkin_admin_required
 @require_POST
 def print_agent_repair(request, agent_id):
     agent = get_object_or_404(PrintAgent, pk=agent_id)
@@ -1609,7 +1609,7 @@ def print_agent_repair(request, agent_id):
     return redirect("checkin:print_agents")
 
 
-@staff_required
+@checkin_admin_required
 @require_POST
 def print_agent_update(request, agent_id):
     agent = get_object_or_404(PrintAgent, pk=agent_id)
@@ -1638,7 +1638,7 @@ def print_agent_update(request, agent_id):
     return redirect("checkin:print_agents")
 
 
-@staff_required
+@checkin_admin_required
 @require_POST
 def print_agent_delete(request, agent_id):
     agent = get_object_or_404(PrintAgent, pk=agent_id)
@@ -1648,7 +1648,7 @@ def print_agent_delete(request, agent_id):
     return redirect("checkin:print_agents")
 
 
-@staff_required
+@checkin_admin_required
 @require_POST
 def print_agent_test(request, agent_id):
     agent = get_object_or_404(PrintAgent, pk=agent_id)

@@ -29,7 +29,12 @@ def is_admin(user):
 
 
 def is_staff_or_above(user):
-    """Check if user is staff or higher (staff, volunteer_admin, or admin)."""
+    """Check if user is staff or admin.
+
+    Volunteer admins are deliberately NOT included: their scope is check-in
+    work only (see is_checkin_admin). Staff pages expose the full directory,
+    custody notes, bulk delete, and PII exports.
+    """
     if not user.is_authenticated:
         return False
     if user.is_superuser:
@@ -37,7 +42,7 @@ def is_staff_or_above(user):
     profile = _get_user_profile(user)
     if not profile:
         return False
-    return profile.role in ("admin", "staff", "volunteer_admin")
+    return profile.role in ("admin", "staff")
 
 
 def is_checkin_admin(user):
