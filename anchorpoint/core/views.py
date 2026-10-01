@@ -8,6 +8,7 @@ from django.core.exceptions import ValidationError
 from django.http import HttpResponse, HttpResponseForbidden
 from django.utils.crypto import constant_time_compare
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from google.oauth2 import id_token
@@ -28,7 +29,7 @@ from .forms import (
 )
 from .models import OrganizationSettings, UserProfile
 from .login_throttle import login_locked_out, record_login_failure
-from .permissions import admin_required, is_staff_or_above
+from .permissions import admin_required, is_admin, is_staff_or_above
 
 
 def login_view(request):
@@ -134,26 +135,96 @@ User = get_user_model()
 def dashboard(request):
     if not request.user.is_authenticated:
         return redirect("login")
+    return render(request, "core/dashboard.html", _dashboard_context(request))
 
-    from checkin.models import CheckIn
 
-    people_count = Person.objects.count()
-    # The directory is staff-only; don't leak the newest records to volunteers.
-    recent_people = (
-        Person.objects.order_by("-id")[:4] if is_staff_or_above(request.user) else []
-    )
-    checked_in_today = CheckIn.objects.filter(
-        session__date=timezone.localdate(),
-        arrived_at__isnull=False,
-        checked_out_at__isnull=True,
-    ).count()
+def _dashboard_context(request):
+    """Live overview, scoped to what this user's role may see."""
+    from django.db.models import Count, Min, Q
+    from checkin.models import CheckInSession, PrintAgent
+    from core.permissions import is_checkin_admin, is_checkin_team
+    from events.models import Event, EventRegistration, EventRegistrationAttendee
+    from groups.models import Group
+    from households.models import Household
 
-    context = {
-        "people_count": people_count,
-        "recent_people": recent_people,
-        "checked_in_today": checked_in_today,
+    user = request.user
+    now = timezone.localtime()
+    staff = is_staff_or_above(user)
+    checkin_admin = is_checkin_admin(user)
+    hour = now.hour
+    ctx = {
+        "greeting": "Good morning" if hour < 12 else "Good afternoon" if hour < 17 else "Good evening",
+        "today": now.date(),
+        "is_staff": staff,
+        "is_checkin_admin": checkin_admin,
+        "attention": [],
     }
-    return render(request, "core/dashboard.html", context)
+
+    if is_checkin_team(user):
+        sessions = list(
+            CheckInSession.objects.filter(date=now.date(), is_active=True)
+            .select_related("configuration")
+            .annotate(
+                present=Count("checkins", filter=Q(checkins__arrived_at__isnull=False,
+                                                   checkins__checked_out_at__isnull=True)),
+                checked_out=Count("checkins", filter=Q(checkins__checked_out_at__isnull=False)),
+                expected=Count("checkins", filter=Q(checkins__arrived_at__isnull=True,
+                                                    checkins__checked_out_at__isnull=True,
+                                                    checkins__no_show=False)),
+            )
+            .order_by("checkin_opens")
+        )
+        ctx["sessions_today"] = sessions
+        if sessions and checkin_admin:
+            offline = [a for a in PrintAgent.objects.filter(is_active=True).exclude(token_hash="")
+                       if not a.is_online]
+            if offline:
+                ctx["attention"].append({
+                    "label": "print agent offline" if len(offline) == 1 else "print agents offline",
+                    "count": len(offline),
+                    "detail": ", ".join(a.name for a in offline[:3]),
+                    "url": reverse("checkin:print_agents"),
+                })
+
+    from households.family_flags import is_alert_recipient, open_flag_count
+    if staff and (is_admin(user) or is_alert_recipient(user)):
+        flags = open_flag_count()
+        if flags:
+            ctx["attention"].append({
+                "label": "family review" if flags == 1 else "family reviews",
+                "count": flags, "detail": "Child linked to a second family",
+                "url": reverse("households:family_flags"),
+            })
+
+    if staff:
+        pending = EventRegistrationAttendee.objects.filter(
+            match_status=EventRegistrationAttendee.MATCH_STATUS_PENDING
+        ).count()
+        if pending:
+            ctx["attention"].append({
+                "label": "registration to match" if pending == 1 else "registrations to match",
+                "count": pending, "detail": "Attendees not yet linked to a person",
+                "url": reverse("events:registration_queue"),
+            })
+        ctx["stats"] = {
+            "people": Person.objects.count(),
+            "families": Household.objects.count(),
+            "groups": Group.objects.count(),
+        }
+        ctx["upcoming_events"] = (
+            Event.objects.upcoming()
+            .annotate(
+                next_start=Min("occurrences__starts_at",
+                               filter=Q(occurrences__starts_at__gte=timezone.now())),
+                registration_count=Count("registrations", distinct=True),
+            )
+            .order_by("next_start")[:5]
+        )
+        ctx["recent_registrations"] = (
+            EventRegistration.objects.select_related("event").order_by("-created_at")[:5]
+        )
+        ctx["recent_people"] = Person.objects.order_by("-id")[:5]
+    return ctx
 
 
 @login_required
