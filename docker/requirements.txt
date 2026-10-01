@@ -2,7 +2,7 @@ asgiref==3.11.0
 Django==5.2.17
 django-htmx==1.26.0
 djangorestframework==3.17.2
-gunicorn==23.0.0
+gunicorn==26.2.0
 Pillow==12.3.0
 psycopg2-binary==2.9.11
 python-dotenv==1.2.2
