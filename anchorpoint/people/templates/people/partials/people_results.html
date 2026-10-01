@@ -1,22 +1,37 @@
 <div id="people-results">
-    <div class="cards">
-        {% for person in page_obj %}
-            <div class="card person-card">
-                <h2>{{ person.first_name }} {{ person.last_name }}</h2>
-                <p class="stat-hint person-card__meta">
-                    {% if person.age is not None %}Age {{ person.age }} · {% endif %}<span class="chip">{{ person.get_status_display }}</span>
-                </p>
-                {% with household=person.households.all|first %}
-                    {% if household %}
-                        <p class="person-card__family"><a class="ghost-link" href="{% url 'households:family_detail' household.pk %}">{{ household.name }}</a></p>
-                    {% endif %}
-                {% endwith %}
-                {% if person.email %}<p class="person-card__email">{{ person.email }}</p>{% endif %}
-                <a class="person-card__view" href="{% url 'people_detail' person.pk %}">View</a>
-            </div>
-        {% empty %}
-            <p>No people found.</p>
-        {% endfor %}
+    {% if page_obj.object_list %}
+    <div class="table-wrap">
+        <table class="data-table data-table--stack">
+            <thead>
+                <tr><th>Name</th><th>Age</th><th>Status</th><th>Family</th><th>Contact</th></tr>
+            </thead>
+            <tbody>
+            {% for person in page_obj %}
+                <tr>
+                    <td data-label="Name">
+                        <a class="person-cell" href="{% url 'people_detail' person.pk %}">
+                            <span class="avatar" aria-hidden="true">{{ person.first_name|slice:":1" }}{{ person.last_name|slice:":1" }}</span>
+                            <strong>{{ person.first_name }} {{ person.last_name }}</strong>
+                        </a>
+                    </td>
+                    <td data-label="Age" class="num">{% if person.age is not None %}{{ person.age }}{% else %}<span class="muted-text">—</span>{% endif %}</td>
+                    <td data-label="Status">{% if person.status %}<span class="chip{% if person.status == 'inactive' %} chip--neutral{% endif %}">{{ person.get_status_display }}</span>{% endif %}</td>
+                    <td data-label="Family">
+                        {% with household=person.households.all|first %}
+                            {% if household %}<a href="{% url 'households:family_detail' household.pk %}">{{ household.name }}</a>{% endif %}
+                        {% endwith %}
+                    </td>
+                    <td data-label="Contact" class="contact-cell">
+                        {% if person.email %}<span>{{ person.email }}</span>{% endif %}
+                        {% if person.phone %}<span class="muted-text">{{ person.phone }}</span>{% endif %}
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
     </div>
+    {% else %}
+        <p class="empty-state">{% if query %}No people found matching “{{ query }}”.{% else %}No people found yet — <a href="{% url 'people_add' %}">add the first person</a>.{% endif %}</p>
+    {% endif %}
     {% include "partials/pagination.html" %}
 </div>

@@ -16,33 +16,33 @@
 {% if candidates %}
     <form method="post" action="{% url 'people_bulk_delete' %}" hx-boost="false">
         {% csrf_token %}
-        <div class="bulk-toolbar" style="display:flex; align-items:center; gap:1rem; flex-wrap:wrap; margin-bottom:1rem;">
-            <label style="display:inline-flex; align-items:center; gap:6px; cursor:pointer;">
+        <div class="bulk-toolbar toolbar">
+            <label class="check-inline">
                 <input type="checkbox" id="select-all"> Select all {{ count }}
             </label>
-            <button type="submit" class="btn ghost danger" style="color:#dc2626;">Delete selected</button>
+            <button type="submit" class="btn ghost danger danger">Delete selected</button>
             <span class="stat-hint">{{ count }} record{{ count|pluralize }} match.</span>
         </div>
         <section class="detail-card">
-            <div style="overflow-x:auto;">
-                <table class="data-table" style="width:100%; border-collapse:collapse;">
+            <div class="table-wrap">
+                <table class="data-table data-table">
                     <thead>
                         <tr>
-                            <th style="padding:6px 10px;"></th>
-                            <th style="text-align:left; padding:6px 10px;">Name</th>
-                            <th style="text-align:left; padding:6px 10px;">Status</th>
-                            <th style="text-align:left; padding:6px 10px;">Family</th>
-                            <th style="text-align:right; padding:6px 10px;"></th>
+                            <th></th>
+                            <th>Name</th>
+                            <th>Status</th>
+                            <th>Family</th>
+                            <th class="text-right"></th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for p in candidates %}
                             <tr>
-                                <td style="padding:6px 10px;"><input type="checkbox" class="row-check" name="ids" value="{{ p.pk }}"></td>
-                                <td style="padding:6px 10px;"><strong>{{ p.first_name }} {{ p.last_name }}</strong></td>
-                                <td style="padding:6px 10px;">{{ p.get_status_display }}</td>
-                                <td style="padding:6px 10px;">{% with hh=p.households.all|first %}{{ hh.name|default:"—" }}{% endwith %}</td>
-                                <td style="padding:6px 10px; text-align:right;"><a class="btn ghost" href="{% url 'people_detail' p.pk %}">Open</a></td>
+                                <td><input type="checkbox" class="row-check" name="ids" value="{{ p.pk }}"></td>
+                                <td><strong>{{ p.first_name }} {{ p.last_name }}</strong></td>
+                                <td>{{ p.get_status_display }}</td>
+                                <td>{% with hh=p.households.all|first %}{{ hh.name|default:"—" }}{% endwith %}</td>
+                                <td class="text-right"><a class="btn ghost" href="{% url 'people_detail' p.pk %}">Open</a></td>
                             </tr>
                         {% endfor %}
                     </tbody>

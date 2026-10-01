@@ -1,28 +1,34 @@
 {% extends "base.html" %}
+{% block title %}People{% endblock %}
 {% block content %}
+<div class="page-header page-header--split">
+    <div>
+        <h1>People <span class="chip chip--neutral">{{ total_people }}</span></h1>
+        <p class="page-subtitle">Everyone in the directory. Search by first or last name.</p>
+    </div>
+    <div class="page-actions">
+        <details class="menu">
+            <summary class="btn ghost">More</summary>
+            <div class="menu__panel" role="menu">
+                <a role="menuitem" href="{% url 'signup_import' %}">Import sign-up CSV</a>
+                {% if request.user.is_superuser or request.user.profile.role == 'admin' or request.user.profile.role == 'staff' %}
+                    <a role="menuitem" href="{% url 'rock_import' %}">Import from another CMS</a>
+                {% endif %}
+                <a role="menuitem" href="{% url 'people_duplicates' %}">Find duplicates</a>
+                <a role="menuitem" href="{% url 'people_cleanup' %}">Clean up inactive</a>
+            </div>
+        </details>
+        <a class="btn" href="{% url 'people_add' %}">Add person</a>
+    </div>
+</div>
 
-<h1>People <span class="chip" style="vertical-align:middle;">{{ total_people }}</span></h1>
-
-<form method="GET" style="margin-bottom: 20px;">
-    <input type="text"
-           name="q"
-           placeholder="Search..."
-           value="{{ query }}"
-           autocomplete="off"
-           hx-get="{% url 'people_search' %}"
-           hx-trigger="keyup changed delay:300ms"
-           hx-target="#people-results"
-           hx-swap="outerHTML">
-    <button type="submit">Search</button>
-    <a href="{% url 'people_add' %}" style="margin-left: 10px;">Add Person</a>
-    <a href="{% url 'signup_import' %}" style="margin-left: 10px;">Import CSV</a>
-    {% if request.user.is_superuser or request.user.profile.role == 'admin' or request.user.profile.role == 'staff' %}
-        <a href="{% url 'rock_import' %}" style="margin-left: 10px;">Other CMS import</a>
-    {% endif %}
-    <a href="{% url 'people_duplicates' %}" style="margin-left: 10px;">Find duplicates</a>
-    <a href="{% url 'people_cleanup' %}" style="margin-left: 10px;">Clean up inactive</a>
+<form method="GET" class="search-bar" role="search">
+    <label class="visually-hidden" for="people-q">Search people</label>
+    <input id="people-q" type="search" name="q" placeholder="Search by name…" value="{{ query }}" autocomplete="off"
+           hx-get="{% url 'people_search' %}" hx-trigger="keyup changed delay:300ms, search"
+           hx-target="#people-results" hx-swap="outerHTML">
+    <button type="submit" class="ghost">Search</button>
 </form>
 
 {% include "people/partials/people_results.html" %}
-
 {% endblock %}

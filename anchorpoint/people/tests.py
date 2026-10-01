@@ -202,7 +202,7 @@ class PeopleListTileTests(TestCase):
         HouseholdMember.objects.create(household=family, person=person)
 
         response = self.client.get(reverse("people_list"))
-        self.assertContains(response, "Age 9")
+        self.assertContains(response, 'data-label="Age" class="num">9</td>')
         self.assertContains(response, "Regular Attendee")  # not regular_attendee
         self.assertNotContains(response, "regular_attendee")
         self.assertContains(response, "Tiles Family")

@@ -27,7 +27,7 @@
                     {% for error in form.csv_file.errors %}<span class="error-text">{{ error }}</span>{% endfor %}
                 </div>
             </div>
-            <div class="form-actions" style="margin-top:1rem;">
+            <div class="form-actions mt-3">
                 <button type="submit" class="btn">Preview import</button>
             </div>
         </form>
@@ -35,20 +35,20 @@
 </section>
 
 {% if result %}
-    <section class="card" style="margin-top:1.5rem;">
+    <section class="card mt-4">
         <div class="list-card__header">
             <div>
                 {% if stage == "done" %}
-                    <span class="chip" style="background:#dcfce7;color:#166534;">Imported</span>
+                    <span class="chip chip--success">Imported</span>
                     <h2>Migration complete</h2>
                 {% else %}
-                    <span class="chip" style="background:#fef9c3;color:#854d0e;">Preview — nothing saved yet</span>
+                    <span class="chip chip--warning">Preview — nothing saved yet</span>
                     <h2>Review before importing</h2>
                 {% endif %}
             </div>
         </div>
 
-        <ul class="detail-list" style="margin:0.5rem 0 1rem;">
+        <ul class="detail-list mb-3">
             <li><span>Families</span><strong>{{ result.families_count }}</strong></li>
             <li><span>People created / matched</span><strong>{{ result.stats.people_created }} / {{ result.stats.people_matched }}</strong></li>
             <li><span>Adults / children</span><strong>{{ result.stats.adults }} / {{ result.stats.children }}</strong></li>
@@ -60,14 +60,14 @@
         </p>
 
         {% if stage == "preview" %}
-            <form method="post" style="margin-top:1.25rem;display:flex;gap:0.75rem;align-items:center;">
+            <form class="action-row" method="post">
                 {% csrf_token %}
                 <input type="hidden" name="action" value="commit">
                 <button type="submit" class="btn">Confirm &amp; import — {{ result.stats.people_created }} new, {{ result.stats.people_matched }} merged</button>
                 <a href="{% url 'rock_import' %}" class="btn ghost">Cancel</a>
             </form>
         {% elif stage == "done" %}
-            <div style="margin-top:1.25rem;display:flex;gap:0.75rem;">
+            <div class="action-row">
                 <a href="{% url 'people_list' %}" class="btn">View People</a>
                 <a href="{% url 'households:family_list' %}" class="btn ghost">View Families</a>
             </div>

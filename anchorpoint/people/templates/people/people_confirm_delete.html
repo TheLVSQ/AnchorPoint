@@ -3,11 +3,11 @@
 <a class="ghost-link" href="{% url 'people_detail' person.pk %}">&larr; Back to {{ person.first_name }}</a>
 
 <div class="page-header">
-    <span class="chip" style="background:#fee2e2;color:#991b1b;">Delete person</span>
+    <span class="chip chip--danger">Delete person</span>
     <h1>Delete {{ person.first_name }} {{ person.last_name }}?</h1>
 </div>
 
-<div class="detail-card" style="border:2px solid #f59e0b; background:#fffbeb; margin-bottom:1.5rem;">
+<div class="detail-card callout callout--warning">
     <p>This permanently removes <strong>{{ person.first_name }} {{ person.last_name }}</strong> and:</p>
     <ul class="detail-list">
         <li><span>Check-in history</span><strong>{{ checkin_count }} record{{ checkin_count|pluralize }}</strong></li>
@@ -24,7 +24,7 @@
     <form method="POST" action="{% url 'people_delete' person.pk %}"
           onsubmit="return confirm('Permanently delete {{ person.first_name|escapejs }} {{ person.last_name|escapejs }}? This cannot be undone.');">
         {% csrf_token %}
-        <button type="submit" class="btn danger" style="background:#dc2626;">Delete permanently</button>
+        <button type="submit" class="btn danger danger">Delete permanently</button>
     </form>
 </div>
 {% endblock %}

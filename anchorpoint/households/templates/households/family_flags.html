@@ -11,7 +11,7 @@
         </p>
     </div>
 
-    <p style="margin-bottom:16px;">
+    <p class="mb-3">
         {% if show == "all" %}
             <a href="{% url 'households:family_flags' %}">Show only open</a>
         {% else %}
@@ -39,7 +39,7 @@
                     </p>
                 {% endif %}
                 {% if flag.status == "open" %}
-                    <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">
+                    <div class="action-row">
                         <form method="post" action="{% url 'households:family_flag_reviewed' flag.pk %}">
                             {% csrf_token %}
                             <button type="submit" class="btn">Looks right — keep it</button>

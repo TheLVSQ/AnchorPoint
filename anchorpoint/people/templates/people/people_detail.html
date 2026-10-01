@@ -1,388 +1,237 @@
 {% extends "base.html" %}
+{% block title %}{{ person.first_name }} {{ person.last_name }}{% endblock %}
 {% block content %}
 
-<div class="profile-header card">
+<a class="back-link" href="{% url 'people_list' %}">&larr; People</a>
+
+<header class="profile-head">
     <div class="profile-photo{% if not person.profile_photo %} profile-photo--placeholder{% endif %}">
         {% if person.profile_photo %}
-            <img src="{{ person.profile_photo.url }}" alt="Profile photo of {{ person.first_name }} {{ person.last_name }}">
+            <img src="{{ person.profile_photo.url }}" alt="Photo of {{ person.first_name }} {{ person.last_name }}">
         {% else %}
             <span>{{ person.first_name|default:"?"|slice:":1" }}{{ person.last_name|default:"?"|slice:":1" }}</span>
         {% endif %}
     </div>
-    <div class="profile-header__meta">
-        <a class="ghost-link" href="{% url 'people_list' %}">&larr; Back to people</a>
+    <div class="profile-head__main">
         <h1>{{ person.first_name }} {{ person.last_name }}</h1>
-        <p class="page-subtitle">
-            {{ person.get_status_display }}
-            {% if person.get_grade_display %}
-                &middot; {{ person.get_grade_display }}
-            {% endif %}
-            {% if person.is_minor == True %}
-                &middot; <span class="chip chip--warning">Minor</span>
-            {% elif person.is_minor == False %}
-                &middot; <span class="chip">Adult</span>
-            {% endif %}
+        <div class="chip-row">
+            {% if person.status %}<span class="chip">{{ person.get_status_display }}</span>{% endif %}
+            {% if person.is_minor == True %}<span class="chip chip--warning">Minor</span>{% elif person.is_minor == False %}<span class="chip chip--neutral">Adult</span>{% endif %}
+            {% if person.grade %}<span class="chip chip--neutral">{{ person.get_grade_display }}</span>{% endif %}
+            {% if person.photo_consent == "denied" %}<span class="chip chip--danger">Denied — no photos</span>{% endif %}
+            {% if person.allergies %}<span class="chip chip--danger">Allergy</span>{% endif %}
+            {% if person.custody_flag %}<span class="chip chip--danger">Custody alert</span>{% endif %}
+        </div>
+        {% if person.phone or person.email %}
+        <p class="contact-line">
+            {% if person.phone %}<a href="tel:{{ person.phone }}">{{ person.phone }}</a>{% endif %}
+            {% if person.email %}<a href="mailto:{{ person.email }}">{{ person.email }}</a>{% endif %}
         </p>
-        <div class="hero-actions">
-            <a class="btn" href="{% url 'people_edit' person.pk %}">Edit person</a>
-            <a class="btn ghost" href="{% url 'people_add' %}">Add another</a>
-            <a class="btn ghost" style="color:#dc2626;" href="{% url 'people_delete' person.pk %}">Delete</a>
-        </div>
+        {% endif %}
     </div>
-</div>
+    <div class="page-actions profile-head__actions">
+        <a class="btn" href="{% url 'people_edit' person.pk %}">Edit</a>
+        <details class="menu">
+            <summary class="btn ghost">More</summary>
+            <div class="menu__panel" role="menu">
+                <a role="menuitem" href="{% url 'people_add' %}">Add another person</a>
+                <a role="menuitem" class="danger-item" href="{% url 'people_delete' person.pk %}">Delete person…</a>
+            </div>
+        </details>
+    </div>
+</header>
 
-<div class="detail-grid">
+{% if missing_fields %}
+<p class="missing-line">Missing: {{ missing_fields|join:", " }} · <a href="{% url 'people_edit' person.pk %}">Add details</a></p>
+{% endif %}
 
-    {% if show_emergency %}
-    <section class="detail-card detail-card--full" style="border:2px solid #f59e0b; background:#fffbeb;">
-        <h2 style="display:flex; align-items:center; gap:8px;">
-            <span class="chip chip--warning">Minor</span> Emergency Contact
-        </h2>
+{% if show_emergency %}
+<section class="safety-panel" aria-label="Emergency contact">
+    <h2><span class="chip chip--warning">Minor</span> Emergency Contact</h2>
+    <div class="safety-panel__grid">
         {% if person.emergency_contact_name or person.emergency_contact_phone %}
-        <div style="margin-bottom:1rem; border:1px solid #fde68a; border-radius:10px; padding:0.75rem 1rem; background:#fff;">
-            <span class="chip chip--warning">Listed contact</span>
+        <div class="contact-tile contact-tile--listed">
+            <span class="eyebrow">Listed contact · prints on the label</span>
             <strong>{{ person.emergency_contact_name|default:"(name not given)" }}</strong>
-            {% if person.emergency_contact_relationship %}<span class="muted-text">· {{ person.emergency_contact_relationship }}</span>{% endif %}
-            <p style="margin:0.4rem 0 0; font-size:1.2rem;">
-                {% if person.emergency_contact_phone %}<a href="tel:{{ person.emergency_contact_phone }}">{{ person.emergency_contact_phone }}</a>{% else %}<span class="muted-text">No phone</span>{% endif %}
-            </p>
-            <small class="stat-hint">This is what prints on the check-in label.</small>
+            {% if person.emergency_contact_relationship %}<span class="muted-text">{{ person.emergency_contact_relationship }}</span>{% endif %}
+            {% if person.emergency_contact_phone %}<a class="contact-tile__phone" href="tel:{{ person.emergency_contact_phone }}">{{ person.emergency_contact_phone }}</a>{% else %}<span class="muted-text">No phone</span>{% endif %}
         </div>
         {% endif %}
-        {% if guardians %}
-            <div style="display:flex; flex-wrap:wrap; gap:1rem;">
-                {% for g in guardians %}
-                    <div style="flex:1 1 240px; border:1px solid #fde68a; border-radius:10px; padding:0.75rem 1rem; background:#fff;">
-                        <strong><a href="{% url 'people_detail' g.person.pk %}">{{ g.person.first_name }} {{ g.person.last_name }}</a></strong>
-                        {% if g.is_primary %}<span class="chip">Primary</span>{% endif %}
-                        <p style="margin:0.4rem 0 0; font-size:1.2rem;">
-                            {% if g.person.phone %}
-                                <a href="tel:{{ g.person.phone }}">{{ g.person.phone }}</a>
-                            {% else %}
-                                <span class="muted-text">No phone on file</span>
-                            {% endif %}
-                        </p>
-                        {% if g.person.email %}<p class="stat-hint" style="margin:0.2rem 0 0;">{{ g.person.email }}</p>{% endif %}
-                    </div>
-                {% endfor %}
-            </div>
-        {% else %}
-            <p class="empty-state">No guardian linked to this child's family yet. Add one under Family Connections below.</p>
-        {% endif %}
-
-        <ul class="detail-list" style="margin-top:1rem;">
-            <li>
-                <span>Allergies</span>
-                {% if person.allergies %}<strong style="color:#991b1b;">{{ person.allergies }}</strong>{% else %}None noted{% endif %}
-            </li>
-            {% if person.custody_flag or person.custody_notes %}
-            <li>
-                <span>Custody alert</span>
-                <div class="highlight-note">{{ person.custody_notes|default:"Custody flag set — see security notes." }}</div>
-            </li>
-            {% endif %}
-            {% if person.unauthorized_pickup %}
-            <li>
-                <span>Do NOT release to</span>
-                <div class="highlight-note">{{ person.unauthorized_pickup }}</div>
-            </li>
-            {% endif %}
-        </ul>
-    </section>
-    {% endif %}
-
-    <section class="detail-card">
-        <h2>Profile Snapshot</h2>
-        <ul class="detail-list">
-            <li>
-                <span>Preferred Name</span>
-                {{ person.first_name }} {{ person.last_name }}
-            </li>
-            <li>
-                <span>Age</span>
-                {{ person.age|default:"-" }}
-                {% if person.is_minor == True %}<small>(Minor)</small>{% elif person.is_minor == False %}<small>(Adult)</small>{% endif %}
-            </li>
-            <li>
-                <span>Gender</span>
-                {{ person.get_gender_display|default:"-" }}
-            </li>
-            <li>
-                <span>Grade</span>
-                {{ person.get_grade_display|default:"-" }}
-            </li>
-            <li>
-                <span>Marital Status</span>
-                {{ person.get_marital_status_display|default:"-" }}
-            </li>
-            <li>
-                <span>Birthdate</span>
-                {{ person.birthdate|date:"M j, Y"|default:"-" }}
-            </li>
-        </ul>
-    </section>
-
-    <section class="detail-card">
-        <h2>Contact & Address</h2>
-        <ul class="detail-list">
-            <li>
-                <span>Email</span>
-                {{ person.email|default:"-" }}
-            </li>
-            <li>
-                <span>Phone</span>
-                {{ person.phone|default:"-" }}
-            </li>
-            <li>
-                <span>SMS Opt-In</span>
-                {% if person.phone %}
-                    {{ person.phone_opt_in|yesno:"Can receive texts,No texts" }}
-                {% else %}
-                    -
-                {% endif %}
-            </li>
-            <li>
-                <span>Address Line 1</span>
-                {{ person.address_line1|default:"-" }}
-            </li>
-            <li>
-                <span>Address Line 2</span>
-                {{ person.address_line2|default:"-" }}
-            </li>
-            <li>
-                <span>City</span>
-                {{ person.city|default:"-" }}
-            </li>
-            <li>
-                <span>State</span>
-                {{ person.state|default:"-" }}
-            </li>
-            <li>
-                <span>ZIP / Postal Code</span>
-                {{ person.postal_code|default:"-" }}
-            </li>
-        </ul>
-    </section>
-
-    <section class="detail-card">
-        <h2>Key Dates</h2>
-        <ul class="detail-list">
-            <li>
-                <span>First Visit</span>
-                {{ person.first_visit_date|date:"M j, Y"|default:"-" }}
-            </li>
-            <li>
-                <span>Salvation Date</span>
-                {{ person.salvation_date|date:"M j, Y"|default:"-" }}
-            </li>
-            <li>
-                <span>Baptism Date</span>
-                {{ person.baptism_date|date:"M j, Y"|default:"-" }}
-            </li>
-        </ul>
-    </section>
-
-    <section class="detail-card">
-        <h2>Health & Security</h2>
-        <ul class="detail-list">
-            <li>
-                <span>Allergies</span>
-                {{ person.allergies|default:"None noted" }}
-            </li>
-            <li>
-                <span>Security Notes</span>
-                {% if person.security_notes %}
-                    <div class="highlight-note">{{ person.security_notes }}</div>
-                {% else %}
-                    None noted
-                {% endif %}
-            </li>
-            <li>
-                <span>Photo / Likeness Permission</span>
-                {% if person.photo_consent == "granted" %}
-                    <span class="chip" style="background:#dcfce7;color:#166534;">Granted</span>
-                {% elif person.photo_consent == "denied" %}
-                    <span class="chip" style="background:#fee2e2;color:#991b1b;">Denied — no photos</span>
-                {% else %}
-                    <span class="chip">Not asked</span>
-                {% endif %}
-            </li>
-        </ul>
-    </section>
-
-    <section class="detail-card detail-card--full">
-        <h2>Address Summary</h2>
-        {% if person.formatted_address %}
-            <p>{{ person.formatted_address|linebreaksbr }}</p>
-        {% else %}
-            <p class="empty-state">No address on file yet.</p>
-        {% endif %}
-    </section>
-
-    <section class="detail-card detail-card--full">
-        <h2>Family Connections</h2>
-        {% if households %}
-            <div class="household-list">
-                {% for household in households %}
-                    <div class="household-item">
-                        <div>
-                            <strong><a href="{% url 'households:family_detail' household.pk %}">{{ household.name }}</a></strong>
-                            {% if household.phone %}<p>{{ household.phone }}</p>{% endif %}
-                            {% if household.formatted_address %}
-                                <p class="household-address">{{ household.formatted_address|linebreaksbr }}</p>
-                            {% endif %}
-                            <ul class="household-members">
-                                {% for membership in household.memberships.all %}
-                                    <li>
-                                        {{ membership.person.first_name }} {{ membership.person.last_name }}
-                                        <small>{{ membership.get_relationship_type_display }}</small>
-                                    </li>
-                                {% endfor %}
-                            </ul>
-                        </div>
-                        <div class="household-actions">
-                            <a class="btn ghost" href="{% url 'people_household_move' person.pk household.pk %}">Move</a>
-                            <form method="POST" action="{% url 'people_household_remove' person.pk household.pk %}">
-                                {% csrf_token %}
-                                <button type="submit" class="btn ghost danger">Remove</button>
-                            </form>
-                        </div>
-                    </div>
-                {% endfor %}
-            </div>
-        {% else %}
-            <p class="empty-state">Not linked to a family yet.</p>
-        {% endif %}
-
-        <div class="family-actions">
-            <div class="family-action-card">
-                <h3>Join existing family</h3>
-                <form method="POST" action="{% url 'people_household_add' person.pk %}">
-                    {% csrf_token %}
-                    <div class="form-field">
-                        {{ existing_household_form.household.label_tag }}
-                        {{ existing_household_form.household }}
-                        {% for error in existing_household_form.household.errors %}<span class="error-text">{{ error }}</span>{% endfor %}
-                    </div>
-                    <div class="form-field">
-                        {{ existing_household_form.relationship_type.label_tag }}
-                        {{ existing_household_form.relationship_type }}
-                        {% for error in existing_household_form.relationship_type.errors %}<span class="error-text">{{ error }}</span>{% endfor %}
-                    </div>
-                    <button type="submit" class="btn ghost">Link family</button>
-                </form>
-            </div>
-            <div class="family-action-card">
-                <h3>Create a new family</h3>
-                <form method="POST" action="{% url 'people_household_create' person.pk %}">
-                    {% csrf_token %}
-                    <div class="form-field">
-                        {{ new_household_form.name.label_tag }}
-                        {{ new_household_form.name }}
-                        {% for error in new_household_form.name.errors %}<span class="error-text">{{ error }}</span>{% endfor %}
-                    </div>
-                    <div class="form-grid" style="margin: 0;">
-                        <div class="form-field">
-                            {{ new_household_form.phone.label_tag }}
-                            {{ new_household_form.phone }}
-                        </div>
-                        <div class="form-field">
-                            {{ new_household_form.primary_adult.label_tag }}
-                            {{ new_household_form.primary_adult }}
-                        </div>
-                    </div>
-                    <div class="form-field">
-                        {{ new_household_form.address_line1.label_tag }}
-                        {{ new_household_form.address_line1 }}
-                    </div>
-                    <div class="form-field">
-                        {{ new_household_form.address_line2.label_tag }}
-                        {{ new_household_form.address_line2 }}
-                    </div>
-                    <div class="form-grid" style="margin: 0;">
-                        <div class="form-field">
-                            {{ new_household_form.city.label_tag }}
-                            {{ new_household_form.city }}
-                        </div>
-                        <div class="form-field">
-                            {{ new_household_form.state.label_tag }}
-                            {{ new_household_form.state }}
-                        </div>
-                        <div class="form-field">
-                            {{ new_household_form.postal_code.label_tag }}
-                            {{ new_household_form.postal_code }}
-                        </div>
-                    </div>
-                    <div class="form-field">
-                        {{ new_household_form.relationship_type.label_tag }}
-                        {{ new_household_form.relationship_type }}
-                    </div>
-                    <button type="submit" class="btn">Create family</button>
-                </form>
-            </div>
+        {% for g in guardians %}
+        <div class="contact-tile">
+            <span class="eyebrow">Guardian{% if g.is_primary %} · Primary{% endif %}</span>
+            <strong><a href="{% url 'people_detail' g.person.pk %}">{{ g.person.first_name }} {{ g.person.last_name }}</a></strong>
+            {% if g.person.phone %}<a class="contact-tile__phone" href="tel:{{ g.person.phone }}">{{ g.person.phone }}</a>{% else %}<span class="muted-text">No phone on file</span>{% endif %}
+            {% if g.person.email %}<span class="muted-text">{{ g.person.email }}</span>{% endif %}
         </div>
-    </section>
+        {% empty %}
+        <p class="empty-state">No guardian linked to this child's family yet. Add one under Family below.</p>
+        {% endfor %}
+    </div>
+    <dl class="kv kv--inline">
+        <div><dt>Allergies</dt><dd>{% if person.allergies %}<strong class="text-danger">{{ person.allergies }}</strong>{% else %}None noted{% endif %}</dd></div>
+        {% if person.custody_flag or person.custody_notes %}
+        <div><dt>Custody alert</dt><dd><div class="highlight-note">{{ person.custody_notes|default:"Custody flag set — see security notes." }}</div></dd></div>
+        {% endif %}
+        {% if person.unauthorized_pickup %}
+        <div><dt>Do NOT release to</dt><dd><div class="highlight-note">{{ person.unauthorized_pickup }}</div></dd></div>
+        {% endif %}
+    </dl>
+</section>
+{% endif %}
 
-    <section class="detail-card detail-card--full">
-        <h2>Event Registrations</h2>
-        {% if registrations %}
-            <div class="list-card__body">
+<div class="split">
+    <div class="split__main">
+        <section class="card">
+            <div class="card__head"><h2>Family</h2></div>
+            {% for household in households %}
+                <div class="household-item">
+                    <div>
+                        <strong><a href="{% url 'households:family_detail' household.pk %}">{{ household.name }}</a></strong>
+                        {% if household.formatted_address %}<p class="household-address muted-text">{{ household.formatted_address|linebreaksbr }}</p>{% endif %}
+                        <ul class="household-members">
+                            {% for membership in household.memberships.all %}
+                                <li>
+                                    {% if membership.person_id == person.pk %}<strong>{{ membership.person.first_name }}</strong>{% else %}<a href="{% url 'people_detail' membership.person.pk %}">{{ membership.person.first_name }} {{ membership.person.last_name }}</a>{% endif %}
+                                    <small>{{ membership.get_relationship_type_display }}</small>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    <div class="household-actions">
+                        <a class="btn ghost btn-sm" href="{% url 'people_household_move' person.pk household.pk %}">Move</a>
+                        <form method="POST" action="{% url 'people_household_remove' person.pk household.pk %}">
+                            {% csrf_token %}
+                            <button type="submit" class="btn ghost danger btn-sm">Remove</button>
+                        </form>
+                    </div>
+                </div>
+            {% empty %}
+                <p class="muted-text">Not linked to a family yet.</p>
+            {% endfor %}
+
+            <details class="disclosure"{% if not households %} open{% endif %}>
+                <summary>Add to a family</summary>
+                <div class="family-actions">
+                    <div class="family-action-card">
+                        <h3>Join an existing family</h3>
+                        <form method="POST" action="{% url 'people_household_add' person.pk %}">
+                            {% csrf_token %}
+                            <div class="form-field">
+                                {{ existing_household_form.household.label_tag }}
+                                {{ existing_household_form.household }}
+                                {% for error in existing_household_form.household.errors %}<span class="error-text">{{ error }}</span>{% endfor %}
+                            </div>
+                            <div class="form-field">
+                                {{ existing_household_form.relationship_type.label_tag }}
+                                {{ existing_household_form.relationship_type }}
+                                {% for error in existing_household_form.relationship_type.errors %}<span class="error-text">{{ error }}</span>{% endfor %}
+                            </div>
+                            <button type="submit" class="btn ghost">Link family</button>
+                        </form>
+                    </div>
+                    <div class="family-action-card">
+                        <h3>Create a new family</h3>
+                        <form method="POST" action="{% url 'people_household_create' person.pk %}">
+                            {% csrf_token %}
+                            <div class="form-field">
+                                {{ new_household_form.name.label_tag }}
+                                {{ new_household_form.name }}
+                                {% for error in new_household_form.name.errors %}<span class="error-text">{{ error }}</span>{% endfor %}
+                            </div>
+                            <div class="form-grid">
+                                <div class="form-field">{{ new_household_form.phone.label_tag }}{{ new_household_form.phone }}</div>
+                                <div class="form-field">{{ new_household_form.primary_adult.label_tag }}{{ new_household_form.primary_adult }}</div>
+                            </div>
+                            <div class="form-field">{{ new_household_form.address_line1.label_tag }}{{ new_household_form.address_line1 }}</div>
+                            <div class="form-field">{{ new_household_form.address_line2.label_tag }}{{ new_household_form.address_line2 }}</div>
+                            <div class="form-grid">
+                                <div class="form-field">{{ new_household_form.city.label_tag }}{{ new_household_form.city }}</div>
+                                <div class="form-field">{{ new_household_form.state.label_tag }}{{ new_household_form.state }}</div>
+                                <div class="form-field">{{ new_household_form.postal_code.label_tag }}{{ new_household_form.postal_code }}</div>
+                            </div>
+                            <div class="form-field">{{ new_household_form.relationship_type.label_tag }}{{ new_household_form.relationship_type }}</div>
+                            <button type="submit" class="btn">Create family</button>
+                        </form>
+                    </div>
+                </div>
+            </details>
+        </section>
+
+        <section class="card">
+            <div class="card__head"><h2>Event Registrations</h2></div>
+            {% if registrations %}
+                <ul class="row-list">
                 {% for registration in registrations %}
-                    <div class="list-item">
-                        <div>
-                            <strong>{{ registration.event.title }}</strong>
-                            <span>Registered {{ registration.registration.created_at|date:"M j, Y" }}</span>
-                            <p class="stat-hint">
-                                Listed as {{ registration.full_name }}
-                                {% if registration.is_minor %}(Minor){% endif %}
-                            </p>
+                    <li class="row-list__item">
+                        <div class="row-list__main">
+                            <a href="{% url 'events:public_detail' registration.event.slug %}"><strong>{{ registration.event.title }}</strong></a>
+                            <span class="muted-text">Registered {{ registration.registration.created_at|date:"M j, Y" }} · listed as {{ registration.full_name }}{% if registration.is_minor %} (minor){% endif %}</span>
                         </div>
-                        <a class="ghost-link" href="{% url 'events:public_detail' registration.event.slug %}">View event &rarr;</a>
-                    </div>
+                    </li>
                 {% endfor %}
-            </div>
-        {% else %}
-            <p class="empty-state">No registrations recorded yet.</p>
-        {% endif %}
-    </section>
+                </ul>
+            {% else %}
+                <p class="muted-text">No registrations yet.</p>
+            {% endif %}
+        </section>
 
-    <section class="detail-card detail-card--full">
-        <h2>Communications History</h2>
-        {% if communication_logs %}
-            <div class="list-card__body">
+        <section class="card">
+            <div class="card__head"><h2>Communications History</h2></div>
+            {% if communication_logs %}
+                <ul class="row-list">
                 {% for log in communication_logs %}
-                    <div class="list-item">
-                        <div>
+                    <li class="row-list__item">
+                        <div class="row-list__main">
                             <strong>{{ log.get_communication_type_display }} · {{ log.summary }}</strong>
-                            <span>{{ log.created_at|date:"M j, Y g:ia" }}</span>
-                            {% if log.detail %}
-                                <p class="stat-hint">{{ log.detail|truncatechars:140 }}</p>
-                            {% endif %}
+                            <span class="muted-text">{{ log.created_at|date:"M j, Y g:ia" }} · {% if log.recorded_by %}{{ log.recorded_by.get_full_name|default:log.recorded_by.username }}{% else %}System{% endif %}</span>
+                            {% if log.detail %}<span class="muted-text">{{ log.detail|truncatechars:140 }}</span>{% endif %}
                         </div>
-                        <div class="muted-text">
-                            {% if log.recorded_by %}
-                                {{ log.recorded_by.get_full_name|default:log.recorded_by.username }}
-                            {% else %}
-                                System
-                            {% endif %}
-                        </div>
-                    </div>
+                    </li>
                 {% endfor %}
-            </div>
-        {% else %}
-            <p class="empty-state">No communications logged yet.</p>
-        {% endif %}
-    </section>
+                </ul>
+            {% else %}
+                <p class="muted-text">No messages logged yet.</p>
+            {% endif %}
+        </section>
 
-    <section class="detail-card detail-card--full">
-        <h2>Additional Notes</h2>
         {% if person.notes %}
-            <p>{{ person.notes }}</p>
-        {% else %}
-            <p class="empty-state">No additional notes yet.</p>
+        <section class="card">
+            <div class="card__head"><h2>Notes</h2></div>
+            <p class="prewrap">{{ person.notes }}</p>
+        </section>
         {% endif %}
-    </section>
+    </div>
 
+    <aside class="split__side">
+        <section class="card">
+            <div class="card__head"><h2>Details</h2></div>
+            <dl class="kv">
+                {% if person.age is not None %}<div><dt>Age</dt><dd>{{ person.age }}{% if person.birthdate %} · born {{ person.birthdate|date:"M j, Y" }}{% endif %}</dd></div>
+                {% elif person.birthdate %}<div><dt>Birthdate</dt><dd>{{ person.birthdate|date:"M j, Y" }}</dd></div>{% endif %}
+                {% if person.gender %}<div><dt>Gender</dt><dd>{{ person.get_gender_display }}</dd></div>{% endif %}
+                {% if person.grade %}<div><dt>Grade</dt><dd>{{ person.get_grade_display }}</dd></div>{% endif %}
+                {% if person.marital_status %}<div><dt>Marital status</dt><dd>{{ person.get_marital_status_display }}</dd></div>{% endif %}
+                {% if person.phone %}<div><dt>Texts</dt><dd>{{ person.phone_opt_in|yesno:"Can receive texts,No texts" }}</dd></div>{% endif %}
+                {% if person.formatted_address %}<div><dt>Address</dt><dd>{{ person.formatted_address|linebreaksbr }}</dd></div>{% endif %}
+                {% if person.first_visit_date %}<div><dt>First visit</dt><dd>{{ person.first_visit_date|date:"M j, Y" }}</dd></div>{% endif %}
+                {% if person.salvation_date %}<div><dt>Salvation</dt><dd>{{ person.salvation_date|date:"M j, Y" }}</dd></div>{% endif %}
+                {% if person.baptism_date %}<div><dt>Baptism</dt><dd>{{ person.baptism_date|date:"M j, Y" }}</dd></div>{% endif %}
+            </dl>
+        </section>
+
+        <section class="card">
+            <div class="card__head"><h2>Health &amp; Security</h2></div>
+            <dl class="kv">
+                <div><dt>Allergies</dt><dd>{% if person.allergies %}<strong class="text-danger">{{ person.allergies }}</strong>{% else %}None noted{% endif %}</dd></div>
+                {% if person.security_notes %}<div><dt>Security notes</dt><dd><div class="highlight-note">{{ person.security_notes }}</div></dd></div>{% endif %}
+                <div><dt>Photo permission</dt><dd>
+                    {% if person.photo_consent == "granted" %}<span class="chip chip--success">Granted</span>
+                    {% elif person.photo_consent == "denied" %}<span class="chip chip--danger">Denied — no photos</span>
+                    {% else %}<span class="chip chip--neutral">Not asked</span>{% endif %}
+                </dd></div>
+            </dl>
+        </section>
+    </aside>
 </div>
-
 {% endblock %}

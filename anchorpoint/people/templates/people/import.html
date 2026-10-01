@@ -29,7 +29,7 @@
                     <span class="section-hint">{{ form.group.help_text }}</span>
                 </div>
             </div>
-            <div class="form-actions" style="margin-top:1rem;">
+            <div class="form-actions mt-3">
                 <button type="submit" class="btn">Preview import</button>
             </div>
         </form>
@@ -37,20 +37,20 @@
 </section>
 
 {% if result %}
-    <section class="card" style="margin-top:1.5rem;">
+    <section class="card mt-4">
         <div class="list-card__header">
             <div>
                 {% if stage == "done" %}
-                    <span class="chip" style="background:#dcfce7;color:#166534;">Imported</span>
+                    <span class="chip chip--success">Imported</span>
                     <h2>Import complete</h2>
                 {% else %}
-                    <span class="chip" style="background:#fef9c3;color:#854d0e;">Preview — nothing saved yet</span>
+                    <span class="chip chip--warning">Preview — nothing saved yet</span>
                     <h2>Review before importing</h2>
                 {% endif %}
             </div>
         </div>
 
-        <ul class="detail-list" style="margin:0.5rem 0 1rem;">
+        <ul class="detail-list mb-3">
             <li><span>Families</span><strong>{{ result.families_count }}</strong></li>
             <li><span>Parents created / matched</span><strong>{{ result.stats.parents_created }} / {{ result.stats.parents_matched }}</strong></li>
             <li><span>Children created / matched</span><strong>{{ result.stats.children_created }} / {{ result.stats.children_matched }}</strong></li>
@@ -60,18 +60,16 @@
             {% endif %}
         </ul>
 
-        <div style="font-family:ui-monospace,Menlo,monospace;font-size:13px;line-height:1.6;
-                    background:#0d0d20;color:#e2e8f0;border-radius:10px;padding:14px 16px;
-                    max-height:420px;overflow:auto;">
+        <div class="log" role="log">
             {% for line in result.log %}
                 {% if line.level == "family" %}
-                    <div style="margin-top:10px;color:#a5b4fc;font-weight:700;">── {{ line.text }}</div>
+                    <div class="log__head">── {{ line.text }}</div>
                 {% elif line.level == "create" %}
-                    <div style="padding-left:18px;color:#4ade80;">{{ line.text }}</div>
+                    <div class="log__line log__line--create">{{ line.text }}</div>
                 {% elif line.level == "match" %}
-                    <div style="padding-left:18px;color:#93c5fd;">{{ line.text }}</div>
+                    <div class="log__line log__line--match">{{ line.text }}</div>
                 {% elif line.level == "skip" or line.level == "warn" %}
-                    <div style="padding-left:18px;color:#fca5a5;">⚠ {{ line.text }}</div>
+                    <div class="log__line log__line--warn">⚠ {{ line.text }}</div>
                 {% else %}
                     <div>{{ line.text }}</div>
                 {% endif %}
@@ -79,14 +77,14 @@
         </div>
 
         {% if stage == "preview" %}
-            <form method="post" style="margin-top:1.25rem;display:flex;gap:0.75rem;align-items:center;">
+            <form class="action-row" method="post">
                 {% csrf_token %}
                 <input type="hidden" name="action" value="commit">
                 <button type="submit" class="btn">Confirm &amp; import {{ result.stats.parents_created|add:result.stats.children_created }} new record{{ result.stats.parents_created|add:result.stats.children_created|pluralize }}</button>
                 <a href="{% url 'signup_import' %}" class="btn ghost">Cancel</a>
             </form>
         {% elif stage == "done" %}
-            <div style="margin-top:1.25rem;display:flex;gap:0.75rem;">
+            <div class="action-row">
                 <a href="{% url 'people_list' %}" class="btn">View People</a>
                 <a href="{% url 'signup_import' %}" class="btn ghost">Import another</a>
             </div>
