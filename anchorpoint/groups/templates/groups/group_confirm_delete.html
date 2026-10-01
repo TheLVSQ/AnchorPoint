@@ -8,16 +8,16 @@
     <p class="page-subtitle">This action cannot be undone.</p>
 </div>
 
-<div class="detail-card" style="max-width:500px;">
+<div class="detail-card narrow">
     <p>Are you sure you want to delete <strong>{{ group.name }}</strong>?</p>
-    <p class="stat-hint" style="margin-top:0.5rem;">
+    <p class="stat-hint mt-2">
         {{ group.memberships.count }} member{{ group.memberships.count|pluralize }} will be removed.
     </p>
 
-    <div class="hero-actions" style="margin-top:1.5rem;">
+    <div class="hero-actions mt-4">
         <form method="post">
             {% csrf_token %}
-            <button type="submit" class="btn" style="background:#dc2626;">Delete Group</button>
+            <button type="submit" class="btn danger">Delete Group</button>
         </form>
         <a href="{% url 'groups:detail' group.pk %}" class="btn ghost">Cancel</a>
     </div>
