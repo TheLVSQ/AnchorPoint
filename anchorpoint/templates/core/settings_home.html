@@ -1,24 +1,17 @@
 {% extends "base.html" %}
+{% block title %}Settings{% endblock %}
 {% block content %}
-<section class="card">
-    <div class="page-header">
-        <span class="chip">Settings</span>
-        <h1>Fine tune AnchorPoint for {{ settings_instance.name|default:"your church" }}.</h1>
-        <p class="page-subtitle">
-            Organize global preferences in one place.
-        </p>
-    </div>
-
-    <div class="quick-actions">
-        {% for section in settings_sections %}
-            <article class="quick-card {% if section.accent %}accent{% else %}neutral{% endif %}">
-                <div>
-                    <p class="quick-label">{{ section.title }}</p>
-                    <h3>{{ section.description }}</h3>
-                </div>
-                <a class="ghost-link" href="{% url section.url %}">Open settings →</a>
-            </article>
-        {% endfor %}
-    </div>
-</section>
+<div class="page-header">
+    <h1>Settings</h1>
+    <p class="page-subtitle">Preferences for {{ settings_instance.name|default:"your church" }}.</p>
+</div>
+<div class="report-grid">
+    {% for section in settings_sections %}
+        <a class="report-card" href="{% url section.url %}">
+            <h2>{{ section.title }}</h2>
+            <p>{{ section.description }}</p>
+            <span class="ghost-link">Open →</span>
+        </a>
+    {% endfor %}
+</div>
 {% endblock %}

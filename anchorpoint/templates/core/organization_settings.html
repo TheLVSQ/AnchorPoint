@@ -10,11 +10,6 @@
         </p>
     </div>
 
-    {% if messages %}
-        {% for message in messages %}
-            <div class="message">{{ message }}</div>
-        {% endfor %}
-    {% endif %}
 
     <form method="post" enctype="multipart/form-data" class="person-form">
         {% csrf_token %}
@@ -208,14 +203,14 @@
     </form>
 </section>
 
-<section class="card" style="margin-top:2rem;">
+<section class="card mt-4">
     <div class="page-header">
         <span class="chip">Release Library</span>
         <h2>Standard Release Documents</h2>
         <p class="page-subtitle">Upload liability and media releases once, then reuse them on any event registration.</p>
     </div>
     {% if release_documents %}
-        <div class="detail-list" style="margin-bottom:1rem;">
+        <div class="detail-list mb-3">
             {% for document in release_documents %}
                 <div class="list-item">
                     <div>
