@@ -289,11 +289,13 @@ def phone_call_status_webhook(request):
     settings_obj = OrganizationSettings.load()
     auth_token = settings_obj.twilio_auth_token or ""
 
-    if auth_token:
-        signature = request.META.get("HTTP_X_TWILIO_SIGNATURE", "")
-        full_url = request.build_absolute_uri()
-        if not _validate_twilio_signature(auth_token, signature, full_url, request.POST.dict()):
-            return HttpResponseForbidden("Invalid signature")
+    # Fail closed: without a token we can't tell Twilio from a forger.
+    if not auth_token:
+        return HttpResponseForbidden("Twilio is not configured")
+    signature = request.META.get("HTTP_X_TWILIO_SIGNATURE", "")
+    full_url = request.build_absolute_uri()
+    if not _validate_twilio_signature(auth_token, signature, full_url, request.POST.dict()):
+        return HttpResponseForbidden("Invalid signature")
 
     call_sid = request.POST.get("CallSid", "")
     twilio_status = request.POST.get("CallStatus", "")

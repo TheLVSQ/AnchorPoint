@@ -125,6 +125,11 @@ DATABASES = {
 }
 
 
+# Auth
+LOGIN_URL = "login"  # Django's default (/accounts/login/) doesn't exist here
+# Signed-in sessions last 3 days (default was 2 weeks) — shared lobby tablets.
+SESSION_COOKIE_AGE = 3 * 24 * 60 * 60
+
 # Cache
 # Shared across gunicorn workers (and the cron container) so rate limits and
 # lockouts actually hold: the default per-process LocMemCache gave each worker

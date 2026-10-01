@@ -2,6 +2,8 @@ import uuid
 
 from django.conf import settings
 from django.db import models
+
+from core.validators import validate_image_size, validate_pdf
 from django.utils import timezone
 from django.utils.text import slugify
 
@@ -38,7 +40,7 @@ class ReleaseDocument(models.Model):
     category = models.CharField(
         max_length=20, choices=CATEGORY_CHOICES, default=CATEGORY_LIABILITY
     )
-    file = models.FileField(upload_to="events/releases/library/")
+    file = models.FileField(upload_to="events/releases/library/", validators=[validate_pdf])
     description = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -126,7 +128,8 @@ class Event(models.Model):
         limit_choices_to={"category": ReleaseDocument.CATEGORY_LIABILITY},
     )
     liability_release_custom = models.FileField(
-        upload_to=event_release_upload_path, blank=True, null=True
+        upload_to=event_release_upload_path, blank=True, null=True,
+        validators=[validate_pdf],
     )
     media_release_document = models.ForeignKey(
         ReleaseDocument,
@@ -137,7 +140,8 @@ class Event(models.Model):
         limit_choices_to={"category": ReleaseDocument.CATEGORY_MEDIA},
     )
     media_release_custom = models.FileField(
-        upload_to=event_release_upload_path, blank=True, null=True
+        upload_to=event_release_upload_path, blank=True, null=True,
+        validators=[validate_pdf],
     )
 
     objects = EventQuerySet.as_manager()
@@ -277,7 +281,7 @@ class EventPhoto(models.Model):
     event = models.ForeignKey(
         Event, related_name="photos", on_delete=models.CASCADE
     )
-    image = models.ImageField(upload_to="events/photos/")
+    image = models.ImageField(upload_to="events/photos/", validators=[validate_image_size])
     caption = models.CharField(max_length=255, blank=True)
     display_order = models.PositiveIntegerField(default=0)
 

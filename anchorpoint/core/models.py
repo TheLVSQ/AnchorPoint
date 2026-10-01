@@ -1,6 +1,8 @@
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db import models
+
+from .validators import validate_image_size
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
@@ -71,7 +73,10 @@ def ensure_user_profile(sender, instance, created, **kwargs):
 
 class OrganizationSettings(models.Model):
     name = models.CharField(max_length=255, blank=True)
-    logo = models.ImageField(upload_to="organization/logo/", blank=True, null=True)
+    logo = models.ImageField(
+        upload_to="organization/logo/", blank=True, null=True,
+        validators=[validate_image_size],
+    )
     phone_number = models.CharField(max_length=50, blank=True)
     email = models.EmailField(blank=True)
     website = models.URLField(blank=True)

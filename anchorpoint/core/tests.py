@@ -509,14 +509,16 @@ class GoogleAuthCallbackTests(TestCase):
         )
         self.url = reverse("google_auth")
 
-    def _post(self, credential="fake-jwt"):
-        return self.client.post(self.url, {"credential": credential})
+    def _post(self, credential="fake-jwt", csrf="tok123"):
+        # Google's redirect mode double-submits g_csrf_token (cookie + body).
+        self.client.cookies["g_csrf_token"] = csrf
+        return self.client.post(self.url, {"credential": credential, "g_csrf_token": csrf})
 
     def _mock_verify(self, email="jsmith@bolivar.church"):
         """Return a patch context that makes verify_oauth2_token return a valid payload."""
         return patch(
             "core.views.id_token.verify_oauth2_token",
-            return_value={"email": email, "email_verified": True},
+            return_value={"email": email, "email_verified": True, "hd": email.split("@")[-1].lower()},
         )
 
     def test_valid_credential_logs_in_and_redirects(self):
@@ -565,6 +567,25 @@ class GoogleAuthCallbackTests(TestCase):
             response = self._post()
         self.assertRedirects(response, reverse("dashboard"))
 
+
+
+    def test_missing_google_csrf_rejected(self):
+        with self._mock_verify():
+            self.client.cookies.pop("g_csrf_token", None)
+            response = self.client.post(self.url, {"credential": "fake-jwt"})
+        self.assertRedirects(response, reverse("login"), fetch_redirect_response=False)
+        self.assertNotIn("_auth_user_id", self.client.session)
+
+    def test_unverified_or_non_workspace_email_rejected(self):
+        for claims in (
+            {"email": "jsmith@bolivar.church", "email_verified": False, "hd": "bolivar.church"},
+            {"email": "jsmith@bolivar.church", "email_verified": True},  # no hd: consumer account
+        ):
+            with self.subTest(claims=claims), patch(
+                "core.views.id_token.verify_oauth2_token", return_value=claims
+            ):
+                self._post()
+                self.assertNotIn("_auth_user_id", self.client.session)
 
 class LoginPageTests(TestCase):
     @override_settings(GOOGLE_CLIENT_ID="test-client-id-123")

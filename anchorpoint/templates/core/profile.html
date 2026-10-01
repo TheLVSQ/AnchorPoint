@@ -51,6 +51,13 @@
                         <p class="error-text">{{ user_form.email.errors.0 }}</p>
                     {% endif %}
                 </div>
+                <div class="form-field form-field--full">
+                    <label for="{{ user_form.current_password.id_for_label }}">{{ user_form.current_password.label }}</label>
+                    {{ user_form.current_password }}
+                    {% if user_form.current_password.errors %}
+                        <p class="error-text">{{ user_form.current_password.errors.0 }}</p>
+                    {% endif %}
+                </div>
             </div>
         </div>
 
