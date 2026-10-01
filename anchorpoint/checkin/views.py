@@ -742,10 +742,17 @@ def kiosk_lock(request):
 # =============================================================================
 
 
+def _checkout_disabled(request, session):
+    messages.info(request, "Checkout isn't turned on for this check-in.")
+    return redirect("checkin:checkin_manager", session_id=session.pk)
+
+
 @checkin_team_required
 def checkout_lookup(request, session_id):
     """Look up check-ins by security code for checkout."""
     session = get_object_or_404(CheckInSession, pk=session_id)
+    if not session.checkout_enabled:
+        return _checkout_disabled(request, session)
 
     checkins = None
     checkout_token = ""
@@ -802,6 +809,8 @@ def checkout_confirm(request, session_id):
     are intersected with the ids it covers.
     """
     session = get_object_or_404(CheckInSession, pk=session_id)
+    if not session.checkout_enabled:
+        return _checkout_disabled(request, session)
 
     try:
         token = signing.loads(

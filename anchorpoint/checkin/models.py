@@ -77,6 +77,12 @@ class CheckInConfiguration(models.Model):
         "groups.Group", on_delete=models.SET_NULL, null=True, blank=True,
         related_name="autoenroll_configurations",
     )
+    # Off = nobody staffs checkout: the checkout screens are hidden and
+    # unreachable. Pickup tags and codes still print/text either way.
+    checkout_enabled = models.BooleanField(
+        default=False,
+        help_text="Show the volunteer checkout screen (verify pickup codes) for this check-in.",
+    )
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -288,6 +294,13 @@ class CheckInSession(models.Model):
                 name="uniq_session_per_config_window_date",
             ),
         ]
+
+
+    @property
+    def checkout_enabled(self):
+        """Checkout follows the session's configuration; standalone sessions
+        (no configuration) have no checkout."""
+        return bool(self.configuration_id and self.configuration.checkout_enabled)
 
     def __str__(self):
         return f"{self.name} - {self.date}"

@@ -13,7 +13,7 @@ class CheckInConfigurationForm(forms.ModelForm):
         fields = [
             "name", "description", "welcome_message", "location_name",
             "is_active", "rooms", "min_age", "max_age", "min_grade",
-            "max_grade", "groups", "auto_enroll_group",
+            "max_grade", "groups", "auto_enroll_group", "checkout_enabled",
         ]
         widgets = {
             "description": forms.Textarea(attrs={"rows": 3}),

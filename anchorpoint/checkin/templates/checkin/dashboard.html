@@ -39,7 +39,7 @@
 
                 <div class="hero-actions">
                     <a href="{% url 'checkin:session_detail' session.pk %}" class="btn">View Details</a>
-                    <a href="{% url 'checkin:checkout_lookup' session.pk %}" class="btn ghost">Checkout</a>
+                    {% if session.checkout_enabled %}<a href="{% url 'checkin:checkout_lookup' session.pk %}" class="btn ghost">Checkout</a>{% endif %}
                     <a href="{% url 'checkin:kiosk_lookup' %}" class="btn ghost" target="_blank">Open Kiosk</a>
                 </div>
             </section>

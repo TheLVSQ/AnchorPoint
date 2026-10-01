@@ -242,6 +242,8 @@ class PreprintArrivalTests(PreprintFixture):
         self.assertEqual([c.pk for c in printed], [walkin_ci.pk])
 
     def test_prestaged_not_checkout_able_until_arrived(self):
+        self.config.checkout_enabled = True
+        self.config.save()
         staff = get_user_model().objects.create_user(username="costaff", password="pw")
         staff.profile.role = UserProfile.Role.STAFF
         staff.profile.save()

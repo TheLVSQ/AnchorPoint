@@ -183,6 +183,8 @@ class KioskUnlockTests(TestCase):
 class CheckoutRequiresCodeTests(KioskFixture):
     def setUp(self):
         super().setUp()
+        self.config.checkout_enabled = True
+        self.config.save()
         self.volunteer = _user("vol", UserProfile.Role.VOLUNTEER)
         self.client.force_login(self.volunteer)
         self.confirm_url = reverse("checkin:checkout_confirm", args=[self.session.pk])
@@ -235,6 +237,46 @@ class CheckoutRequiresCodeTests(KioskFixture):
         self.client.logout()
         resp = self.client.get(self.lookup_url)
         self.assertRedirects(resp, reverse("login"), fetch_redirect_response=False)
+
+
+class CheckoutToggleTests(KioskFixture):
+    """Checkout is opt-in per configuration (off by default)."""
+
+    def setUp(self):
+        super().setUp()
+        self.client.force_login(_user("vol2", UserProfile.Role.VOLUNTEER))
+        self.lookup_url = reverse("checkin:checkout_lookup", args=[self.session.pk])
+
+    def test_off_by_default_and_unreachable(self):
+        self.assertFalse(self.config.checkout_enabled)
+        resp = self.client.get(self.lookup_url)
+        self.assertRedirects(
+            resp, reverse("checkin:checkin_manager", args=[self.session.pk]),
+            fetch_redirect_response=False,
+        )
+        # A crafted confirm can't check anyone out either.
+        self.client.post(
+            reverse("checkin:checkout_confirm", args=[self.session.pk]),
+            {"checkin_ids": [self.live.pk]},
+        )
+        self.live.refresh_from_db()
+        self.assertIsNone(self.live.checked_out_at)
+
+    def test_checkout_button_follows_the_toggle(self):
+        self.client.force_login(_user("adm2", UserProfile.Role.ADMIN))
+        detail = reverse("checkin:session_detail", args=[self.session.pk])
+        self.assertNotContains(self.client.get(detail), self.lookup_url)
+        self.config.checkout_enabled = True
+        self.config.save()
+        self.assertContains(self.client.get(detail), self.lookup_url)
+        self.assertEqual(self.client.get(self.lookup_url).status_code, 200)
+
+    def test_pickup_code_still_issued_when_checkout_off(self):
+        with mock.patch("checkin.views.enqueue_checkin_labels", return_value=1), \
+                mock.patch("checkin.views.send_security_code_sms", return_value=0):
+            self._select(self.ben)
+        ben_ci = CheckIn.objects.get(session=self.session, person=self.ben)
+        self.assertTrue(ben_ci.security_code)
 
 
 class ClientIpTests(TestCase):
