@@ -25,3 +25,12 @@ jobs:
         # docker/entrypoint.sh (migrate --noinput before gunicorn). A separate
         # migrate step here would race that one and fail with DuplicateTable.
         run: docker compose --env-file .env.production up -d
+
+      - name: Prune old images and build cache
+        working-directory: /home/deploy/anchorpoint/docker
+        # Every build leaves layers behind (~20GB had piled up). Keep a week of
+        # build cache so routine deploys stay fast; drop unused images.
+        run: |
+          docker image prune -af --filter "until=168h"
+          docker builder prune -af --filter "until=168h"
+          df -h / | tail -1

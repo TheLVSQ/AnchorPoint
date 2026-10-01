@@ -102,6 +102,12 @@ class OrganizationSettings(models.Model):
         settings.AUTH_USER_MODEL, blank=True, related_name="+",
         help_text="Staff alerted when a child already in one family is linked to another.",
     )
+    # Who gets the daily server/system health email (only sent when something
+    # needs attention, plus a short weekly all-clear).
+    maintenance_alert_recipients = models.ManyToManyField(
+        settings.AUTH_USER_MODEL, blank=True, related_name="+",
+        help_text="Admins emailed about server problems: disk, backups, updates, reboots.",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

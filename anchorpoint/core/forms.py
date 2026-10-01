@@ -151,6 +151,7 @@ class OrganizationSettingsForm(forms.ModelForm):
             "sms_blackout_end",
             "kiosk_pin",
             "family_alert_recipients",
+            "maintenance_alert_recipients",
         ]
         widgets = {
             "twilio_account_sid": forms.TextInput(attrs={"placeholder": "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"}),
@@ -160,6 +161,7 @@ class OrganizationSettingsForm(forms.ModelForm):
             "sms_blackout_start": forms.TimeInput(attrs={"type": "time"}),
             "sms_blackout_end": forms.TimeInput(attrs={"type": "time"}),
             "family_alert_recipients": forms.CheckboxSelectMultiple(),
+            "maintenance_alert_recipients": forms.CheckboxSelectMultiple(),
         }
 
     def __init__(self, *args, **kwargs):
@@ -173,5 +175,12 @@ class OrganizationSettingsForm(forms.ModelForm):
         )
         self.fields["family_alert_recipients"].label_from_instance = (
             lambda u: f"{u.get_full_name() or u.username} ({u.email or 'no email'})"
+        )
+        self.fields["maintenance_alert_recipients"].queryset = (
+            get_user_model().objects.filter(is_active=True, profile__role="admin")
+            .order_by("first_name", "last_name", "username")
+        )
+        self.fields["maintenance_alert_recipients"].label_from_instance = (
+            self.fields["family_alert_recipients"].label_from_instance
         )
 

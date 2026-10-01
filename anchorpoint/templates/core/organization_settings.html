@@ -190,6 +190,18 @@
             </div>
         </div>
 
+        <div class="form-section" id="maintenance-alerts">
+            <h2>Maintenance Alerts</h2>
+            <p class="page-subtitle">
+                Who gets the daily server health check: an email only when something needs attention
+                (disk filling up, backups stopped, a reboot or security updates waiting, a print agent gone quiet,
+                failed phone blasts), plus a short all-clear every Monday.
+            </p>
+            <div class="form-field">
+                {{ form.maintenance_alert_recipients }}
+            </div>
+        </div>
+
         <div class="form-actions">
             <button type="submit">Save Settings</button>
         </div>
