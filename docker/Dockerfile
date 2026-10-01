@@ -35,8 +35,16 @@ RUN sed -i 's/\r$//' /app/entrypoint.sh && chmod +x /app/entrypoint.sh
 COPY docker/cron.sh /app/cron.sh
 RUN sed -i 's/\r$//' /app/cron.sh && chmod +x /app/cron.sh
 
+# Processes run as an unprivileged `app` user. as-app.sh starts as root only to
+# hand the media volume to `app`, then drops privileges (setpriv) before
+# running migrations, gunicorn, or the cron loop.
+COPY docker/as-app.sh /app/as-app.sh
+RUN sed -i 's/\r$//' /app/as-app.sh && chmod +x /app/as-app.sh \
+    && useradd --system --uid 10001 --user-group --no-create-home --shell /usr/sbin/nologin app
+
 # Create directories for static and media files
-RUN mkdir -p /app/anchorpoint/staticfiles /app/anchorpoint/media
+RUN mkdir -p /app/anchorpoint/staticfiles /app/anchorpoint/media \
+    && chown app:app /app/anchorpoint/media
 
 # Collect static files (requires a dummy SECRET_KEY at build time)
 WORKDIR /app/anchorpoint
@@ -44,8 +52,8 @@ RUN SECRET_KEY=build-time-placeholder python manage.py collectstatic --noinput -
 
 EXPOSE 8000
 
-# Migrations run here (entrypoint) before gunicorn (CMD) takes over.
-ENTRYPOINT ["/app/entrypoint.sh"]
+# Drop to `app`, then run migrations (entrypoint.sh) before gunicorn (CMD).
+ENTRYPOINT ["/app/as-app.sh", "/app/entrypoint.sh"]
 
 # Run with gunicorn using config file
 CMD ["gunicorn", "--config", "/app/gunicorn.conf.py", "anchorpoint.wsgi:application"]

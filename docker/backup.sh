@@ -10,12 +10,20 @@
 # droplet snapshot) is still strongly recommended for disaster recovery —
 # point a sync at $BACKUP_DIR or enable provider snapshots.
 set -eu
+# Without pipefail the `if` below tests gzip's status, so a failed pg_dump would
+# be recorded as a (tiny, empty) successful backup and good dumps pruned later.
+set -o pipefail
 
 BACKUP_DIR="${BACKUP_DIR:-/backups}"
 RETENTION_DAYS="${BACKUP_RETENTION_DAYS:-14}"
 INTERVAL_SECONDS="${BACKUP_INTERVAL_SECONDS:-86400}"   # daily
 
+# Dumps hold every person's PII: keep them root-only on the host (dir 700,
+# files 600), including any written before this was tightened.
+umask 077
 mkdir -p "$BACKUP_DIR"
+chmod 700 "$BACKUP_DIR"
+find "$BACKUP_DIR" -name 'anchorpoint-*.sql.gz*' -type f -exec chmod 600 {} +
 echo "[backup] started; dir=$BACKUP_DIR retention=${RETENTION_DAYS}d interval=${INTERVAL_SECONDS}s"
 
 while true; do

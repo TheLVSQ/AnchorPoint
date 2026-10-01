@@ -31,7 +31,7 @@ services:
       context: ..
       dockerfile: docker/Dockerfile
     restart: unless-stopped
-    entrypoint: ["/app/cron.sh"]
+    entrypoint: ["/app/as-app.sh", "/app/cron.sh"]
     volumes:
       - media_data:/app/anchorpoint/media
     env_file:
