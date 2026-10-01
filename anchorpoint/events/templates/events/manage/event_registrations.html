@@ -17,7 +17,7 @@
 {% if registrations %}
 <div class="table-wrap">
     <table class="data-table data-table--stack">
-        <thead><tr><th>Registered by</th><th>Contact</th><th>Attendees</th><th>When</th></tr></thead>
+        <thead><tr><th>Registered by</th><th>Contact</th><th>{% if event.require_attendee_details %}Children{% else %}Attendees{% endif %}</th><th>When</th></tr></thead>
         <tbody>
         {% for registration in registrations %}
             <tr>
@@ -29,7 +29,16 @@
                     {% if registration.email %}<a href="mailto:{{ registration.email }}">{{ registration.email }}</a>{% endif %}
                     {% if registration.phone %}<a href="tel:{{ registration.phone }}">{{ registration.phone }}</a>{% endif %}
                 </td>
-                <td data-label="Attendees" class="num">{{ registration.number_of_attendees }}</td>
+                <td data-label="Attendees">
+                    <ul class="attendee-list">
+                    {% for a in registration.attendees.all %}
+                        <li><strong>{{ a.first_name }} {{ a.last_name }}</strong>
+                            <span class="muted-text">{% if a.age is not None %}age {{ a.age }}{% endif %}{% if a.birthdate %} · {{ a.birthdate|date:"M j, Y" }}{% endif %}{% if a.grade %} · {{ a.grade_label }}{% endif %}</span></li>
+                    {% empty %}
+                        <li class="muted-text">{{ registration.number_of_attendees }} attendee{{ registration.number_of_attendees|pluralize }}</li>
+                    {% endfor %}
+                    </ul>
+                </td>
                 <td data-label="When"><span class="muted-text">{{ registration.created_at|date:"M j, Y g:i A" }}</span></td>
             </tr>
         {% endfor %}

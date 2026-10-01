@@ -86,8 +86,13 @@
             </div>
 
             <div class="card" data-formset-prefix="attendee">
-                <h2>Attendees</h2>
-                <p class="page-subtitle">Share details for each person attending. Use the checkboxes to copy contact information from the primary contact as needed.</p>
+                {% if event.require_attendee_details %}
+                    <h2>Children</h2>
+                    <p class="page-subtitle">Add each child separately, with their birthdate and grade. Use the checkboxes to copy details from the primary contact.</p>
+                {% else %}
+                    <h2>Attendees</h2>
+                    <p class="page-subtitle">Share details for each person attending. Use the checkboxes to copy contact information from the primary contact as needed.</p>
+                {% endif %}
                 {% if attendee_formset %}
                     {{ attendee_formset.management_form }}
                     {% if attendee_formset.non_form_errors %}
@@ -95,10 +100,9 @@
                             <p class="error-text">{{ error }}</p>
                         {% endfor %}
                     {% endif %}
-                    <div class="detail-list" id="attendee-formset">
+                    <div class="detail-list formset-list" id="attendee-formset" data-noun="{% if event.require_attendee_details %}Child{% else %}Attendee{% endif %}">
                         {% for subform in attendee_formset %}
                             <div class="family-action-card formset-item">
-                                <p class="detail-pill">Attendee {{ forloop.counter }}</p>
                                 {% for hidden in subform.hidden_fields %}{{ hidden }}{% endfor %}
                                 <div class="form-field checkbox-field">
                                     <label><input type="checkbox" data-copy-field="address"> Same as primary contact address</label>
@@ -112,7 +116,7 @@
                                 <div class="form-grid">
                                     {% for field in subform.visible_fields %}
                                         <div class="form-field{% if field.name == 'notes' or field.name == 'allergies' or field.name == 'medical_notes' or field.name == 'address_line1' or field.name == 'address_line2' %} form-field--full{% endif %}">
-                                            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                            <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} <span class="req" aria-hidden="true">*</span>{% endif %}</label>
                                             {{ field }}
                                             {% if field.help_text %}
                                                 <small class="help-text">{{ field.help_text }}</small>
@@ -126,7 +130,7 @@
                             </div>
                         {% endfor %}
                     </div>
-                    <button type="button" class="btn ghost" data-add-attendee>Add Another Attendee</button>
+                    <button type="button" class="btn ghost" data-add-attendee>{% if event.require_attendee_details %}Add another child{% else %}Add another attendee{% endif %}</button>
                 {% endif %}
             </div>
 
@@ -206,6 +210,9 @@
                     const newName = name.replace(/-(\d+)-/, "-" + formCount + "-");
                     input.setAttribute("name", newName);
                     input.setAttribute("id", "id_" + newName);
+                    // Added blocks are optional to the browser; the server
+                    // still validates any block that's partly filled in.
+                    input.removeAttribute("required");
                     if (input.type === "checkbox") {
                         input.checked = false;
                     } else {
@@ -217,10 +224,6 @@
                     if (!forAttr) { return; }
                     label.setAttribute("for", forAttr.replace(/-(\d+)-/, "-" + formCount + "-"));
                 });
-                const pill = clone.querySelector(".detail-pill");
-                if (pill) {
-                    pill.textContent = "Attendee " + (formCount + 1);
-                }
                 formsetWrapper.appendChild(clone);
                 totalInput.value = formCount + 1;
                 copyParentDefaults(clone);

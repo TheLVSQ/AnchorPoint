@@ -975,3 +975,15 @@ label + .help-text, label + small.help-text { display: block; margin: -0.15rem 0
     background: var(--primary-soft); border: 1px solid var(--border);
 }
 .mb-2 { margin-bottom: 0.5rem; } .h-sub { font-size: 1rem; margin: 0 0 1rem; }
+/* Registration formset: numbered "Child 1 / Child 2 …" headings that stay right when JS clones rows. */
+.formset-list { counter-reset: formset; gap: 1rem; }
+.formset-list .formset-item { counter-increment: formset; }
+.formset-list .formset-item::before {
+    content: "Attendee " counter(formset); display: inline-block; margin-bottom: 0.6rem;
+    padding: 0.12rem 0.6rem; border-radius: 999px; background: var(--primary-soft); color: var(--primary-text);
+    font-size: 0.78rem; font-weight: 700;
+}
+.formset-list[data-noun="Child"] .formset-item::before { content: "Child " counter(formset); }
+.req { color: var(--danger); font-weight: 700; }
+.attendee-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.2rem; }
+.attendee-list .muted-text { margin-left: 0.3rem; font-size: 0.85rem; }

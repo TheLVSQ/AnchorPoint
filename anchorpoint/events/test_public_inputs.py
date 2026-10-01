@@ -109,3 +109,68 @@ class PublicEventListTests(TestCase):
         resp = self.client.get(reverse("events:public_list"))
         self.assertEqual(resp.context["events"][0].next_start, future)
         self.assertContains(resp, timezone.localtime(future).strftime("%A, %B %-d"))
+
+
+@mock.patch("core.email_service.send_staff_registration_notification")
+@mock.patch("core.email_service.send_registration_confirmation")
+class RequireAttendeeDetailsTests(TestCase):
+    def setUp(self):
+        cache.clear()
+        self.event = Event.objects.create(title="BKiDS Night Out", summary="s", description="d",
+                                          require_attendee_details=True)
+        EventOccurrence.objects.create(event=self.event, starts_at=timezone.now() + timedelta(days=2),
+                                       ends_at=timezone.now() + timedelta(days=2, hours=2))
+        self.url = reverse("event_register", args=[self.event.registration_token])
+
+    def test_child_without_birthdate_or_grade_is_rejected(self, *_):
+        resp = self.client.post(self.url, _payload())
+        self.assertEqual(EventRegistration.objects.count(), 0)
+        self.assertContains(resp, "This field is required", count=2)
+
+    def test_child_with_birthdate_and_grade_is_accepted_and_listed(self, *_):
+        data = _payload()
+        data.update({"attendee-0-birthdate": "2017-03-04", "attendee-0-grade": "3"})
+        self.client.post(self.url, data)
+        self.assertEqual(EventRegistration.objects.count(), 1)
+        staff = get_user_model().objects.create_user(username="st2", password="pw")
+        staff.profile.role = UserProfile.Role.STAFF
+        staff.profile.save()
+        self.client.force_login(staff)
+        resp = self.client.get(reverse("events:registrations", args=[self.event.pk]))
+        self.assertContains(resp, "Casey Reed")
+        self.assertContains(resp, "Mar 4, 2017")
+        self.assertContains(resp, "3rd Grade")
+
+    def test_off_by_default_keeps_birthdate_optional(self, *_):
+        self.event.require_attendee_details = False
+        self.event.save()
+        self.client.post(self.url, _payload())
+        self.assertEqual(EventRegistration.objects.count(), 1)
+
+    def test_form_says_children_when_on(self, *_):
+        resp = self.client.get(self.url)
+        self.assertContains(resp, "Add another child")
+        self.assertContains(resp, 'data-noun="Child"')
+
+
+@mock.patch("core.email_service.send_staff_registration_notification")
+@mock.patch("core.email_service.send_registration_confirmation")
+class PartialExtraChildTests(TestCase):
+    def test_partly_filled_second_child_is_validated_blank_one_ignored(self, *_):
+        cache.clear()
+        event = Event.objects.create(title="Kids", summary="s", description="d", require_attendee_details=True)
+        EventOccurrence.objects.create(event=event, starts_at=timezone.now() + timedelta(days=2),
+                                       ends_at=timezone.now() + timedelta(days=2, hours=2))
+        url = reverse("event_register", args=[event.registration_token])
+        data = _payload()
+        data.update({"attendee-0-birthdate": "2016-01-01", "attendee-0-grade": "4",
+                     "attendee-TOTAL_FORMS": "3",
+                     "attendee-1-first_name": "Second", "attendee-1-last_name": "Reed"})
+        resp = self.client.post(url, data)  # child 2 lacks birthdate/grade; child 3 blank
+        self.assertEqual(EventRegistration.objects.count(), 0)
+        self.assertContains(resp, "This field is required", count=2)
+        data.update({"attendee-1-birthdate": "2018-05-05", "attendee-1-grade": "1"})
+        self.client.post(url, data)
+        reg = EventRegistration.objects.get()
+        self.assertEqual(reg.attendees.count(), 2)
+        self.assertEqual(reg.number_of_attendees, 2)

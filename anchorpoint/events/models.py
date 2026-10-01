@@ -99,6 +99,13 @@ class Event(models.Model):
         help_text="Optional cap on total registrations.",
     )
     registration_open = models.BooleanField(default=True)
+    # Kids events: every attendee must give a birthdate (age is computed from
+    # it) and a grade, so rosters/rooms can be planned per child.
+    require_attendee_details = models.BooleanField(
+        "Require birthdate and grade for each attendee",
+        default=False,
+        help_text="Turn on for kids' events: each child must be registered with a birthdate and grade.",
+    )
     is_published = models.BooleanField(
         default=True, help_text="Unpublished events stay hidden from public pages."
     )
@@ -418,6 +425,22 @@ class EventRegistrationAttendee(models.Model):
 
     class Meta:
         ordering = ["last_name", "first_name"]
+
+
+    @property
+    def grade_label(self):
+        """Human label for the stored grade code (same choices as Person)."""
+        from people.models import Person
+        return dict(Person.GRADE_CHOICES).get(self.grade, self.grade)
+
+    @property
+    def age(self):
+        """Age in whole years on today's date, or None without a birthdate."""
+        if not self.birthdate:
+            return None
+        today = timezone.localdate()
+        b = self.birthdate
+        return today.year - b.year - ((today.month, today.day) < (b.month, b.day))
 
     def __str__(self):
         return f"{self.first_name} {self.last_name} ({self.event.title})"
