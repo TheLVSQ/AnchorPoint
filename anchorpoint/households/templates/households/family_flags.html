@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="card">
+    <div class="page-header">
+        <span class="chip">Families</span>
+        <h1>Family review</h1>
+        <p class="page-subtitle">
+            A child who was already in one family was linked to a different family by a registration.
+            The link is already in place — confirm it's right, or undo it.
+        </p>
+    </div>
+
+    <p style="margin-bottom:16px;">
+        {% if show == "all" %}
+            <a href="{% url 'households:family_flags' %}">Show only open</a>
+        {% else %}
+            <a href="?show=all">Show all (including resolved)</a>
+        {% endif %}
+    </p>
+
+    <div class="cards">
+        {% for flag in flags %}
+            <div class="card">
+                <h2>
+                    <a href="{% url 'people_detail' flag.child.pk %}">{{ flag.child.first_name }} {{ flag.child.last_name }}</a>
+                    <span class="chip">{{ flag.get_status_display }}</span>
+                </h2>
+                <p class="stat-hint">Flagged {{ flag.created_at|date:"M j, g:i A" }}{% if flag.registration %} · {{ flag.registration.event.title }}{% endif %}</p>
+                <p><strong>Already in:</strong> {{ flag.existing_households|default:"another family" }}</p>
+                <p>
+                    <strong>Now also linked to:</strong>
+                    {% if flag.household %}<a href="{% url 'households:family_detail' flag.household.pk %}">{{ flag.household.name }}</a>{% else %}(family removed){% endif %}
+                    {% if flag.guardian %} — registered by {{ flag.guardian.first_name }} {{ flag.guardian.last_name }}{% if flag.guardian.phone %} ({{ flag.guardian.phone }}){% endif %}{% endif %}
+                </p>
+                {% if flag.filled_fields %}
+                    <p><strong>Filled-in details:</strong>
+                        {% for field, value in flag.filled_fields.items %}{{ field }} = “{{ value }}”{% if not forloop.last %}; {% endif %}{% endfor %}
+                    </p>
+                {% endif %}
+                {% if flag.status == "open" %}
+                    <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">
+                        <form method="post" action="{% url 'households:family_flag_reviewed' flag.pk %}">
+                            {% csrf_token %}
+                            <button type="submit" class="btn">Looks right — keep it</button>
+                        </form>
+                        <form method="post" action="{% url 'households:family_flag_undo' flag.pk %}"
+                              onsubmit="return confirm('Remove {{ flag.child.first_name|escapejs }} from {{ flag.household.name|default:'the new family'|escapejs }} and clear the details this registration filled in?');">
+                            {% csrf_token %}
+                            <button type="submit" class="btn ghost">Undo the link</button>
+                        </form>
+                    </div>
+                {% else %}
+                    <p class="stat-hint">{{ flag.get_status_display }}{% if flag.resolved_by %} by {{ flag.resolved_by.get_full_name|default:flag.resolved_by.username }}{% endif %}{% if flag.resolved_at %} · {{ flag.resolved_at|date:"M j, g:i A" }}{% endif %}</p>
+                {% endif %}
+            </div>
+        {% empty %}
+            <p class="empty-state">Nothing to review. 🎉</p>
+        {% endfor %}
+    </div>
+</section>
+{% endblock %}

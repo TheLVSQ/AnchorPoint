@@ -90,6 +90,13 @@ class OrganizationSettings(models.Model):
         blank=True,
         help_text="Optional 4-6 digit code required to unlock kiosk mode.",
     )
+    # Who hears about family-safety flags (a child linked to a new family by
+    # someone outside it): email + in-app badge on registration, email + SMS
+    # when a flagged child is checked in at the kiosk.
+    family_alert_recipients = models.ManyToManyField(
+        settings.AUTH_USER_MODEL, blank=True, related_name="+",
+        help_text="Staff alerted when a child already in one family is linked to another.",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

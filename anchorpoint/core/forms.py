@@ -125,6 +125,7 @@ class OrganizationSettingsForm(forms.ModelForm):
             "sms_blackout_start",
             "sms_blackout_end",
             "kiosk_pin",
+            "family_alert_recipients",
         ]
         widgets = {
             "twilio_account_sid": forms.TextInput(attrs={"placeholder": "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"}),
@@ -133,4 +134,19 @@ class OrganizationSettingsForm(forms.ModelForm):
             "phone_number": forms.TextInput(attrs={"placeholder": "+15551234567"}),
             "sms_blackout_start": forms.TimeInput(attrs={"type": "time"}),
             "sms_blackout_end": forms.TimeInput(attrs={"type": "time"}),
+            "family_alert_recipients": forms.CheckboxSelectMultiple(),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        from django.contrib.auth import get_user_model
+        # Only active staff/admins can receive family-safety alerts.
+        self.fields["family_alert_recipients"].queryset = (
+            get_user_model().objects.filter(
+                is_active=True, profile__role__in=["admin", "staff"]
+            ).order_by("first_name", "last_name", "username")
+        )
+        self.fields["family_alert_recipients"].label_from_instance = (
+            lambda u: f"{u.get_full_name() or u.username} ({u.email or 'no email'})"
+        )
+

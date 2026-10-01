@@ -8,7 +8,8 @@ from core.permissions import staff_required
 from people.models import Person
 
 from .forms import HouseholdForm, HouseholdNewPersonForm
-from .models import Household, HouseholdMember
+from . import family_flags as flags_service
+from .models import FamilyConflictFlag, Household, HouseholdMember
 
 
 @staff_required
@@ -295,3 +296,39 @@ def family_set_primary(request, pk):
         household.save(update_fields=["primary_adult"])
         messages.success(request, f"{member.person} is now the primary adult.")
     return redirect("households:family_detail", pk=pk)
+
+
+# =============================================================================
+# FAMILY-SAFETY REVIEW (a child already in one family linked to another)
+# =============================================================================
+
+
+@staff_required
+def family_flags(request):
+    show = request.GET.get("show", "open")
+    qs = FamilyConflictFlag.objects.select_related(
+        "child", "guardian", "household", "registration__event", "resolved_by"
+    )
+    if show != "all":
+        qs = qs.filter(status=FamilyConflictFlag.STATUS_OPEN)
+    return render(request, "households/family_flags.html", {
+        "flags": qs[:200], "show": show,
+    })
+
+
+@staff_required
+@require_POST
+def family_flag_undo(request, pk):
+    flag = get_object_or_404(FamilyConflictFlag, pk=pk, status=FamilyConflictFlag.STATUS_OPEN)
+    flags_service.undo_flag(flag, request.user)
+    messages.success(request, f"Undone: {flag.child} was removed from {flag.household or 'the new family'} and the filled-in details were cleared.")
+    return redirect("households:family_flags")
+
+
+@staff_required
+@require_POST
+def family_flag_reviewed(request, pk):
+    flag = get_object_or_404(FamilyConflictFlag, pk=pk, status=FamilyConflictFlag.STATUS_OPEN)
+    flags_service.mark_reviewed(flag, request.user)
+    messages.success(request, f"Marked OK: {flag.child} stays in both families.")
+    return redirect("households:family_flags")

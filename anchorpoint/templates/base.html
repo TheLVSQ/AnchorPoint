@@ -1142,6 +1142,7 @@
                     <span></span>
                 </span>
                 Menu
+                {% if family_flags_open %}<span title="Family reviews waiting" style="margin-left:6px;display:inline-block;min-width:18px;padding:0 6px;border-radius:9px;background:#dc2626;color:#fff;font-size:12px;font-weight:700;line-height:18px;text-align:center;">{{ family_flags_open }}</span>{% endif %}
             </button>
         </div>
     </nav>
@@ -1170,6 +1171,9 @@
                     <a href="{% url 'dashboard' %}">Dashboard</a>
                     <a href="{% url 'people_list' %}">People</a>
                     <a href="{% url 'households:family_list' %}">Families</a>
+                    {% if family_flags_open %}
+                        <a href="{% url 'households:family_flags' %}">Family review <strong style="color:#dc2626;">({{ family_flags_open }})</strong></a>
+                    {% endif %}
                     <a href="{% url 'groups:list' %}">Groups</a>
                     <a href="{% url 'checkin:dashboard' %}">Check-In</a>
                     <a href="{% url 'events:manage_list' %}">Events Admin</a>

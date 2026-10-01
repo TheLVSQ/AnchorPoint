@@ -6,6 +6,9 @@ app_name = "households"
 
 urlpatterns = [
     path("", views.family_list, name="family_list"),
+    path("review/", views.family_flags, name="family_flags"),
+    path("review/<int:pk>/undo/", views.family_flag_undo, name="family_flag_undo"),
+    path("review/<int:pk>/ok/", views.family_flag_reviewed, name="family_flag_reviewed"),
     path("<int:pk>/", views.family_detail, name="family_detail"),
     path("<int:pk>/edit/", views.family_edit, name="family_edit"),
     path("<int:pk>/delete/", views.family_delete, name="family_delete"),

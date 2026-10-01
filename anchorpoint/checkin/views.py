@@ -22,6 +22,7 @@ from core.permissions import (
     checkin_admin_required, checkin_team_required, is_checkin_admin,
 )
 from groups.models import GroupMembership
+from households.family_flags import alert_flagged_checkins
 from households.models import Household, HouseholdMember
 from people.models import Person, normalize_phone
 
@@ -470,6 +471,17 @@ def kiosk_family_select(request, household_id):
                 except Exception:
                     logger.exception("Failed to send check-in code SMS")
                 request.session["kiosk_sms_sent"] = sms_sent > 0
+
+                # Family-safety: a child with an open "linked to another family"
+                # flag was just checked in — alert designated staff (email + SMS).
+                # Never blocks the check-in.
+                try:
+                    alert_flagged_checkins(
+                        CheckIn.objects.filter(pk__in=checkin_ids).select_related("room"),
+                        session,
+                    )
+                except Exception:
+                    logger.exception("Family-safety kiosk alert failed")
                 return redirect("checkin:kiosk_confirmation")
     else:
         form = FamilyMemberSelectForm(
