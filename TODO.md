@@ -4,12 +4,11 @@ The one backlog for the project. `CLAUDE.md` is reference only; open work goes h
 
 ## Top priority
 
-- [ ] **UI refresh.** Modernize the look without making it busier. Sweep every page for consistency.
-- [ ] **Security review.** Do a full pass before making the repo public. Cover auth and role gates, IDOR on every `<id>` URL, kiosk/agent endpoints, file uploads, secrets in history, dependency versions.
+_(empty — the UI refresh and security review both shipped 2026-10-01; see Completed.)_
 
 ## Next up
 
-- [ ] **Nightly family/person hygiene job + admin review page.** Run at 2–3am via the cron sidecar.
+- [ ] **Nightly family/person hygiene job + admin review page.** Run at 2–3am via the cron sidecar. (The admin review page pattern exists now: `/families/review/` for family-safety flags — extend it for duplicates/orphans.)
   - Detect orphaned households (0 members, or no adults).
   - Detect likely duplicate people and households (same normalized phone, address, or last name).
   - Write the findings to a review queue. Add an **admin-only page** that lists them, with merge, edit, delete and dismiss actions.
@@ -63,3 +62,7 @@ The one backlog for the project. `CLAUDE.md` is reference only; open work goes h
 - [x] Check-in: pre-print, kiosk PIN gate, offline-agent fallback, Brother QL direct-USB backend
 - [x] Reports: group roster, session attendance, birthday/VBS postcards, missing data
 - [x] Local dev/test environment (`scripts/dev-setup.sh`)
+- [x] Security review (Oct 2026): 5 fix batches — kiosk/checkout safety, Volunteer Admin scope, checkout toggle, public-input hardening, family-safety flags + alerts, auth/media gating, login throttling, dependency patches
+- [x] Maintenance: daily health email, host status cron, Tuesday security reboot, Docker prune, Dependabot
+- [x] UI refresh ("Harbor" design system, Figtree, dark mode, sidebar, every staff page redesigned; kiosk unchanged)
+- [x] Events: per-event "require birthdate + grade for each attendee" (kids' events)
