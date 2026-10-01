@@ -1,0 +1,27 @@
+# Build context is the repo root (docker-compose.yml: context: ..), and the
+# Dockerfile does `COPY . .`. Anything not excluded here ends up in the image
+# layers, so secrets, DB dumps, and user uploads must never get past this file.
+
+# Secrets / env files (docker/.env.production lives next to the compose file)
+**/.env
+**/.env.*
+
+# Database dumps written by the backup sidecar (full PII)
+docker/backups
+
+# User uploads live in the media volume, not the image
+anchorpoint/media
+anchorpoint/staticfiles
+
+# VCS + local tooling
+.git
+.github
+.claude
+.worktrees
+.superpowers
+.venv
+venv
+**/__pycache__
+**/*.py[cod]
+**/.DS_Store
+*.sqlite3
