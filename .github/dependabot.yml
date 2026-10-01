@@ -1,0 +1,16 @@
+# Weekly dependency update PRs (security alerts are separate and immediate).
+version: 2
+updates:
+  - package-ecosystem: "pip"
+    directory: "/docker"          # docker/requirements.txt (server)
+    schedule: {interval: "weekly", day: "monday"}
+    open-pull-requests-limit: 5
+    groups:
+      minor-and-patch:
+        update-types: ["minor", "patch"]
+  - package-ecosystem: "pip"
+    directory: "/agent"           # agent/requirements.txt (Pi print agent)
+    schedule: {interval: "weekly", day: "monday"}
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule: {interval: "monthly"}

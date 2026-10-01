@@ -2,7 +2,8 @@
 # Scheduler loop for the `cron` sidecar service.
 #
 # Every 60s: deliver any scheduled SMS / phone blasts that are now due.
-# Once every ~24h: purge old/unused phone-blast audio files and old label images.
+# Once every ~24h: purge old/unused phone-blast audio files and old label images,
+# then run the system health check (emails Maintenance Alerts recipients).
 #
 # Dependency-free on purpose (no system cron / supercronic) — a plain loop is
 # enough for a single-instance deployment and keeps the image lean.
@@ -24,6 +25,7 @@ while true; do
     if [ "$minutes_since_cleanup" -ge "$CLEANUP_INTERVAL_MIN" ]; then
         python manage.py cleanup_audio || echo "[cron] cleanup_audio failed"
         python manage.py purge_print_images || echo "[cron] purge_print_images failed"
+        python manage.py system_health || echo "[cron] system_health failed"
         minutes_since_cleanup=0
     fi
 

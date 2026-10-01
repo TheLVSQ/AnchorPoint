@@ -105,6 +105,25 @@ absolute audio + Twilio status-callback URLs. Phone-blast audio (uploaded or rec
 in-browser via `MediaRecorder`) is transcoded to MP3 with `ffmpeg` so Twilio's `<Play>`
 can fetch it.
 
+## Maintenance alerts
+
+- **Daily health email** — `manage.py system_health` (cron sidecar, daily) checks disk %, backup
+  age/size, droplet reboot-needed and pending security updates, print agents silent >7 days, and
+  failed SMS/phone blasts in the last 24h. Emails **Settings → Organization → Maintenance Alerts**
+  recipients only when something's wrong, plus an all-clear every Monday. `--force-email` to test.
+- **Host status** — containers can't see apt/reboot state or the root-only backups, so
+  `docker/hoststatus.sh` runs on the droplet via root cron (`/etc/cron.d/anchorpoint-hoststatus`,
+  every 30 min) and writes `/var/lib/anchorpoint-host/status.json`, mounted read-only into the cron
+  container at `/hoststatus`. Reinstall after editing the script:
+  `sudo install -m 755 docker/hoststatus.sh /usr/local/sbin/anchorpoint-hoststatus`.
+- **Weekly security reboot** — unattended-upgrades installs security updates daily; root cron
+  (`/etc/cron.d/anchorpoint-reboot`) reboots **Tuesdays 07:30 UTC (~3:30am ET) only if
+  `/var/run/reboot-required` exists**. Containers come back via `restart: unless-stopped`.
+- **Storage** — deploys prune unused images/build cache older than a week; container logs are
+  capped (10MB × 3 per service); backups keep 14 days; `cleanup_audio` purges finished
+  phone-blast audio after 30 days (`AUDIO_RETENTION_DAYS`).
+- **Dependencies** — Dependabot alerts + weekly PRs (`.github/dependabot.yml`).
+
 ## Reporting (`reporting/` app)
 
 A small report **registry**: subclass `reporting.reports.Report` (declare `slug`, `name`,

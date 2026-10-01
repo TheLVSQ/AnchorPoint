@@ -1,5 +1,12 @@
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   web:
+    logging: *default-logging
     build:
       context: ..
       dockerfile: docker/Dockerfile
@@ -27,6 +34,7 @@ services:
   # purges old phone-blast audio daily. Shares the web image, env, and media
   # volume. Skips the migration entrypoint (web owns migrations).
   cron:
+    logging: *default-logging
     build:
       context: ..
       dockerfile: docker/Dockerfile
@@ -34,6 +42,9 @@ services:
     entrypoint: ["/app/as-app.sh", "/app/cron.sh"]
     volumes:
       - media_data:/app/anchorpoint/media
+      # Host maintenance status written by docker/hoststatus.sh (root cron on
+      # the droplet); read by `manage.py system_health`. Read-only.
+      - /var/lib/anchorpoint-host:/hoststatus:ro
     env_file:
       - .env.production
     depends_on:
@@ -46,6 +57,7 @@ services:
   # survives `docker compose down -v`) and prunes old dumps. Uses postgres:16 so
   # pg_dump matches the server. Off-box copy (Spaces/snapshot) still recommended.
   backup:
+    logging: *default-logging
     image: postgres:16
     restart: unless-stopped
     env_file:
@@ -59,6 +71,7 @@ services:
         condition: service_healthy
 
   db:
+    logging: *default-logging
     container_name: anchorpoint-postgres
     image: postgres:16
     restart: unless-stopped
