@@ -1,9 +1,8 @@
 """Tiny fixed-window rate limiter built on Django's cache.
 
-Best-effort abuse-blunting, not a hard security boundary: with the default
-LocMemCache the counter is per-process (per gunicorn worker), so the effective
-limit is roughly `limit * workers`. Good enough to stop junk floods and slow
-brute force; swap in a shared cache (Redis) for exactness if ever needed.
+Fixed-window counters in the shared DatabaseCache (settings.CACHES), so a limit
+holds across gunicorn workers. Key on core.net.client_ip(), never on
+X-Forwarded-For (client-controlled behind Cloudflare).
 """
 
 from django.core.cache import cache

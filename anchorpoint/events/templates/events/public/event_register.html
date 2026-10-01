@@ -20,6 +20,11 @@
     {% else %}
         <form method="post" class="person-form" novalidate>
             {% csrf_token %}
+            {# Honeypot: hidden from people, filled by bots; any value discards the submission. #}
+            <div aria-hidden="true" style="position:absolute;left:-10000px;top:auto;width:1px;height:1px;overflow:hidden;">
+                <label for="id_website">Leave this field empty</label>
+                <input type="text" id="id_website" name="website" value="" tabindex="-1" autocomplete="off">
+            </div>
             {% if form and form.non_field_errors %}
                 {% for error in form.non_field_errors %}
                     <p class="error-text">{{ error }}</p>
