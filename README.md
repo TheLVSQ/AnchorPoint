@@ -27,43 +27,19 @@ A lightweight church management system for small-to-mid-sized churches. Inspired
 
 ### Local Development Setup
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/yourusername/anchorpoint.git
-   cd anchorpoint
-   ```
+Needs Docker (OrbStack works) and [uv](https://docs.astral.sh/uv/) or Python 3.12.
 
-2. Create a virtual environment:
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   ```
+```bash
+git clone https://github.com/yourusername/anchorpoint.git
+cd anchorpoint
+scripts/dev-setup.sh        # Postgres 16 on localhost:5433, .venv/, anchorpoint/.env
+cd anchorpoint
+../.venv/bin/python manage.py migrate
+../.venv/bin/python manage.py create_admin --username admin --email you@example.com
+../.venv/bin/python manage.py runserver
+```
 
-3. Install dependencies:
-   ```bash
-   pip install -r docker/requirements.txt
-   ```
-
-4. Create a `.env` file in `anchorpoint/anchorpoint/`:
-   ```env
-   SECRET_KEY=your-dev-secret-key
-   DEBUG=True
-   DB_NAME=anchorpoint
-   DB_USER=anchorpoint
-   DB_PASS=anchorpoint
-   DB_HOST=localhost
-   DB_PORT=5432
-   ```
-
-5. Run migrations and start the server:
-   ```bash
-   cd anchorpoint
-   python manage.py migrate
-   python manage.py createsuperuser
-   python manage.py runserver
-   ```
-
-6. Visit http://localhost:8000
+Visit http://localhost:8000. The script is idempotent; re-run it any time to start the DB again.
 
 ## Production Deployment
 
@@ -87,7 +63,7 @@ docker compose up -d
 
 # Initialize database
 docker compose exec web python manage.py migrate
-docker compose exec web python manage.py setup_beta_users
+docker compose exec web python manage.py create_admin --username <u> --email <e>
 ```
 
 ## Project Structure
@@ -100,9 +76,9 @@ anchorpoint/
 ├── households/           # Family groupings
 ├── groups/               # Teams and ministries
 ├── events/               # Events and registration
-├── attendance/           # Legacy check-in (deprecated)
-├── checkin/              # New check-in kiosk system
+├── checkin/              # Check-in kiosk, labels, print agents
 ├── messaging/            # SMS and phone communications
+├── reporting/            # Reports + CSV export
 └── templates/            # Global templates
 ```
 
@@ -126,8 +102,7 @@ All configuration is done via environment variables:
 ## Running Tests
 
 ```bash
-cd anchorpoint
-python manage.py test
+scripts/dev-setup.sh test   # Django suite + print-agent suite
 ```
 
 ## Contributing
