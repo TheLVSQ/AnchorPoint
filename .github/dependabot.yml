@@ -5,6 +5,11 @@ updates:
     directory: "/docker"          # docker/requirements.txt (server)
     schedule: {interval: "weekly", day: "monday"}
     open-pull-requests-limit: 5
+    ignore:
+      # Stay on the Django 5.2 LTS line (security patches into 2028); a major
+      # upgrade is its own planned project, not a weekly PR.
+      - dependency-name: "django"
+        update-types: ["version-update:semver-major"]
     groups:
       minor-and-patch:
         update-types: ["minor", "patch"]
