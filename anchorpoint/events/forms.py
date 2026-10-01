@@ -113,6 +113,7 @@ class EventForm(forms.ModelForm):
             "media_release_document",
             "media_release_custom",
             "registration_open",
+            "require_attendee_details",
             "registration_deadline",
             "registration_capacity",
             "is_published",
@@ -366,6 +367,21 @@ class EventRegistrationAttendeeForm(forms.ModelForm):
             "parent_guardian_name": "Parent / Guardian Name",
         }
 
+    def __init__(self, *args, require_details=False, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.require_details = require_details
+        if require_details:
+            for name, label in (("birthdate", "Birthdate"), ("grade", "Grade")):
+                self.fields[name].required = True
+                self.fields[name].label = label
+            self.fields["grade"].choices = [("", "Select grade")] + list(Person.GRADE_CHOICES)
+
+    def has_changed(self):
+        # A block that only differs by the pre-filled relationship default
+        # (cleared by the "add another" script) is still an empty block, so the
+        # formset skips it instead of demanding a name/birthdate for it.
+        return any(name != "emergency_contact_relationship" for name in self.changed_data)
+
     def clean(self):
         cleaned = super().clean()
         is_minor = cleaned.get("is_minor")
@@ -385,7 +401,7 @@ class EventRegistrationAttendeeForm(forms.ModelForm):
 
 EventRegistrationAttendeeFormSet = formset_factory(
     EventRegistrationAttendeeForm,
-    extra=1,
+    extra=0,  # start with one block; "Add another" adds more
     min_num=1,
     validate_min=True,
     max_num=20,        # cap one public submission so it can't create huge batches

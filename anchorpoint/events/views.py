@@ -161,10 +161,8 @@ def event_edit(request, pk):
 
 @staff_required
 def event_registrations(request, pk):
-    event = get_object_or_404(
-        Event.objects.prefetch_related("registrations"), pk=pk
-    )
-    registrations = event.registrations.all()
+    event = get_object_or_404(Event, pk=pk)
+    registrations = event.registrations.prefetch_related("attendees").order_by("-created_at")
     return render(
         request,
         "events/manage/event_registrations.html",
@@ -402,7 +400,8 @@ def public_event_register(request, registration_token):
     if request.method == "POST" and not registration_closed:
         form = EventRegistrationContactForm(request.POST, prefix="contact")
         attendee_formset = EventRegistrationAttendeeFormSet(
-            request.POST, prefix="attendee"
+            request.POST, prefix="attendee",
+            form_kwargs={"require_details": event.require_attendee_details},
         )
         ip = client_ip(request) or "unknown"
         if request.POST.get("website"):
@@ -456,7 +455,10 @@ def public_event_register(request, registration_token):
             )
     elif not registration_closed:
         form = EventRegistrationContactForm(prefix="contact")
-        attendee_formset = EventRegistrationAttendeeFormSet(prefix="attendee")
+        attendee_formset = EventRegistrationAttendeeFormSet(
+            prefix="attendee",
+            form_kwargs={"require_details": event.require_attendee_details},
+        )
 
     return render(
         request,

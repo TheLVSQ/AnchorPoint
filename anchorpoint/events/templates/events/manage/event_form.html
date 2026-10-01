@@ -275,6 +275,13 @@
                 </label>
                 {% for error in form.registration_open.errors %}<p class="error-text">{{ error }}</p>{% endfor %}
             </div>
+            <div class="checkbox-field form-field--full">
+                <label for="{{ form.require_attendee_details.id_for_label }}">
+                    {{ form.require_attendee_details }}
+                    <span>{{ form.require_attendee_details.label }}</span>
+                </label>
+                <small class="help-text">{{ form.require_attendee_details.help_text }}</small>
+            </div>
             <div class="form-field">
                 <label for="{{ form.registration_deadline.id_for_label }}">{{ form.registration_deadline.label }}</label>
                 {{ form.registration_deadline }}
