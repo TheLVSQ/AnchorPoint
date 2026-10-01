@@ -53,8 +53,9 @@ class CheckoutThrottleTests(TestCase):
         from django.core.cache import cache
         cache.clear()
         self.user = get_user_model().objects.create_user(username="couser", password="pw")
+        config = CheckInConfiguration.objects.create(name="Checkout On", checkout_enabled=True)
         self.session = CheckInSession.objects.create(
-            name="S", date=timezone.localdate(),
+            name="S", date=timezone.localdate(), configuration=config,
             checkin_opens=time(0, 0), checkin_closes=time(23, 50),
             event_starts=time(0, 5), event_ends=time(23, 55), is_active=True,
         )
