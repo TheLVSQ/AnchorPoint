@@ -1,25 +1,19 @@
 {% extends "base.html" %}
+{% block title %}Reports{% endblock %}
 {% block content %}
-<section class="card">
-    <div class="page-header">
-        <span class="chip">Reports</span>
-        <h1>Reports</h1>
-        <p class="page-subtitle">Pull rosters and attendance with full detail, and export to CSV.</p>
-    </div>
-
-    <div class="quick-actions">
-        {% for report in reports %}
-            <article class="quick-card">
-                <div>
-                    <p class="quick-label">Report</p>
-                    <h3>{{ report.name }}</h3>
-                    <p>{{ report.description }}</p>
-                </div>
-                <a class="ghost-link" href="{% url 'reporting:detail' report.slug %}">Open report →</a>
-            </article>
-        {% empty %}
-            <p class="empty-state">No reports registered.</p>
-        {% endfor %}
-    </div>
-</section>
+<div class="page-header">
+    <h1>Reports</h1>
+    <p class="page-subtitle">Rosters, attendance, mailing lists, and data-quality checks — preview here, export to CSV.</p>
+</div>
+<div class="report-grid">
+    {% for report in reports %}
+        <a class="report-card" href="{% url 'reporting:detail' report.slug %}">
+            <h2>{{ report.name }}</h2>
+            <p>{{ report.description }}</p>
+            <span class="ghost-link">Open report →</span>
+        </a>
+    {% empty %}
+        <p class="empty-state">No reports registered.</p>
+    {% endfor %}
+</div>
 {% endblock %}

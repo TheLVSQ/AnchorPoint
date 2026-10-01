@@ -1,17 +1,18 @@
 {% extends "base.html" %}
+{% block title %}{{ report.name }}{% endblock %}
 {% block content %}
-<a class="ghost-link" href="{% url 'reporting:list' %}">&larr; All reports</a>
+<a class="back-link" href="{% url 'reporting:list' %}">&larr; Reports</a>
 
 <div class="page-header">
-    <span class="chip">Report</span>
+    <p class="eyebrow">Report</p>
     <h1>{{ report.name }}</h1>
     <p class="page-subtitle">{{ report.description }}</p>
 </div>
 
-<section class="card" style="margin-bottom:1.5rem;">
+<section class="card">
     <form method="get">
         {% if form %}
-            <div style="display:flex; gap:0.75rem; align-items:flex-end; flex-wrap:wrap; margin-bottom:1rem;">
+            <div class="toolbar align-end">
                 {% for field in form %}
                     <div class="form-field">
                         {{ field.label_tag }}
@@ -21,61 +22,46 @@
                 {% endfor %}
             </div>
         {% endif %}
-
-        <fieldset style="border:1px solid #e5e7eb; border-radius:10px; padding:0.75rem 1rem; margin:0 0 1rem;">
-            <legend class="stat-hint" style="padding:0 0.4rem;">Columns to include</legend>
-            <div style="display:flex; flex-wrap:wrap; gap:0.5rem 1.25rem;">
+        <details class="disclosure"{% if no_columns %} open{% endif %}>
+            <summary>Choose columns</summary>
+            <div class="check-grid">
                 {% for col in available_columns %}
-                    <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:0.9rem;">
-                        <input type="checkbox" name="cols" value="{{ col.key }}" {% if col.checked %}checked{% endif %}>
-                        {{ col.header }}
-                    </label>
+                    <label class="check-inline"><input type="checkbox" name="cols" value="{{ col.key }}" {% if col.checked %}checked{% endif %}> {{ col.header }}</label>
                 {% endfor %}
             </div>
-        </fieldset>
-
-        <button type="submit" class="btn">Run report</button>
+        </details>
+        <div class="action-row"><button type="submit" class="btn">Run report</button></div>
     </form>
 </section>
 
 {% if no_columns %}
-    <div class="highlight-note">Select at least one column to include.</div>
+    <div class="callout callout--warning">Select at least one column to include.</div>
 {% elif table_rows is not None %}
     <section class="card">
-        <div class="list-card__header">
+        <div class="card__head">
             <div>
-                <span class="chip">{{ row_count }} row{{ row_count|pluralize }}</span>
-                <h2>Results</h2>
-                {% if truncated %}<p class="stat-hint">Showing first {{ preview_limit }} — the CSV export includes all {{ row_count }}.</p>{% endif %}
+                <h2>Results <span class="chip chip--neutral">{{ row_count }} row{{ row_count|pluralize }}</span></h2>
+                {% if truncated %}<p class="muted-text m-0">Showing the first {{ preview_limit }} — the CSV export includes all {{ row_count }}.</p>{% endif %}
             </div>
             {% comment %}hx-boost="false" so this is a real navigation and the browser downloads
                the file (Content-Disposition) instead of htmx swapping the CSV into the page.{% endcomment %}
             <a class="btn" hx-boost="false" download
                href="{% url 'reporting:export' report.slug %}{% if export_qs %}?{{ export_qs }}{% endif %}">Export CSV</a>
         </div>
-        <div style="overflow-x:auto;">
-            <table class="data-table" style="width:100%; border-collapse:collapse;">
+        <div class="table-wrap">
+            <table class="data-table">
                 <thead>
                     <tr>
                         {% for h in headers %}
-                            <th style="text-align:left; padding:8px 12px; border-bottom:2px solid #e5e7eb; white-space:nowrap;">
-                                <a href="?{{ h.sort_qs }}" class="ghost-link" style="display:inline-flex; gap:4px; align-items:center;">
-                                    {{ h.header }}
-                                    {% if h.active %}<span>{% if h.dir == "desc" %}▼{% else %}▲{% endif %}</span>{% else %}<span style="opacity:0.3;">↕</span>{% endif %}
-                                </a>
-                            </th>
+                            <th><a class="th-sort{% if h.active %} is-active{% endif %}" href="?{{ h.sort_qs }}">{{ h.header }} <span aria-hidden="true">{% if h.active %}{% if h.dir == "desc" %}▼{% else %}▲{% endif %}{% else %}↕{% endif %}</span></a></th>
                         {% endfor %}
                     </tr>
                 </thead>
                 <tbody>
                     {% for cells in table_rows %}
-                        <tr>
-                            {% for cell in cells %}
-                                <td style="padding:8px 12px; border-bottom:1px solid #f1f1f4;">{{ cell }}</td>
-                            {% endfor %}
-                        </tr>
+                        <tr>{% for cell in cells %}<td>{{ cell }}</td>{% endfor %}</tr>
                     {% empty %}
-                        <tr><td colspan="{{ headers|length }}" class="empty-state">No matching records.</td></tr>
+                        <tr><td colspan="{{ headers|length }}" class="muted-text">No matching records.</td></tr>
                     {% endfor %}
                 </tbody>
             </table>
