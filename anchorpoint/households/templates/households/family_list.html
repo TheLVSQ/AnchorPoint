@@ -1,39 +1,41 @@
 {% extends "base.html" %}
-
+{% block title %}Families{% endblock %}
 {% block content %}
-<section class="card">
-    <div class="page-header">
-        <span class="chip">Families</span>
-        <h1>Families</h1>
-        <p class="page-subtitle">Every household in AnchorPoint — search by family name or a member's last name.</p>
-    </div>
+<div class="page-header">
+    <h1>Families</h1>
+    <p class="page-subtitle">Every household in AnchorPoint — search by family name or a member's last name.</p>
+</div>
 
-    <form method="GET" style="margin-bottom: 20px; display:flex; gap:0.5rem;">
-        <input type="text" name="q" value="{{ query }}" placeholder="Search families..."
-               style="flex:1;" autocomplete="off">
-        <button type="submit" class="btn">Search</button>
-    </form>
+<form method="GET" class="search-bar" role="search">
+    <label class="visually-hidden" for="family-q">Search families</label>
+    <input id="family-q" type="search" name="q" value="{{ query }}" placeholder="Search families…" autocomplete="off">
+    <button type="submit" class="ghost">Search</button>
+</form>
 
-    <div class="cards">
+{% if page_obj.object_list %}
+<div class="table-wrap">
+    <table class="data-table data-table--stack">
+        <thead><tr><th>Family</th><th>Members</th><th>Primary adult</th><th>City</th></tr></thead>
+        <tbody>
         {% for family in page_obj %}
-            <div class="card">
-                <h2><a href="{% url 'households:family_detail' family.pk %}">{{ family.name }}</a></h2>
-                <p class="stat-hint">
-                    {{ family.member_count }} member{{ family.member_count|pluralize }}
-                    {% if family.primary_adult %} · Primary: {{ family.primary_adult.first_name }} {{ family.primary_adult.last_name }}{% endif %}
-                    {% if family.city %} · {{ family.city }}{% endif %}
-                </p>
-                <p>
-                    {% for membership in family.memberships.all %}{{ membership.person.first_name }}{% if not forloop.last %}, {% endif %}{% endfor %}
-                </p>
-                <a href="{% url 'households:family_detail' family.pk %}">View</a>
-            </div>
-        {% empty %}
-            <p class="empty-state">
-                {% if query %}No families match "{{ query }}".{% else %}No families yet — they're created when you add people.{% endif %}
-            </p>
+            <tr>
+                <td data-label="Family">
+                    <a class="person-cell" href="{% url 'households:family_detail' family.pk %}">
+                        <span class="avatar avatar--square" aria-hidden="true">{{ family.name|slice:":1" }}</span>
+                        <strong>{{ family.name }}</strong>
+                    </a>
+                    <span class="muted-text count-note">{{ family.member_count }} member{{ family.member_count|pluralize }}</span>
+                </td>
+                <td data-label="Members">{% for membership in family.memberships.all %}{{ membership.person.first_name }}{% if not forloop.last %}, {% endif %}{% empty %}<span class="muted-text">No members</span>{% endfor %}</td>
+                <td data-label="Primary">{% if family.primary_adult %}{{ family.primary_adult.first_name }} {{ family.primary_adult.last_name }}{% endif %}</td>
+                <td data-label="City">{{ family.city|default:"" }}</td>
+            </tr>
         {% endfor %}
-    </div>
-    {% include "partials/pagination.html" %}
-</section>
+        </tbody>
+    </table>
+</div>
+{% else %}
+    <p class="empty-state">{% if query %}No families match "{{ query }}".{% else %}No families yet — they're created when you add people.{% endif %}</p>
+{% endif %}
+{% include "partials/pagination.html" %}
 {% endblock %}

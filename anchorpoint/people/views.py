@@ -375,8 +375,25 @@ def people_detail(request, pk):
         person.is_minor is None and bool(own_relationships & child_relationships)
     )
 
+    # Key fields worth chasing when blank (shown as one quiet line instead of
+    # a column of "-" placeholders). Adults: reachability; kids: safety basics.
+    missing = []
+    if not person.birthdate:
+        missing.append("birthdate")
+    if not person.formatted_address and not any(h.formatted_address for h in households):
+        missing.append("address")  # a family address counts (kids rarely have their own)
+    if show_emergency:
+        if not person.grade:
+            missing.append("grade")
+    else:
+        if not person.phone:
+            missing.append("phone")
+        if not person.email:
+            missing.append("email")
+
     context = {
         "person": person,
+        "missing_fields": missing,
         "households": households,
         "registrations": registrations,
         "communication_logs": communication_logs,

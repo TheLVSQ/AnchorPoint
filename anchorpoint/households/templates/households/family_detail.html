@@ -1,131 +1,139 @@
 {% extends "base.html" %}
-
+{% block title %}{{ household.name }}{% endblock %}
 {% block content %}
-<a class="ghost-link" href="{% url 'households:family_list' %}">&larr; Back to Families</a>
+<a class="back-link" href="{% url 'households:family_list' %}">&larr; Families</a>
 
-<div class="page-header">
-    <span class="chip">Family</span>
-    <h1>{{ household.name }}</h1>
-    <p class="page-subtitle">
-        {% if household.phone %}{{ household.phone }} · {% endif %}
-        {% if household.primary_adult %}Primary adult: {{ household.primary_adult.first_name }} {{ household.primary_adult.last_name }}{% else %}No primary adult set{% endif %}
-    </p>
+<div class="page-header page-header--split">
+    <div>
+        <h1>{{ household.name }}</h1>
+        <p class="page-subtitle">
+            {% if household.primary_adult %}Primary adult: <a href="{% url 'people_detail' household.primary_adult.pk %}">{{ household.primary_adult.first_name }} {{ household.primary_adult.last_name }}</a>{% else %}No primary adult set{% endif %}
+            {% if household.phone %} · <a href="tel:{{ household.phone }}">{{ household.phone }}</a>{% endif %}
+        </p>
+    </div>
+    <div class="page-actions">
+        <a href="{% url 'households:family_edit' household.pk %}" class="btn">Edit family</a>
+        <details class="menu">
+            <summary class="btn ghost">More</summary>
+            <div class="menu__panel" role="menu">
+                <a role="menuitem" class="danger-item" href="{% url 'households:family_delete' household.pk %}">Delete family…</a>
+            </div>
+        </details>
+    </div>
 </div>
 
-<div class="hero-actions" style="margin-bottom: 2rem;">
-    <a href="{% url 'households:family_edit' household.pk %}" class="btn">Edit Family</a>
-    <a href="{% url 'households:family_delete' household.pk %}" class="btn ghost" style="color:#dc2626;">Delete Family</a>
-</div>
-
-<div class="detail-grid">
-    <section class="detail-card">
-        <h2>Members</h2>
-        <div class="list-card__body" style="margin-top: 1rem;">
-            {% for membership in memberships %}
-                <div class="list-item">
-                    <div>
-                        <strong>
-                            <a href="{% url 'people_detail' membership.person.pk %}">
-                                {{ membership.person.first_name }} {{ membership.person.last_name }}
-                            </a>
-                            {% if household.primary_adult_id == membership.person.pk %}
-                                <span class="chip" style="background:#fef3c7;color:#92400e;">★ Primary</span>
-                            {% endif %}
-                        </strong>
-                        <span class="muted-text">
-                            {% if membership.person.age is not None %}Age {{ membership.person.age }} · {% endif %}
-                            {{ membership.person.get_status_display }}
-                        </span>
+<div class="split">
+    <div class="split__main">
+        <section class="card">
+            <div class="card__head"><h2>Members</h2><span class="muted-text">{{ memberships|length }}</span></div>
+            {% if memberships %}
+            <ul class="row-list">
+                {% for membership in memberships %}
+                <li class="row-list__item member-row">
+                    <span class="avatar" aria-hidden="true">{{ membership.person.first_name|slice:":1" }}{{ membership.person.last_name|slice:":1" }}</span>
+                    <div class="row-list__main">
+                        <span><a href="{% url 'people_detail' membership.person.pk %}"><strong>{{ membership.person.first_name }} {{ membership.person.last_name }}</strong></a>
+                            {% if household.primary_adult_id == membership.person.pk %}<span class="chip chip--warning">★ Primary</span>{% endif %}</span>
+                        <span class="muted-text">{% if membership.person.age is not None %}Age {{ membership.person.age }} · {% endif %}{{ membership.person.get_status_display }}</span>
                     </div>
-                    <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
-                        <form method="POST" action="{% url 'households:family_member_role' household.pk membership.pk %}"
-                              style="display:flex; gap:0.25rem; align-items:center;">
+                    <div class="member-row__actions">
+                        <form method="POST" action="{% url 'households:family_member_role' household.pk membership.pk %}" class="inline-form">
                             {% csrf_token %}
-                            <select name="relationship_type">
+                            <label class="visually-hidden" for="role-{{ membership.pk }}">Role</label>
+                            <select id="role-{{ membership.pk }}" name="relationship_type">
                                 {% for value, label in relationship_choices %}
                                     <option value="{{ value }}" {% if membership.relationship_type == value %}selected{% endif %}>{{ label }}</option>
                                 {% endfor %}
                             </select>
-                            <button type="submit" class="btn ghost">Save</button>
+                            <button type="submit" class="btn ghost btn-sm">Save</button>
                         </form>
                         {% if membership.relationship_type == "adult" and household.primary_adult_id != membership.person.pk %}
                             <form method="POST" action="{% url 'households:family_set_primary' household.pk %}">
                                 {% csrf_token %}
                                 <input type="hidden" name="person_id" value="{{ membership.person.pk }}">
-                                <button type="submit" class="btn ghost">Make Primary</button>
+                                <button type="submit" class="btn ghost btn-sm">Make primary</button>
                             </form>
                         {% endif %}
                         <form method="POST" action="{% url 'households:family_member_remove' household.pk membership.pk %}"
                               onsubmit="return confirm('Remove {{ membership.person.first_name|escapejs }} from {{ household.name|escapejs }}? Their profile is kept.');">
                             {% csrf_token %}
-                            <button type="submit" class="btn ghost danger">Remove</button>
+                            <button type="submit" class="btn ghost danger btn-sm">Remove</button>
                         </form>
                     </div>
-                </div>
-            {% empty %}
-                <p class="empty-state">No members — add someone below, or this family is a candidate for deletion.</p>
-            {% endfor %}
-        </div>
-    </section>
-
-    <section class="detail-card">
-        <h2>Add a Member</h2>
-        <p class="stat-hint">Search for an existing person, or create a brand-new one below.</p>
-        <form method="GET" style="display:flex; gap:0.5rem; margin:0.75rem 0;">
-            <input type="text" name="member_q" value="{{ member_query }}" placeholder="Search people..." style="flex:1;">
-            <button type="submit" class="btn">Search</button>
-        </form>
-        {% if member_query %}
-            {% for person in candidates %}
-                <form method="POST" action="{% url 'households:family_member_add' household.pk %}"
-                      class="list-item" style="display:flex; justify-content:space-between; align-items:center;">
-                    {% csrf_token %}
-                    <input type="hidden" name="person_id" value="{{ person.pk }}">
-                    <div>
-                        <strong>{{ person.first_name }} {{ person.last_name }}</strong>
-                        <span class="muted-text">{% if person.age is not None %}Age {{ person.age }}{% endif %}</span>
-                    </div>
-                    <div style="display:flex; gap:0.25rem;">
-                        <select name="relationship_type">
-                            {% for value, label in relationship_choices %}
-                                <option value="{{ value }}">{{ label }}</option>
-                            {% endfor %}
-                        </select>
-                        <button type="submit" class="btn">Add</button>
-                    </div>
-                </form>
-            {% empty %}
-                <p class="empty-state">No matches for "{{ member_query }}" outside this family.</p>
-            {% endfor %}
-        {% endif %}
-
-        <h3 style="margin-top:1.75rem;">Or create a new person</h3>
-        <p class="stat-hint">Adds a brand-new profile straight into this family.</p>
-        <form method="POST" action="{% url 'households:family_member_create' household.pk %}" style="margin-top:0.5rem;">
-            {% csrf_token %}
-            {% if new_person_form.errors %}
-                <div style="margin-bottom:0.75rem; padding:0.6rem 0.85rem; background:#fef2f2; border:1px solid #fecaca; border-radius:8px; color:#991b1b; font-size:0.9rem;">
-                    {% for field in new_person_form %}{% for error in field.errors %}<div>{{ field.label }}: {{ error }}</div>{% endfor %}{% endfor %}
-                    {% for error in new_person_form.non_field_errors %}<div>{{ error }}</div>{% endfor %}
-                </div>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+                <p class="empty-state">No members — add someone, or this family is a candidate for deletion.</p>
             {% endif %}
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem;">
-                <label>First name<br>{{ new_person_form.first_name }}</label>
-                <label>Last name {% if family_surname %}<span class="muted-text">(blank = {{ family_surname }})</span>{% endif %}<br>{{ new_person_form.last_name }}</label>
-                <label>Role in family<br>{{ new_person_form.relationship_type }}</label>
-                <label>Birthdate<br>{{ new_person_form.birthdate }}</label>
-                <label>Grade<br>{{ new_person_form.grade }}</label>
-                <label>Gender<br>{{ new_person_form.gender }}</label>
-                <label>Phone<br>{{ new_person_form.phone }}</label>
-                <label>Email<br>{{ new_person_form.email }}</label>
-            </div>
-            <button type="submit" class="btn" style="margin-top:0.85rem;">Create &amp; add to family</button>
-        </form>
+        </section>
+    </div>
 
+    <aside class="split__side">
         {% if household.formatted_address %}
-            <h2 style="margin-top:1.5rem;">Address</h2>
-            <p>{{ household.formatted_address|linebreaksbr }}</p>
+        <section class="card">
+            <div class="card__head"><h2>Address</h2></div>
+            <p class="m-0">{{ household.formatted_address|linebreaksbr }}</p>
+        </section>
         {% endif %}
-    </section>
+
+        <section class="card">
+            <div class="card__head"><h2>Add a member</h2></div>
+            <form method="GET" class="search-bar">
+                <label class="visually-hidden" for="member-q">Search people</label>
+                <input id="member-q" type="search" name="member_q" value="{{ member_query }}" placeholder="Search people…">
+                <button type="submit" class="ghost">Search</button>
+            </form>
+            {% if member_query %}
+                <ul class="row-list">
+                {% for person in candidates %}
+                    <li class="row-list__item">
+                        <form method="POST" action="{% url 'households:family_member_add' household.pk %}" class="candidate-form">
+                            {% csrf_token %}
+                            <input type="hidden" name="person_id" value="{{ person.pk }}">
+                            <div class="row-list__main">
+                                <strong>{{ person.first_name }} {{ person.last_name }}</strong>
+                                {% if person.age is not None %}<span class="muted-text">Age {{ person.age }}</span>{% endif %}
+                            </div>
+                            <div class="inline-form">
+                                <label class="visually-hidden" for="add-role-{{ person.pk }}">Role</label>
+                                <select id="add-role-{{ person.pk }}" name="relationship_type">
+                                    {% for value, label in relationship_choices %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
+                                </select>
+                                <button type="submit" class="btn btn-sm">Add</button>
+                            </div>
+                        </form>
+                    </li>
+                {% empty %}
+                    <li class="muted-text">No matches for "{{ member_query }}" outside this family.</li>
+                {% endfor %}
+                </ul>
+            {% endif %}
+
+            <details class="disclosure"{% if new_person_form.errors %} open{% endif %}>
+                <summary>Create a new person in this family</summary>
+                <form method="POST" action="{% url 'households:family_member_create' household.pk %}">
+                    {% csrf_token %}
+                    {% if new_person_form.errors %}
+                        <div class="message error">
+                            {% for field in new_person_form %}{% for error in field.errors %}<div>{{ field.label }}: {{ error }}</div>{% endfor %}{% endfor %}
+                            {% for error in new_person_form.non_field_errors %}<div>{{ error }}</div>{% endfor %}
+                        </div>
+                    {% endif %}
+                    <div class="form-grid">
+                        <div class="form-field"><label for="{{ new_person_form.first_name.id_for_label }}">First name</label>{{ new_person_form.first_name }}</div>
+                        <div class="form-field"><label for="{{ new_person_form.last_name.id_for_label }}">Last name {% if family_surname %}<span class="muted-text">(blank = {{ family_surname }})</span>{% endif %}</label>{{ new_person_form.last_name }}</div>
+                        <div class="form-field"><label for="{{ new_person_form.relationship_type.id_for_label }}">Role in family</label>{{ new_person_form.relationship_type }}</div>
+                        <div class="form-field"><label for="{{ new_person_form.birthdate.id_for_label }}">Birthdate</label>{{ new_person_form.birthdate }}</div>
+                        <div class="form-field"><label for="{{ new_person_form.grade.id_for_label }}">Grade</label>{{ new_person_form.grade }}</div>
+                        <div class="form-field"><label for="{{ new_person_form.gender.id_for_label }}">Gender</label>{{ new_person_form.gender }}</div>
+                        <div class="form-field"><label for="{{ new_person_form.phone.id_for_label }}">Phone</label>{{ new_person_form.phone }}</div>
+                        <div class="form-field"><label for="{{ new_person_form.email.id_for_label }}">Email</label>{{ new_person_form.email }}</div>
+                    </div>
+                    <button type="submit" class="btn">Create &amp; add to family</button>
+                </form>
+            </details>
+        </section>
+    </aside>
 </div>
 {% endblock %}

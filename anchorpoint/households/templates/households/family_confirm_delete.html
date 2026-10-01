@@ -4,12 +4,12 @@
 <a class="ghost-link" href="{% url 'households:family_detail' household.pk %}">&larr; Back to {{ household.name }}</a>
 
 <div class="page-header">
-    <span class="chip" style="background:#fee2e2;color:#991b1b;">Delete Family</span>
+    <span class="chip chip--danger">Delete Family</span>
     <h1>Delete {{ household.name }}?</h1>
 </div>
 
 {% if members %}
-    <div class="detail-card" style="border:2px solid #f59e0b; background:#fffbeb; margin-bottom:1.5rem;">
+    <div class="detail-card callout callout--warning">
         <h2>This family still has {{ members|length }} member{{ members|length|pluralize }}</h2>
         <p class="stat-hint">
             A family can't be deleted while anyone is in it. For each person below,
@@ -17,9 +17,9 @@
             their profile. Once the family is empty you can delete it.
         </p>
 
-        <div class="list-card__body" style="margin-top:1rem;">
+        <div class="list-card__body mt-3">
             {% for membership in members %}
-                <div class="list-item" style="align-items:flex-start;">
+                <div class="list-item align-start">
                     <div>
                         <strong>
                             <a href="{% url 'people_detail' membership.person.pk %}">
@@ -27,17 +27,17 @@
                             </a>
                         </strong>
                         {% if household.primary_adult_id == membership.person.pk %}
-                            <span class="chip" style="background:#fef3c7;color:#92400e;">★ Primary</span>
+                            <span class="chip chip--warning">★ Primary</span>
                         {% endif %}
                         <span class="muted-text">
                             {% if membership.person.age is not None %}Age {{ membership.person.age }} · {% endif %}
                             {{ membership.get_relationship_type_display }}
                         </span>
                     </div>
-                    <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
+                    <div class="inline-form">
                         {% if other_families %}
-                            <form method="POST" action="{% url 'households:family_delete' household.pk %}"
-                                  style="display:flex; gap:0.25rem; align-items:center;">
+                            <form class="inline-form" method="POST" action="{% url 'households:family_delete' household.pk %}"
+                                 >
                                 {% csrf_token %}
                                 <input type="hidden" name="action" value="move">
                                 <input type="hidden" name="member_pk" value="{{ membership.pk }}">
@@ -67,10 +67,10 @@
 
     <div class="hero-actions">
         <a href="{% url 'households:family_detail' household.pk %}" class="btn ghost">Cancel</a>
-        <button class="btn" disabled style="opacity:0.5; cursor:not-allowed;">Delete family (empty it first)</button>
+        <button class="btn is-disabled" disabled>Delete family (empty it first)</button>
     </div>
 {% else %}
-    <div class="detail-card" style="margin-bottom:1.5rem;">
+    <div class="detail-card mb-4">
         <p>This family has no members. Deleting it removes the family record only — no people are affected.</p>
     </div>
     <div class="hero-actions">

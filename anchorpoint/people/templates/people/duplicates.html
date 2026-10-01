@@ -15,42 +15,42 @@
 {% if groups %}
     <form method="post" action="{% url 'people_bulk_delete' %}" hx-boost="false">
         {% csrf_token %}
-        <div class="bulk-toolbar" style="display:flex; align-items:center; gap:1rem; flex-wrap:wrap; margin-bottom:1rem;">
-            <button type="submit" class="btn ghost danger" style="color:#dc2626;">Delete selected</button>
+        <div class="bulk-toolbar toolbar">
+            <button type="submit" class="btn ghost danger danger">Delete selected</button>
             <span class="stat-hint">{{ groups|length }} group{{ groups|length|pluralize }} · {{ people_in_groups }} records. Tick the copy to remove (keep one per group).</span>
         </div>
 
         {% for group in groups %}
-            <section class="detail-card" style="margin-bottom:1rem;">
-                <h2 style="font-size:1.05rem;">
+            <section class="detail-card mb-3">
+                <h2 class="text-lg">
                     <span class="chip">{{ group.reason }}</span> {{ group.label }}
                     <span class="stat-hint">({{ group.people|length }})</span>
                 </h2>
-                <div style="overflow-x:auto;">
-                    <table class="data-table" style="width:100%; border-collapse:collapse;">
+                <div class="table-wrap">
+                    <table class="data-table data-table">
                         <thead>
                             <tr>
-                                <th style="padding:6px 10px;"></th>
-                                <th style="text-align:left; padding:6px 10px;">Name</th>
-                                <th style="text-align:left; padding:6px 10px;">Age</th>
-                                <th style="text-align:left; padding:6px 10px;">Email</th>
-                                <th style="text-align:left; padding:6px 10px;">Phone</th>
-                                <th style="text-align:left; padding:6px 10px;">Family</th>
-                                <th style="text-align:right; padding:6px 10px;"></th>
+                                <th></th>
+                                <th>Name</th>
+                                <th>Age</th>
+                                <th>Email</th>
+                                <th>Phone</th>
+                                <th>Family</th>
+                                <th class="text-right"></th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for p in group.people %}
                                 <tr>
-                                    <td style="padding:6px 10px;"><input type="checkbox" name="ids" value="{{ p.pk }}"></td>
-                                    <td style="padding:6px 10px;"><strong>{{ p.first_name }} {{ p.last_name }}</strong></td>
-                                    <td style="padding:6px 10px;">{{ p.age|default:"—" }}</td>
-                                    <td style="padding:6px 10px; overflow-wrap:anywhere;">{{ p.email|default:"—" }}</td>
-                                    <td style="padding:6px 10px;">{{ p.phone|default:"—" }}</td>
-                                    <td style="padding:6px 10px;">
+                                    <td><input type="checkbox" name="ids" value="{{ p.pk }}"></td>
+                                    <td><strong>{{ p.first_name }} {{ p.last_name }}</strong></td>
+                                    <td>{{ p.age|default:"—" }}</td>
+                                    <td class="wrap-anywhere">{{ p.email|default:"—" }}</td>
+                                    <td>{{ p.phone|default:"—" }}</td>
+                                    <td>
                                         {% with hh=p.households.all|first %}{{ hh.name|default:"—" }}{% endwith %}
                                     </td>
-                                    <td style="padding:6px 10px; text-align:right;">
+                                    <td class="text-right">
                                         <a class="btn ghost" href="{% url 'people_detail' p.pk %}">Open</a>
                                     </td>
                                 </tr>
