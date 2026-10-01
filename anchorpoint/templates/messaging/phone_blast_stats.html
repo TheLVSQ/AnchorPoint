@@ -4,34 +4,16 @@
      hx-trigger="every 5s"
      hx-swap="outerHTML"
      {% endif %}>
-
-    <div style="margin-top:1rem;">
-        <div style="display:flex;justify-content:space-between;font-size:0.85rem;" class="muted-text">
-            <span>{{ stats.settled }} of {{ stats.total }} call{{ stats.total|pluralize }} settled</span>
-            <span>{{ stats.percent }}%</span>
-        </div>
-        <div style="background:#e5e7eb;border-radius:999px;height:0.5rem;overflow:hidden;margin-top:0.25rem;">
-            <div style="background:#16a34a;height:100%;width:{{ stats.percent }}%;transition:width 0.4s ease;"></div>
-        </div>
+    <div class="progress-row">
+        <span class="muted-text">{{ stats.settled }} of {{ stats.total }} call{{ stats.total|pluralize }} settled</span>
+        <span class="muted-text">{{ stats.percent }}%</span>
     </div>
+    <progress class="progress" max="100" value="{{ stats.percent }}">{{ stats.percent }}%</progress>
 
-    <div class="detail-grid" style="margin-top:1rem;">
-        <section class="detail-card" style="text-align:center;">
-            <div style="font-size:2.5rem;font-weight:700;color:#16a34a;">{{ stats.answered }}</div>
-            <div class="stat-hint">Answered</div>
-        </section>
-        <section class="detail-card" style="text-align:center;">
-            <div style="font-size:2.5rem;font-weight:700;">{{ stats.no_answer }}</div>
-            <div class="stat-hint">No Answer</div>
-        </section>
-        <section class="detail-card" style="text-align:center;">
-            <div style="font-size:2.5rem;font-weight:700;color:#dc2626;">{{ stats.failed }}</div>
-            <div class="stat-hint">Failed</div>
-        </section>
-        <section class="detail-card" style="text-align:center;">
-            <div style="font-size:2.5rem;font-weight:700;color:#ca8a04;">{{ stats.pending }}</div>
-            <div class="stat-hint">Pending</div>
-        </section>
+    <div class="stat-grid">
+        <div class="stat-card"><p class="stat-label">Answered</p><p class="stat-value text-success">{{ stats.answered }}</p></div>
+        <div class="stat-card"><p class="stat-label">No answer</p><p class="stat-value">{{ stats.no_answer }}</p></div>
+        <div class="stat-card"><p class="stat-label">Failed</p><p class="stat-value text-danger">{{ stats.failed }}</p></div>
+        <div class="stat-card"><p class="stat-label">Pending</p><p class="stat-value text-warning">{{ stats.pending }}</p></div>
     </div>
-
 </div>
