@@ -825,7 +825,8 @@ table.data-table, table.table, .permissions-table {
 .card .person-form > .form-section:first-of-type, .card .photo-upload + .form-section { border-top: 0; padding-top: 0; }
 .card .person-form { gap: 1.1rem; }
 /* Help text that follows a checkbox (no input above it to tuck under). */
-.checkbox-field .help-text, .checkbox-field + .help-text, label + small.help-text { display: block; margin: 0.25rem 0 0.9rem 1.7rem; }
+.checkbox-field .help-text, .checkbox-field + .help-text { display: block; margin: 0.25rem 0 0.9rem 1.7rem; }
+label + .help-text, label + small.help-text { display: block; margin: -0.15rem 0 0.4rem; }
 .photo-upload .help-text { margin: 0; }
 .copy-address { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem 0.75rem; margin-bottom: 1rem; }
 .copy-address .help-text { margin: 0; }
@@ -856,3 +857,50 @@ table.data-table, table.table, .permissions-table {
 .log__line--create { color: #7fd99d; }
 .log__line--match { color: #9cc4f0; }
 .log__line--warn { color: #f4a6a0; }
+
+/* -------------------------------------------------------------- Events -- */
+.row-actions { display: inline-flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.35rem; }
+.data-table tr.is-past td { color: var(--muted); }
+.data-table td .chip { margin-left: 0.35rem; vertical-align: middle; }
+.data-table td .chip-row .chip { margin-left: 0; }
+.contact-cell a { display: block; line-height: 1.35; }
+@media (max-width: 720px) { .row-actions { justify-content: flex-start; } }
+/* Person lookup (event form) */
+.person-lookup { position: relative; }
+.person-lookup__suggestions {
+    position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 10; overflow: hidden;
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow-lg);
+}
+.person-lookup__suggestions[hidden] { display: none; }
+.person-lookup__option {
+    display: block; width: 100%; min-height: 0; padding: 0.6rem 0.85rem; text-align: left;
+    background: transparent; border: 0; border-radius: 0; color: var(--text); font: inherit; font-weight: 500;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer;
+}
+.person-lookup__option:hover, .person-lookup__option:focus { background: var(--surface-sunken); color: var(--text); }
+.form-field--remove input[type="checkbox"] { display: none; }
+/* Public event page */
+.event-hero-photo { width: 100%; margin-bottom: 1.5rem; border-radius: var(--radius-lg); overflow: hidden; background: var(--surface-sunken); }
+.event-hero-photo img { width: 100%; height: auto; display: block; }
+.photo-preview--tall { width: 100%; height: 200px; }
+.event-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1rem; }
+.event-card {
+    display: flex; flex-direction: column; overflow: hidden; text-decoration: none; color: var(--text);
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow-sm);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.event-card:hover { color: var(--text); border-color: var(--primary); box-shadow: var(--shadow); }
+.event-card__photo { aspect-ratio: 16 / 9; background: var(--surface-sunken); }
+.event-card__photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.event-card__body { display: flex; gap: 0.9rem; padding: 1rem 1.1rem 1.1rem; }
+.event-card__text h2 { margin: 0 0 0.15rem; font-size: 1.05rem; }
+.event-card__text .muted-text { margin: 0 0 0.4rem; font-size: 0.85rem; }
+.event-card__summary { margin: 0; color: var(--muted); font-size: 0.92rem; }
+.event-facts h2 { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); margin: 1.1rem 0 0.4rem; }
+.event-facts p { margin: 0; }
+.btn-block { display: flex; width: 100%; }
+.contact-stack { display: flex; flex-direction: column; gap: 0.15rem; }
+.prose p { max-width: 70ch; }
+.prose p:last-child { margin-bottom: 0; }
+.gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 0.75rem; }
+.event-card__body { align-items: flex-start; } .row-list__item .date-badge { align-self: flex-start; }

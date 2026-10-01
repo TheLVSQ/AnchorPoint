@@ -1,39 +1,24 @@
 {% extends "base.html" %}
 {% block content %}
+<a class="back-link" href="{% url 'events:manage_list' %}">&larr; Events</a>
 <div class="page-header">
-    <div>
-        <h1>Registration Matching Queue</h1>
-        <p class="page-subtitle">Link attendees to people profiles or create new records. Only team members with elevated permissions can make changes.</p>
-    </div>
-    <a class="btn ghost" href="{% url 'events:manage_list' %}">Back to Events</a>
+    <h1>Match attendees</h1>
+    <p class="page-subtitle">Link each registered attendee to an existing person, or create a new record.</p>
 </div>
 
 {% if attendee_forms %}
     <div class="person-form">
         {% for attendee, form in attendee_forms %}
             <div class="card">
-                <p class="detail-pill">{{ attendee.event.title }}</p>
-                <h2>{{ attendee.full_name }}</h2>
-                <div class="detail-grid">
-                    <div class="detail-card">
-                        <h3>Contact</h3>
-                        <ul class="detail-list">
-                            <li><span>Email</span> {{ attendee.email|default:"—" }}</li>
-                            <li><span>Phone</span> {{ attendee.phone|default:"—" }}</li>
-                            <li><span>Birthdate</span> {{ attendee.birthdate|date:"M j, Y"|default:"—" }}</li>
-                            <li><span>Minor?</span> {{ attendee.is_minor|yesno:"Yes,No" }}</li>
-                        </ul>
-                    </div>
-                    <div class="detail-card">
-                        <h3>Guardian & Emergency</h3>
-                        <ul class="detail-list">
-                            <li><span>Parent / Guardian</span> {{ attendee.parent_guardian_name|default:"—" }}</li>
-                            <li><span>Guardian Email</span> {{ attendee.parent_guardian_email|default:"—" }}</li>
-                            <li><span>Guardian Phone</span> {{ attendee.parent_guardian_phone|default:"—" }}</li>
-                            <li><span>Emergency Contact</span> {{ attendee.emergency_contact_name|default:"—" }}</li>
-                        </ul>
-                    </div>
-                </div>
+                <div class="card__head"><h2>{{ attendee.full_name }}</h2><span class="chip">{{ attendee.event.title }}</span></div>
+                <dl class="kv kv--inline mb-3">
+                    {% if attendee.email %}<div><dt>Email</dt><dd>{{ attendee.email }}</dd></div>{% endif %}
+                    {% if attendee.phone %}<div><dt>Phone</dt><dd>{{ attendee.phone }}</dd></div>{% endif %}
+                    {% if attendee.birthdate %}<div><dt>Birthdate</dt><dd>{{ attendee.birthdate|date:"M j, Y" }}</dd></div>{% endif %}
+                    <div><dt>Minor</dt><dd>{{ attendee.is_minor|yesno:"Yes,No" }}</dd></div>
+                    {% if attendee.parent_guardian_name %}<div><dt>Guardian</dt><dd>{{ attendee.parent_guardian_name }}{% if attendee.parent_guardian_phone %} · {{ attendee.parent_guardian_phone }}{% endif %}{% if attendee.parent_guardian_email %} · {{ attendee.parent_guardian_email }}{% endif %}</dd></div>{% endif %}
+                    {% if attendee.emergency_contact_name %}<div><dt>Emergency</dt><dd>{{ attendee.emergency_contact_name }}</dd></div>{% endif %}
+                </dl>
                 <form method="post" class="form-field form-field--full">
                     {% csrf_token %}
                     <input type="hidden" name="attendee_id" value="{{ attendee.id }}">
@@ -54,14 +39,12 @@
                             {{ form.notes }}
                         </div>
                     </div>
-                    <button type="submit">Update Match</button>
+                    <button type="submit">Save match</button>
                 </form>
             </div>
         {% endfor %}
     </div>
 {% else %}
-    <div class="card">
-        <p class="empty-state">No attendees need matching right now. Great job staying caught up!</p>
-    </div>
+    <p class="empty-state">No attendees need matching right now — you're all caught up.</p>
 {% endif %}
 {% endblock %}

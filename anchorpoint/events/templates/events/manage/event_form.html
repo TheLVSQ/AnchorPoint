@@ -1,62 +1,9 @@
 {% extends "base.html" %}
 {% block content %}
-<style>
-    .person-lookup {
-        position: relative;
-    }
-    .person-lookup__suggestions {
-        position: absolute;
-        top: calc(100% + 4px);
-        left: 0;
-        right: 0;
-        background: #fff;
-        border: 1px solid var(--border, #e2e8f0);
-        border-radius: 10px;
-        box-shadow: 0 12px 25px rgba(15, 23, 42, 0.1);
-        z-index: 10;
-        overflow: hidden;
-    }
-    .person-lookup__suggestions[hidden] {
-        display: none;
-    }
-    .person-lookup__option {
-        display: block;
-        width: 100%;
-        padding: 0.65rem 0.9rem;
-        border: none;
-        background: transparent;
-        text-align: left;
-        cursor: pointer;
-        font: inherit;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-    .person-lookup__option:hover,
-    .person-lookup__option:focus {
-        background: var(--bg, #f6f7fb);
-    }
-    .form-field .help-text {
-        color: var(--muted, #5b6476);
-        display: block;
-        margin-top: 4px;
-    }
-    .form-field--remove input[type="checkbox"] {
-        display: none;
-    }
-    .btn.danger {
-        background: #fee2e2;
-        color: #b91c1c;
-    }
-    .btn.danger:hover {
-        background: #fecaca;
-        color: #991b1b;
-    }
-</style>
+<a class="back-link" href="{% url 'events:manage_list' %}">&larr; Events</a>
 <div class="page-header">
-    <h1>{% if event %}Edit Event{% else %}Create Event{% endif %}</h1>
-    <p class="page-subtitle">Define public details, schedule, and registration settings.</p>
-    <a class="btn ghost" href="{% url 'events:manage_list' %}">Back to Events</a>
+    <h1>{% if event %}Edit event{% else %}Create event{% endif %}</h1>
+    <p class="page-subtitle">Public details, schedule, and registration settings.</p>
 </div>
 
 <form method="post" enctype="multipart/form-data" class="person-form">
