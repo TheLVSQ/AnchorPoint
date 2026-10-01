@@ -1,5 +1,4 @@
 import hashlib
-import random
 import secrets
 import string
 
@@ -26,7 +25,7 @@ SECURITY_CODE_CHARS = "ABCDEFGHJKMNPQRTUVWXYZ234679"
 
 def generate_security_code():
     """Generate a 4-character random alphanumeric security code."""
-    return "".join(random.choices(SECURITY_CODE_CHARS, k=4))
+    return "".join(secrets.choice(SECURITY_CODE_CHARS) for _ in range(4))
 
 
 def generate_unique_security_code(session, max_attempts=100):
@@ -523,7 +522,7 @@ class PrintAgent(models.Model):
     def issue_pairing_code(self):
         """Generate a fresh, short, human-typable pairing code with a TTL."""
         # No ambiguous characters (shares the security-code alphabet).
-        self.pairing_code = "".join(random.choices(SECURITY_CODE_CHARS, k=8))
+        self.pairing_code = "".join(secrets.choice(SECURITY_CODE_CHARS) for _ in range(8))
         self.pairing_expires_at = timezone.now() + timezone.timedelta(
             seconds=PAIRING_CODE_TTL_SECONDS
         )

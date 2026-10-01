@@ -69,6 +69,9 @@ EOF
   echo "Wrote anchorpoint/.env"
 fi
 
+# 5. Schema + shared cache table (both idempotent)
+( cd "$ROOT/anchorpoint" && ../.venv/bin/python manage.py migrate --noinput -v0 && ../.venv/bin/python manage.py createcachetable )
+
 if [ "${1:-}" = "test" ]; then
   cd "$ROOT/anchorpoint"
   ../.venv/bin/python manage.py test --noinput --parallel auto
@@ -79,7 +82,6 @@ else
 
 Ready. Common commands (from the repo root):
   scripts/dev-setup.sh test                                   # full test suite
-  cd anchorpoint && ../.venv/bin/python manage.py migrate      # set up the dev DB
   cd anchorpoint && ../.venv/bin/python manage.py create_admin --username admin --email you@example.com
   cd anchorpoint && ../.venv/bin/python manage.py runserver
 EOF

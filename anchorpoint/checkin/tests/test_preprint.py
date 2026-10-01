@@ -15,6 +15,7 @@ from core.models import OrganizationSettings, UserProfile
 from groups.models import Group, GroupMembership
 from households.models import Household, HouseholdMember
 from people.models import Person
+from checkin.tests.kiosk_helpers import unlock_kiosk
 
 
 def _admin(username="ppadmin"):
@@ -173,7 +174,7 @@ class PreprintArrivalTests(PreprintFixture):
                 security_code=self.code, arrived_at=None,
             )
         s = self.client.session
-        s["kiosk_authenticated"] = True
+        unlock_kiosk(s)
         s["kiosk_session_id"] = self.session.pk
         s.save()
 
@@ -210,7 +211,7 @@ class PreprintArrivalTests(PreprintFixture):
 
     @mock.patch("checkin.views.send_security_code_sms", return_value=0)
     @mock.patch("checkin.views.enqueue_checkin_labels", return_value=1)
-    def test_walkin_sibling_shares_family_code_and_prints(self, mock_enqueue, _sms):
+    def test_walkin_sibling_gets_fresh_code_and_prints(self, mock_enqueue, _sms):
         # A third, not-pre-staged sibling joins at the door.
         walkin = Person.objects.create(first_name="Cy", last_name="Walker",
                                        birthdate=date(2019, 3, 3))
@@ -228,9 +229,17 @@ class PreprintArrivalTests(PreprintFixture):
             },
         )
         walkin_ci = CheckIn.objects.get(session=self.session, person=walkin)
-        self.assertEqual(walkin_ci.security_code, self.code)  # shares family code
+        # SECURITY: a kiosk print must never carry the family's existing code
+        # (whoever is at the kiosk would get a valid pickup code). The walk-in
+        # gets its own fresh code + pickup tag; the pre-staged code is untouched.
+        self.assertNotEqual(walkin_ci.security_code, self.code)
+        self.assertTrue(walkin_ci.security_code)
         self.assertIsNotNone(walkin_ci.arrived_at)
+        prestaged_ci = CheckIn.objects.get(session=self.session, person=self.kids[0])
+        self.assertEqual(prestaged_ci.security_code, self.code)
         mock_enqueue.assert_called_once()  # only the walk-in prints
+        printed = mock_enqueue.call_args[0][0]
+        self.assertEqual([c.pk for c in printed], [walkin_ci.pk])
 
     def test_prestaged_not_checkout_able_until_arrived(self):
         staff = get_user_model().objects.create_user(username="costaff", password="pw")
@@ -256,7 +265,7 @@ class KioskLockTests(TestCase):
         user = _admin("lockadmin")
         self.client.force_login(user)
         s = self.client.session
-        s["kiosk_authenticated"] = True
+        unlock_kiosk(s)
         s.save()
         self.client.get(reverse("checkin:kiosk_lock"))
         # Subsequent request to a login-required page should redirect to login.
@@ -271,7 +280,7 @@ class KioskAddChildTests(PreprintFixture):
     def setUp(self):
         super().setUp()
         s = self.client.session
-        s["kiosk_authenticated"] = True
+        unlock_kiosk(s)
         s["kiosk_session_id"] = self.session.pk
         s.save()
 

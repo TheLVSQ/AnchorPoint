@@ -125,6 +125,19 @@ DATABASES = {
 }
 
 
+# Cache
+# Shared across gunicorn workers (and the cron container) so rate limits and
+# lockouts actually hold: the default per-process LocMemCache gave each worker
+# its own counters. The table is created by `createcachetable` (entrypoint.sh,
+# scripts/dev-setup.sh; the test runner creates it automatically).
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.db.DatabaseCache",
+        "LOCATION": "anchorpoint_cache",
+    }
+}
+
+
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
 

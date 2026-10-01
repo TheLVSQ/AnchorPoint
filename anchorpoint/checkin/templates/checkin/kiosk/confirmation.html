@@ -11,12 +11,14 @@
   {% endif %}
 
   <div style="margin:28px 0;padding:24px;background:var(--inset);border-radius:12px;">
+    {% if security_code %}
     <div style="font-size:13px;color:var(--faint);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px;">
       Security Code
     </div>
     <div style="font-size:52px;font-weight:800;letter-spacing:12px;font-variant-numeric:tabular-nums;">
       {{ security_code }}
     </div>
+    {% endif %}
     <div style="font-size:14px;color:var(--faint);margin-top:8px;">
       Present the pickup tag at pickup
     </div>
@@ -46,7 +48,7 @@
 <!-- Hidden print area — shown only during print. Colours here render on white
      label stock, so they intentionally stay as fixed greys (not theme vars). -->
 <div class="print-labels">
-  {% for checkin in checkins %}
+  {% for checkin in print_checkins %}
     <div class="label">
       <div>
         <div style="font-size:26px;font-weight:800;line-height:1.1;">
@@ -83,6 +85,7 @@
     </div>
   {% endfor %}
 
+  {% if security_code and print_checkins %}
   <!-- Pickup tag -->
   <div class="label" style="text-align:center;display:flex;flex-direction:column;
                              justify-content:center;gap:6px;min-height:65mm;">
@@ -92,13 +95,14 @@
     </div>
     <div>
       <div style="font-size:14px;color:#555;">
-        {% for checkin in checkins %}{{ checkin.person.first_name }}{% if not forloop.last %} · {% endif %}{% endfor %}
+        {% for checkin in print_checkins %}{{ checkin.person.first_name }}{% if not forloop.last %} · {% endif %}{% endfor %}
       </div>
       <div style="font-size:10px;color:#999;margin-top:3px;">
         {{ session.name }} · {{ session.date|date:"M j" }}
       </div>
     </div>
   </div>
+  {% endif %}
 </div>
 
 {% block extra_js %}

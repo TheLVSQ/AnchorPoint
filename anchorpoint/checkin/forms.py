@@ -1,4 +1,5 @@
 from django import forms
+from django.utils.crypto import constant_time_compare
 from django.forms import inlineformset_factory
 
 from people.models import Person
@@ -58,7 +59,7 @@ class KioskPinForm(forms.Form):
 
     def clean_pin(self):
         pin = self.cleaned_data["pin"]
-        if self.expected_pin and pin != self.expected_pin:
+        if self.expected_pin and not constant_time_compare(pin, self.expected_pin):
             raise forms.ValidationError("Incorrect PIN.")
         return pin
 
@@ -79,7 +80,7 @@ class FamilyMemberSelectForm(forms.Form):
     """Dynamic form for selecting family members and rooms at check-in."""
 
     def __init__(self, *args, members_with_eligibility=None, rooms=None,
-                 prestaged_ids=None, **kwargs):
+                 prestaged_ids=None, present_ids=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.members_with_eligibility = members_with_eligibility or []
         self.has_rooms = bool(rooms)
@@ -87,6 +88,13 @@ class FamilyMemberSelectForm(forms.Form):
         # so they get a select box but no room picker (and no room requirement).
         self.prestaged_ids = set(prestaged_ids or [])
         room_choices = [(r.pk, str(r)) for r in (rooms or [])]
+        # Members already checked in get no field at all, so a forged POST for
+        # them is ignored: the kiosk must never re-check-in / reprint them.
+        present_ids = set(present_ids or [])
+        self.members_with_eligibility = [
+            (person, eligible and person.pk not in present_ids)
+            for person, eligible in self.members_with_eligibility
+        ]
 
         for person, eligible in self.members_with_eligibility:
             if eligible:
