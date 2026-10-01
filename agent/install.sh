@@ -27,11 +27,14 @@
 #   6. Installs the comitup WiFi fallback (skip with --no-wifi-fallback): if the
 #      Pi can't reach a known network it broadcasts its own 'comitup-<id>' AP so
 #      you can join a new venue's WiFi from a phone. Needs a reboot to activate.
+#   --server must be https:// (the pairing code + agent token travel over it);
+#   pass --insecure only for a local http:// test server.
 
 set -euo pipefail
 
 SERVER=""
 CODE=""
+INSECURE=0
 PRINTER_URI=""
 PRINTER=""
 PRINTER_USB=0
@@ -48,7 +51,7 @@ QL_DEVICE=""
 COMITUP_APT_SOURCE_URL="https://davesteele.github.io/comitup/deb/davesteele-comitup-apt-source_1.3_all.deb"
 
 usage() {
-    grep "^#" "$0" | head -29
+    grep "^#" "$0" | head -31
     exit 1
 }
 
@@ -66,6 +69,7 @@ while [[ $# -gt 0 ]]; do
         --ql-model)         QL_MODEL="$2"; shift 2 ;;
         --ql-label)         QL_LABEL="$2"; shift 2 ;;
         --ql-device)        QL_DEVICE="$2"; shift 2 ;;
+        --insecure)         INSECURE=1; shift ;;
         *) echo "Unknown option: $1"; usage ;;
     esac
 done
@@ -73,6 +77,11 @@ done
 [[ -n "$SERVER" && -n "$CODE" ]] || { echo "ERROR: --server and --code are required."; usage; }
 [[ $EUID -eq 0 ]] || { echo "ERROR: run with sudo."; exit 1; }
 SERVER="${SERVER%/}"
+if [[ "$SERVER" != https://* && "$INSECURE" != "1" ]]; then
+    echo "ERROR: --server must start with https:// (the pairing code and agent token"
+    echo "       are sent to it). For a local http:// test server, add --insecure."
+    exit 1
+fi
 
 # The agent runs as the user who invoked sudo (falls back to 'pi').
 RUN_USER="${SUDO_USER:-pi}"
@@ -181,8 +190,9 @@ setup_brother_ql() {
 
     # Let the non-root agent reach the Brother USB device without sudo.
     cat > /etc/udev/rules.d/99-brother-ql.rules <<'RULE'
-# AnchorPoint: allow the agent (non-root) to talk to the Brother QL over USB.
-SUBSYSTEM=="usb", ATTRS{idVendor}=="04f9", MODE="0666"
+# AnchorPoint: allow the agent (non-root, in group lp) to talk to the Brother QL
+# over USB. Group-only, not world-writable.
+SUBSYSTEM=="usb", ATTRS{idVendor}=="04f9", GROUP="lp", MODE="0660"
 RULE
     udevadm control --reload-rules >/dev/null 2>&1 || true
     udevadm trigger >/dev/null 2>&1 || true

@@ -71,6 +71,45 @@ def get_site_base_url(settings_obj: OrganizationSettings | None = None) -> str |
     return None
 
 
+# ffprobe format_name -> demuxer to force. Only plain audio/video containers;
+# anything else (HLS/m3u8, concat, image2, ...) is refused, because those
+# demuxers can make ffmpeg fetch URLs or read other local files.
+_ALLOWED_AUDIO_FORMATS = {
+    "mp3": "mp3",
+    "wav": "wav",
+    "ogg": "ogg",
+    "flac": "flac",
+    "aac": "aac",
+    "matroska,webm": "matroska",
+    "mov,mp4,m4a,3gp,3g2,mj2": "mov",
+}
+
+
+def _probe_audio_format(path):
+    """Return the demuxer name to force for `path`, or raise AudioProcessingError."""
+    try:
+        result = subprocess.run(
+            [
+                "ffprobe", "-v", "error", "-protocol_whitelist", "file",
+                "-show_entries", "format=format_name",
+                "-of", "default=noprint_wrappers=1:nokey=1", path,
+            ],
+            capture_output=True, timeout=30, check=True,
+        )
+    except (subprocess.TimeoutExpired, subprocess.CalledProcessError, OSError) as exc:
+        raise AudioProcessingError(
+            "That audio file could not be processed. Please try a different recording."
+        ) from exc
+    format_name = (result.stdout or b"").decode("utf-8", "replace").strip()
+    demuxer = _ALLOWED_AUDIO_FORMATS.get(format_name)
+    if not demuxer:
+        logger.warning("Rejected phone-blast upload with format %r", format_name)
+        raise AudioProcessingError(
+            "Please upload an MP3, WAV, M4A, OGG or WebM audio file."
+        )
+    return demuxer
+
+
 def transcode_to_mp3(django_file) -> ContentFile:
     """Transcode an uploaded/recorded audio file to mono MP3 via ffmpeg.
 
@@ -81,7 +120,7 @@ def transcode_to_mp3(django_file) -> ContentFile:
     Returns a ``ContentFile`` named ``<uuid>.mp3``. Raises AudioProcessingError
     if ffmpeg is missing, errors, or times out.
     """
-    if shutil.which("ffmpeg") is None:
+    if shutil.which("ffmpeg") is None or shutil.which("ffprobe") is None:
         raise AudioProcessingError(
             "Audio processing is unavailable (ffmpeg is not installed on the server)."
         )
@@ -96,10 +135,12 @@ def transcode_to_mp3(django_file) -> ContentFile:
         out_path = os.path.join(
             tempfile.gettempdir(), f"anchorpoint-blast-{uuid.uuid4().hex}.mp3"
         )
+        demuxer = _probe_audio_format(in_path)
         try:
             subprocess.run(
                 [
-                    "ffmpeg", "-y", "-i", in_path,
+                    "ffmpeg", "-y", "-protocol_whitelist", "file",
+                    "-f", demuxer, "-i", in_path,
                     "-ac", "1", "-codec:a", "libmp3lame", "-q:a", "5",
                     out_path,
                 ],

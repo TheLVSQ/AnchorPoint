@@ -98,7 +98,8 @@ per household.
 
 The `cron` sidecar (see `docker/docker-compose.yml` + `docker/cron.sh`) runs
 `process_communications` every minute to deliver due scheduled SMS/phone blasts, and
-`cleanup_audio` daily to purge old phone-blast recordings. Scheduled phone blasts need
+`cleanup_audio` + `purge_print_images` daily (old phone-blast recordings; label PNGs
+from print jobs older than 24h — finished jobs are already cleared on ack). Scheduled phone blasts need
 `SITE_BASE_URL` (or Organization Settings > Website) so the headless worker can build
 absolute audio + Twilio status-callback URLs. Phone-blast audio (uploaded or recorded
 in-browser via `MediaRecorder`) is transcoded to MP3 with `ffmpeg` so Twilio's `<Play>`

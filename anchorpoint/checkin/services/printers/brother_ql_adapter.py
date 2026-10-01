@@ -16,6 +16,11 @@ logger = logging.getLogger(__name__)
 
 # Lazy import — missing library logs a warning but doesn't break startup
 try:
+    from PIL import Image as _PILImage
+    # brother_ql 0.9.4 resizes with Image.ANTIALIAS, which Pillow 10 removed;
+    # LANCZOS is the same filter under its current name.
+    if not hasattr(_PILImage, "ANTIALIAS") and hasattr(_PILImage, "LANCZOS"):
+        _PILImage.ANTIALIAS = _PILImage.LANCZOS
     from brother_ql.raster import BrotherQLRaster
     from brother_ql.conversion import convert
     from brother_ql.backends.helpers import send as ql_send
