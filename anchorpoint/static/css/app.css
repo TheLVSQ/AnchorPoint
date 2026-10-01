@@ -987,3 +987,37 @@ label + .help-text, label + small.help-text { display: block; margin: -0.15rem 0
 .req { color: var(--danger); font-weight: 700; }
 .attendee-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.2rem; }
 .attendee-list .muted-text { margin-left: 0.3rem; font-size: 0.85rem; }
+
+/* ------------------------------------------------------ Check-in admin -- */
+.text-center { text-align: center; } .nowrap { white-space: nowrap; } .shrink { width: 1%; white-space: nowrap; }
+.w-full { width: 100%; } .w-5 { width: 5rem; } .ml-auto { margin-left: auto; } .pointer { cursor: pointer; }
+.align-self-center { align-self: center; } .indent { margin: 0.5rem 0 1rem 1.5rem; }
+.check-lg { width: 20px; height: 20px; }
+.select-all { user-select: all; }
+.code-big { font-family: var(--mono); font-size: 1.2rem; letter-spacing: 3px; font-variant-numeric: tabular-nums; font-weight: 700; }
+.btn-success, button.btn-success { background: var(--success); color: #fff; }
+.btn-success:hover { background: var(--success); filter: brightness(0.92); color: #fff; }
+.empty-state--big { padding: 3.5rem 1rem; }
+.sticky-bar { position: sticky; bottom: 0; z-index: 5; padding: 0.85rem 0; background: var(--bg); border-top: 1px solid var(--border); }
+.flex-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem; }
+.flex-between { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem 1rem; }
+.flex-col { display: flex; flex-direction: column; gap: 0.75rem; }
+.flex-col.tight { gap: 0.25rem; }
+.flex-1 { flex: 1; min-width: 0; } .min-220 { min-width: 220px; } .gap-lg { gap: 1rem 2rem; } .my-3 { margin-block: 1rem; }
+.small { font-size: 0.85rem; } .inline { display: inline; } .wrap { flex-wrap: wrap; } .text-primary { color: var(--primary); }
+.select-row {
+    display: flex; align-items: center; gap: 1rem; margin: 0 0 0.5rem; padding: 0.9rem 1rem; cursor: pointer; font-weight: 500;
+    background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm);
+}
+.select-row:hover { border-color: var(--primary); }
+.log--cmd { white-space: pre-wrap; word-break: break-all; font-size: 0.8rem; margin: 0.5rem 0; }
+.window-row { border: 1px solid var(--border); border-radius: var(--radius); padding: 1.1rem; margin-bottom: 1rem; background: var(--surface-2); }
+.window-row__active { float: right; margin-bottom: 0.5rem; }
+.progress--thin { height: 6px; margin: 0.25rem 0 0.75rem; }
+.progress--danger::-webkit-progress-value { background: var(--danger); }
+.progress--danger::-moz-progress-bar { background: var(--danger); }
+.section-title { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); margin: 1.5rem 0 0.6rem; }
+.page-header + .section-title { margin-top: 0; }
+.session-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1rem; }
+.session-card .card__head h2 a { color: var(--text); text-decoration: none; }
+.session-card .stat-value { margin: 0.25rem 0 0; }

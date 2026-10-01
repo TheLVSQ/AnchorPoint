@@ -7,7 +7,7 @@
     <h1>{{ title }}</h1>
 </div>
 
-<div class="detail-card" style="max-width: 600px;">
+<div class="detail-card narrow">
     <form method="post">
         {% csrf_token %}
 
@@ -35,14 +35,14 @@
             </div>
         </div>
 
-        <div class="checkbox-field" style="margin-top: 0.5rem;">
+        <div class="checkbox-field mt-2">
             <label>
                 {{ form.is_active }}
                 Active — this room is available for check-in
             </label>
         </div>
 
-        <div class="form-section" style="margin-top:1rem;">
+        <div class="form-section mt-3">
             <h3>Auto-routing (optional)</h3>
             <p class="stat-hint">At check-in, a child whose <strong>age</strong> or <strong>grade</strong>
                falls in this room's range is sent here automatically (a volunteer can still override).

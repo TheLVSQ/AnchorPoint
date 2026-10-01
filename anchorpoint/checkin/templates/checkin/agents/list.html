@@ -13,12 +13,12 @@
     </p>
 </div>
 
-<div class="list-card" style="margin-bottom: 2rem;">
+<div class="list-card mb-4">
     <div class="list-card__body">
         <form method="POST" action="{% url 'checkin:print_agent_create' %}"
-              style="display:flex; gap:0.5rem; align-items:flex-end; flex-wrap:wrap;">
+              class="flex-row align-end">
             {% csrf_token %}
-            <div class="form-field" style="flex:1; min-width:220px;">
+            <div class="form-field flex-1 min-220">
                 <label for="name">Add a print agent</label>
                 <input id="name" type="text" name="name"
                        placeholder="e.g. Front Desk Printer" required>
@@ -35,37 +35,35 @@
                 <div>
                     <strong>{{ agent.name }}</strong>
                     {% if not agent.is_paired %}
-                        <span class="chip" style="background:#fef3c7; color:#92400e;">Awaiting pairing</span>
+                        <span class="chip chip--warning">Awaiting pairing</span>
                     {% elif agent.is_online %}
-                        <span class="chip" style="background:#dcfce7; color:#166534;">Online</span>
+                        <span class="chip chip--success">Online</span>
                     {% else %}
-                        <span class="chip" style="background:#fee2e2; color:#991b1b;">Offline</span>
+                        <span class="chip chip--danger">Offline</span>
                     {% endif %}
 
                     {% if agent.is_paired and agent.last_seen_at %}
                         <p class="stat-hint">Last seen {{ agent.last_seen_at|timesince }} ago</p>
                         {% if agent.local_ip or agent.hostname %}
                             <p class="stat-hint">
-                                {% if agent.local_ip %}IP <strong style="user-select:all;">{{ agent.local_ip }}</strong>{% endif %}
-                                {% if agent.hostname %}· host <span style="user-select:all;">{{ agent.hostname }}</span>{% endif %}
+                                {% if agent.local_ip %}IP <strong class="select-all mono">{{ agent.local_ip }}</strong>{% endif %}
+                                {% if agent.hostname %}· host <span class="select-all mono">{{ agent.hostname }}</span>{% endif %}
                             </p>
                         {% endif %}
                     {% endif %}
 
                     {% if not agent.is_paired and agent.pairing_code %}
-                        <p class="stat-hint" style="margin-top:0.5rem;">
+                        <p class="stat-hint mt-2">
                             Pairing code:
-                            <strong style="font-size:1.25rem; letter-spacing:3px; font-variant-numeric:tabular-nums;">{{ agent.pairing_code }}</strong>
+                            <strong class="code-big">{{ agent.pairing_code }}</strong>
                             <br>
                             The code expires {{ agent.pairing_expires_at|timeuntil }} from now.
                         </p>
-                        <div class="stat-hint" style="margin-top:0.75rem;">
+                        <div class="stat-hint mt-2">
                             <strong>Set up a new Raspberry Pi in one command</strong> — SSH into the
                             Pi and paste (replace <code>PRINTER-IP</code> with your label printer's
                             IP address, from its settings printout or your router):
-                            <pre style="background:#0d0d20;color:#e2e8f0;border-radius:8px;padding:0.75rem;
-                                        margin-top:0.5rem;white-space:pre-wrap;word-break:break-all;
-                                        font-size:0.8rem;user-select:all;">curl -fsSL {{ request.scheme }}://{{ request.get_host }}{% url 'checkin:agent_install_script' %} | sudo bash -s -- --server {{ request.scheme }}://{{ request.get_host }} --code {{ agent.pairing_code }} --printer-uri ipp://PRINTER-IP/ipp/print</pre>
+                            <pre class="log log--cmd select-all">curl -fsSL {{ request.scheme }}://{{ request.get_host }}{% url 'checkin:agent_install_script' %} | sudo bash -s -- --server {{ request.scheme }}://{{ request.get_host }} --code {{ agent.pairing_code }} --printer-uri ipp://PRINTER-IP/ipp/print</pre>
                             <strong>USB printer?</strong> Drop <code>--printer-uri …</code> and use
                             <code>--printer-usb</code> (add <code>--driver zebra</code> for a Zebra). Already
                             have a CUPS queue? Use <code>--printer &lt;queue-name&gt;</code>.
@@ -74,24 +72,24 @@
 
                     {% if agent.is_paired %}
                         <form method="POST" action="{% url 'checkin:print_agent_update' agent.id %}"
-                              style="display:flex; gap:0.5rem; align-items:center; margin-top:0.5rem;">
+                              class="inline-form mt-2">
                             {% csrf_token %}
-                            <label for="width_{{ agent.id }}" class="stat-hint" style="margin:0;">Label width (mm)</label>
-                            <input id="width_{{ agent.id }}" type="number" name="label_width_mm"
+                            <label for="width_{{ agent.id }}" class="stat-hint m-0">Label width (mm)</label>
+                            <input class="w-5" id="width_{{ agent.id }}" type="number" name="label_width_mm"
                                    value="{{ agent.label_width_mm }}" min="20" max="120"
-                                   style="width:5rem;">
-                            <label for="rot_{{ agent.id }}" class="stat-hint" style="margin:0;">Rotation</label>
+                                  >
+                            <label for="rot_{{ agent.id }}" class="stat-hint m-0">Rotation</label>
                             <select id="rot_{{ agent.id }}" name="label_rotation">
                                 {% for value, label in agent.ROTATION_CHOICES %}
                                     <option value="{{ value }}" {% if agent.label_rotation == value %}selected{% endif %}>{{ label }}</option>
                                 {% endfor %}
                             </select>
-                            <button type="submit" class="btn btn-secondary" style="padding:0.25rem 0.75rem;">Save</button>
+                            <button type="submit" class="btn btn-secondary btn-sm">Save</button>
                         </form>
                     {% endif %}
                 </div>
 
-                <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
+                <div class="inline-form">
                     {% if agent.is_paired %}
                         <form method="POST" action="{% url 'checkin:print_agent_test' agent.id %}">
                             {% csrf_token %}
@@ -112,7 +110,7 @@
                 </div>
             </div>
         {% empty %}
-            <p class="stat-hint" style="padding:1rem;">
+            <p class="stat-hint">
                 No print agents yet. Add one above, then install the agent next to
                 your printer and enter its pairing code.
             </p>

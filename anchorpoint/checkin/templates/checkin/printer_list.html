@@ -8,7 +8,7 @@
     <p class="page-subtitle">Configure label printers for check-in</p>
 </div>
 
-<div class="hero-actions" style="margin-bottom: 2rem;">
+<div class="hero-actions mb-4">
     <a href="{% url 'checkin:printer_create' %}" class="btn">Add Printer</a>
 </div>
 
@@ -21,18 +21,18 @@
                     <span>{{ printer.get_printer_type_display|default:"No type set" }}</span>
                     <p class="stat-hint">{{ printer.host }}{% if printer.port %}:{{ printer.port }}{% endif %}</p>
                 </div>
-                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                <div class="inline-form">
                     {% if printer.is_default %}
-                        <span class="chip" style="background: #dbeafe; color: #1e40af;">Default</span>
+                        <span class="chip">Default</span>
                     {% endif %}
                     {% if printer.is_active %}
-                        <span class="chip" style="background: #dcfce7; color: #166534;">Active</span>
+                        <span class="chip chip--success">Active</span>
                     {% else %}
                         <span class="chip">Inactive</span>
                     {% endif %}
-                    <form method="post" action="{% url 'checkin:printer_test' printer.pk %}" style="display: inline;">
+                    <form method="post" action="{% url 'checkin:printer_test' printer.pk %}" class="inline">
                         {% csrf_token %}
-                        <button type="submit" class="btn ghost" style="padding: 0.25rem 0.5rem; font-size: 0.85rem;">
+                        <button type="submit" class="btn ghost btn-sm">
                             Test
                         </button>
                     </form>
@@ -45,12 +45,12 @@
     </div>
 </div>
 
-<section class="detail-card" style="margin-top: 2rem;">
+<section class="detail-card mt-4">
     <h2>Setup Guide</h2>
     <div class="detail-list">
         <h3>ESC/POS (Generic Thermal Printers)</h3>
         <p>Works with most cheap thermal printers. Connection examples:</p>
-        <ul style="margin: 0.5rem 0 1rem 1.5rem;">
+        <ul class="indent">
             <li><code>tcp://192.168.1.100:9100</code> - Network printer</li>
             <li><code>usb://0x0416:0x5011</code> - USB printer (vendor:product)</li>
             <li><code>file:///dev/usb/lp0</code> - Linux USB device</li>
@@ -58,14 +58,14 @@
 
         <h3>Brother QL Series</h3>
         <p>Popular label printers (QL-800, QL-820NWB). Connection examples:</p>
-        <ul style="margin: 0.5rem 0 1rem 1.5rem;">
+        <ul class="indent">
             <li><code>tcp://192.168.1.100:9100</code> - Network (QL-820NWB)</li>
             <li><code>usb://0x04f9:0x209c</code> - USB connection</li>
         </ul>
 
         <h3>CUPS (System Printer)</h3>
         <p>Use any printer installed on the system. Connection is just the printer name:</p>
-        <ul style="margin: 0.5rem 0 1rem 1.5rem;">
+        <ul class="indent">
             <li><code>Brother_QL-820NWB</code> - CUPS printer name</li>
             <li><code>HP_LaserJet</code> - Any system printer</li>
         </ul>

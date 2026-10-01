@@ -7,7 +7,7 @@
     <h1>{{ title }}</h1>
 </div>
 
-<div class="detail-card" style="max-width: 600px;">
+<div class="detail-card narrow">
     <form method="post">
         {% csrf_token %}
 
@@ -32,7 +32,7 @@
             {% for e in form.ql_model.errors %}<span class="error-text">{{ e }}</span>{% endfor %}
         </div>
 
-        <h3 style="margin: 1.5rem 0 1rem;">Connection</h3>
+        <h3 class="mt-4 mb-3">Connection</h3>
 
         <div class="form-grid">
             <div class="form-field">
@@ -49,7 +49,7 @@
             </div>
         </div>
 
-        <div style="display: flex; flex-wrap: wrap; gap: 1rem 2rem; margin-top: 0.5rem;">
+        <div class="flex-row gap-lg mt-2">
             <div class="checkbox-field">
                 <label>
                     {{ form.is_default }}
