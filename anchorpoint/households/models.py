@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import models
 
 
@@ -90,3 +91,63 @@ class HouseholdMember(models.Model):
 
     def __str__(self):
         return f"{self.person} → {self.household}"
+
+
+class FamilyConflictFlag(models.Model):
+    """A child who already belonged to a family was linked to a *different*
+    family by someone outside it (e.g. a public event registration).
+
+    The link and any blank contact fields filled by that registration are
+    applied immediately; this flag records exactly what changed so staff can
+    review it and, if it's wrong, undo just that.
+    """
+
+    STATUS_OPEN = "open"
+    STATUS_REVIEWED = "reviewed"
+    STATUS_UNDONE = "undone"
+    STATUS_CHOICES = [
+        (STATUS_OPEN, "Needs review"),
+        (STATUS_REVIEWED, "Reviewed — OK"),
+        (STATUS_UNDONE, "Undone"),
+    ]
+
+    child = models.ForeignKey(
+        "people.Person", on_delete=models.CASCADE, related_name="family_conflict_flags"
+    )
+    guardian = models.ForeignKey(
+        "people.Person", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="+",
+    )
+    household = models.ForeignKey(
+        Household, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="conflict_flags",
+        help_text="The family the child was linked to.",
+    )
+    added_membership = models.BooleanField(default=False)
+    existing_households = models.CharField(
+        max_length=500, blank=True,
+        help_text="The child's families before the link (names, for review).",
+    )
+    filled_fields = models.JSONField(
+        default=dict, blank=True,
+        help_text="Blank fields this registration filled: {field: value}.",
+    )
+    registration = models.ForeignKey(
+        "events.EventRegistration", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="family_conflict_flags",
+    )
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_OPEN)
+    last_kiosk_alert_session_id = models.PositiveIntegerField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    resolved_at = models.DateTimeField(null=True, blank=True)
+    resolved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="+",
+    )
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [models.Index(fields=["status", "child"])]
+
+    def __str__(self):
+        return f"Family conflict: {self.child} ({self.get_status_display()})"

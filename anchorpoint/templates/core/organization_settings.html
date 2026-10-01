@@ -170,11 +170,23 @@
                 <div class="form-field">
                     <label for="{{ form.kiosk_pin.id_for_label }}">Kiosk PIN</label>
                     {{ form.kiosk_pin }}
-                    <p class="help-text">Leave blank to disable the PIN requirement.</p>
+                    <p class="help-text">Required for public kiosks: with no PIN, only signed-in check-in admins can unlock a kiosk.</p>
                     {% if form.kiosk_pin.errors %}
                         <p class="error-text">{{ form.kiosk_pin.errors.0 }}</p>
                     {% endif %}
                 </div>
+            </div>
+        </div>
+
+        <div class="form-section" id="family-alerts">
+            <h2>Family Safety Alerts</h2>
+            <p class="page-subtitle">
+                Who to alert when a child already in one family is linked to another family by a registration.
+                They get an email and a badge in the menu right away, and an email + text if that child is then checked in at the kiosk.
+                Texts go to the phone number on each person's profile.
+            </p>
+            <div class="form-field">
+                {{ form.family_alert_recipients }}
             </div>
         </div>
 

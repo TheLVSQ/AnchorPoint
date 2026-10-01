@@ -4,6 +4,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from groups.models import Group, GroupMembership
+from households.family_flags import conflicting_households, record_registration_conflict
 from households.models import Household, HouseholdMember
 from people.models import Person, normalize_phone
 
@@ -42,20 +43,23 @@ def _match_person(email="", first_name="", last_name="", birthdate=None, phone="
     return None
 
 
+CONTACT_FIELDS = [
+    "email",
+    "phone",
+    "birthdate",
+    "address_line1",
+    "address_line2",
+    "city",
+    "state",
+    "postal_code",
+    "grade",
+    "allergies",
+]
+
+
 def _apply_contact_data(person: Person, data: dict) -> Person:
     changed = False
-    for field in [
-        "email",
-        "phone",
-        "birthdate",
-        "address_line1",
-        "address_line2",
-        "city",
-        "state",
-        "postal_code",
-        "grade",
-        "allergies",
-    ]:
+    for field in CONTACT_FIELDS:
         value = data.get(field)
         if value and not getattr(person, field):
             setattr(person, field, value)
@@ -178,25 +182,33 @@ def match_registration_attendees(registration: EventRegistration):
         postal_code=registration.postal_code,
     )
     for attendee in registration.attendees.all():
-        person = _ensure_person(
-            attendee.first_name,
-            attendee.last_name,
-            email=attendee.email,
-            phone=attendee.phone,
-            birthdate=attendee.birthdate,
-            address_line1=attendee.address_line1 or registration.address_line1,
-            address_line2=attendee.address_line2 or registration.address_line2,
-            city=attendee.city or registration.city,
-            state=attendee.state or registration.state,
-            postal_code=attendee.postal_code or registration.postal_code,
-            grade=attendee.grade,
-            allergies=attendee.allergies,
-            create_if_missing=False,
+        # Match first and snapshot, so a family-safety flag can record exactly
+        # which blank fields this registration filled (for a precise undo).
+        person = _match_person(
+            attendee.email, attendee.first_name, attendee.last_name,
+            attendee.birthdate, attendee.phone,
         )
         if not person:
             attendee.match_status = EventRegistrationAttendee.MATCH_STATUS_PENDING
             attendee.save(update_fields=["match_status", "updated_at"])
             continue
+        before = {f: getattr(person, f) for f in CONTACT_FIELDS}
+        _apply_contact_data(person, {
+            "email": attendee.email,
+            "phone": attendee.phone,
+            "birthdate": attendee.birthdate,
+            "address_line1": attendee.address_line1 or registration.address_line1,
+            "address_line2": attendee.address_line2 or registration.address_line2,
+            "city": attendee.city or registration.city,
+            "state": attendee.state or registration.state,
+            "postal_code": attendee.postal_code or registration.postal_code,
+            "grade": attendee.grade,
+            "allergies": attendee.allergies,
+        })
+        filled = {
+            f: str(getattr(person, f)) for f in CONTACT_FIELDS
+            if not before[f] and getattr(person, f)
+        }
 
         _mark_attendee_matched(attendee, person)
 
@@ -221,7 +233,21 @@ def match_registration_attendees(registration: EventRegistration):
             guardian = contact_person
 
         if guardian and guardian != person:
-            _ensure_household(guardian, person)
+            prior = conflicting_households(person, guardian)
+            prior_ids = set(Household.objects.filter(members=person).values_list("pk", flat=True))
+            household = _ensure_household(guardian, person)
+            if prior:
+                # Child already in a family the guardian isn't part of: keep the
+                # link (honest re-registrations shouldn't stall) but flag it.
+                record_registration_conflict(
+                    child=person,
+                    guardian=guardian,
+                    household=household,
+                    added_membership=household is not None and household.pk not in prior_ids,
+                    prior_households=prior,
+                    filled_fields=filled,
+                    registration=registration,
+                )
 
 
 def manually_assign_attendee(attendee, person, matched_by=None, notes=""):
