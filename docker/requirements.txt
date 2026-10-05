@@ -5,12 +5,12 @@ djangorestframework==3.18.1
 gunicorn==26.2.0
 Pillow==12.3.0
 psycopg2-binary==2.9.13
-python-dotenv==1.2.3
+python-dotenv==1.2.4
 sqlparse==0.6.0
 tzdata==2026.4
 whitenoise==6.12.0
 Markdown==3.11
-google-auth==2.58.1
+google-auth==2.59.1
 requests==2.34.2
 
 brother_ql==0.9.4
