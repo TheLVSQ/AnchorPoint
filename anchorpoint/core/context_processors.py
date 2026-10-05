@@ -23,6 +23,7 @@ _NAV_SECTIONS = [
     ("/permissions/", "permissions"),
     ("/settings/", "settings"),
     ("/profile/", "profile"),
+    ("/help/", "help"),
 ]
 
 

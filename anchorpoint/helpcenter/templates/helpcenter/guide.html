@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}{{ guide.title }} · Help{% endblock %}
+{% block content %}
+<a class="ghost-link guide-back" href="{% url 'help:list' %}">&larr; All guides</a>
+<div class="page-header page-header--split">
+    <div>
+        <h1>{{ guide.title }}</h1>
+        <p class="page-subtitle">{{ guide.summary }}</p>
+    </div>
+    <div class="page-actions">
+        <button type="button" class="btn ghost" onclick="window.print()">Print / save PDF</button>
+    </div>
+</div>
+<div class="guide-layout">
+    {% if toc %}
+    <nav class="guide-toc card" aria-label="On this page">
+        <p class="eyebrow">On this page</p>
+        <ol>
+            {% for item in toc %}<li><a href="#{{ item.id }}">{{ item.name }}</a></li>{% endfor %}
+        </ol>
+    </nav>
+    {% endif %}
+    <article class="guide card">{{ body|safe }}</article>
+</div>
+{% endblock %}

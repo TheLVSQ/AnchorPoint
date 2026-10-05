@@ -150,6 +150,20 @@ list/detail/CSV-export views at `/reports/` pick it up with no new URLs. Ships w
 image. Captured on the person form, kiosk quick-register, and `import_signups` (a `photo_consent`
 column, set on create only); shown on the profile and in reports.
 
+## Help guides (`helpcenter/` app, `/help/`)
+
+User-facing how-to guides, linked from the sidebar footer for every logged-in user. Each guide
+is a Markdown file in `anchorpoint/helpcenter/guides/<slug>.md`, registered in `GUIDES`
+(`helpcenter/guides.py`). Images use relative paths (`![Alt](checkin-setup/01-rooms.png)`) that
+resolve to `helpcenter/static/help/`; a test fails if one is missing (it would 500 in prod under
+the hashed static storage). "Print / save PDF" uses print styles in `app.css`.
+
+Screenshots come from `scripts/help_screenshots.py`: it seeds a **throwaway `*_docs` DB** with
+fictional families (repo is public — never real data), drives your installed Chrome via
+Playwright (docs-only dependency, not in requirements), and can write the guide as a PDF.
+See its docstring for the one-time DB container + `LABEL_FONT_DIR` (DejaVu fonts for the
+sample labels). Re-run it when check-in screens change.
+
 ## Common Tasks
 
 ### Adding a new permission-protected view
