@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Help{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>Help</h1>
+    <p class="page-subtitle">Step-by-step guides for running AnchorPoint. Open one, or print it to share as a PDF.</p>
+</div>
+<div class="report-grid">
+    {% for guide in guides %}
+        <a class="report-card" href="{% url 'help:guide' guide.slug %}">
+            <h2>{{ guide.title }}</h2>
+            <p>{{ guide.summary }}</p>
+            <span class="chip chip--neutral">{{ guide.audience }}</span>
+            <span class="ghost-link">Read guide →</span>
+        </a>
+    {% endfor %}
+</div>
+{% endblock %}

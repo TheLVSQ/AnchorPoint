@@ -131,6 +131,10 @@
                 <strong>{{ request.user.get_full_name|default:request.user.username }}</strong>
                 {{ request.user.profile.get_role_display|default:"" }}
             </div>
+            <a class="nav__link" href="{% url 'help:list' %}"{% if nav.active == "help" %} aria-current="page"{% endif %}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 0 1 4.9.7c0 1.7-2.4 2.3-2.4 3.8M12 17h.01"/></svg>
+                Help
+            </a>
             <a class="nav__link" href="{% url 'events:public_list' %}">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>
                 Public events page

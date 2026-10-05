@@ -74,6 +74,7 @@ INSTALLED_APPS = [
     "messaging",
     "checkin",
     "reporting",
+    "helpcenter",
 ]
 
 MIDDLEWARE = [
