@@ -1092,6 +1092,10 @@ body.embed {
     --primary-text: #01536f;
     background: transparent;
     margin: 0;
+    /* The frame is sized to the content; a viewport-based min-height would make
+       the content grow with the frame forever. */
+    min-height: 0;
 }
+html.embed-html { overflow-y: auto; background: transparent; }
 .embed-main { padding: 0; }
 .embed-main > .container { padding: 0; max-width: none; }

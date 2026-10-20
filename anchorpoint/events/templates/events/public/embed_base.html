@@ -1,7 +1,7 @@
 {% load static %}<!DOCTYPE html>
 {# Frameless shell for the sign-up form embedded on the church website (?embed=1). #}
 {# No AnchorPoint navigation or branding; the website supplies the page around it. #}
-<html lang="en" data-theme="light">
+<html lang="en" data-theme="light" class="embed-html">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -24,12 +24,15 @@
         // and that a new page loaded (after submitting) so it can scroll the form into view.
         (function () {
             var origin = JSON.parse(document.getElementById("embed-origin").textContent);
+            var main = document.querySelector(".embed-main");
             function send(type) {
-                parent.postMessage({ type: type, height: document.documentElement.scrollHeight }, origin);
+                // Measure the content, not the document: the document is at least as
+                // tall as the frame, so reporting it would only ever grow.
+                parent.postMessage({ type: type, height: Math.ceil(main.getBoundingClientRect().height) }, origin);
             }
             send("anchorpoint:loaded");
             if ("ResizeObserver" in window) {
-                new ResizeObserver(function () { send("anchorpoint:height"); }).observe(document.body);
+                new ResizeObserver(function () { send("anchorpoint:height"); }).observe(main);
             } else {
                 window.addEventListener("resize", function () { send("anchorpoint:height"); });
             }
