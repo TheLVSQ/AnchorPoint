@@ -28,6 +28,8 @@ urlpatterns = [
         views.event_registration_queue,
         name="registration_queue",
     ),
+    path("feed.json", views.public_events_feed_json, name="feed_json"),
+    path("feed.ics", views.public_events_feed_ics, name="feed_ics"),
     path("", views.public_event_list, name="public_list"),
     path("<slug:slug>/", views.public_event_detail, name="public_detail"),
 ]

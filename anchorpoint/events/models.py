@@ -448,3 +448,23 @@ class EventRegistrationAttendee(models.Model):
     @property
     def full_name(self):
         return f"{self.first_name} {self.last_name}".strip()
+
+
+class WebsiteRebuildState(models.Model):
+    """Single row: what the church website was last rebuilt from.
+
+    ``trigger_site_rebuild`` (cron, every minute) hashes the public events feed
+    and pings the website's deploy hook when it changes, at most once per
+    debounce window. See events/management/commands/trigger_site_rebuild.py.
+    """
+
+    feed_hash = models.CharField(max_length=64, blank=True)
+    last_requested_at = models.DateTimeField(blank=True, null=True)
+
+    @classmethod
+    def load(cls):
+        obj, _ = cls.objects.get_or_create(pk=1)
+        return obj
+
+    def __str__(self):
+        return f"Website rebuild state (last requested {self.last_requested_at})"

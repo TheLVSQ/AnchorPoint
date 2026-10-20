@@ -2,7 +2,9 @@ from django.contrib import messages
 from django.db import transaction
 from django.db.models import Count, F, Max, Min, Q
 from django.shortcuts import get_object_or_404, redirect, render
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
+from django.utils.cache import patch_cache_control
+from django.views.decorators.http import require_GET
 from django.utils import timezone
 
 import io
@@ -21,6 +23,7 @@ from .forms import (
     EventRegistrationContactForm,
     RegistrationMatchForm,
 )
+from . import feeds
 from .models import Event, EventRegistration, EventRegistrationAttendee
 from .services import (
     create_person_from_attendee,
@@ -241,6 +244,30 @@ def event_roster_export(request, pk):
     response["Content-Disposition"] = (
         f'attachment; filename="event-roster-{event.pk}.csv"'
     )
+    return response
+
+
+def _org_name():
+    from core.models import OrganizationSettings
+
+    return OrganizationSettings.load().name or "Events"
+
+
+@require_GET
+def public_events_feed_json(request):
+    """Upcoming published events for the church website (built at deploy time)."""
+    response = JsonResponse({"events": feeds.feed_items(request.build_absolute_uri)})
+    patch_cache_control(response, public=True, max_age=300)
+    return response
+
+
+@require_GET
+def public_events_feed_ics(request):
+    """The same events as an iCalendar feed people can subscribe to."""
+    body = feeds.ics_calendar(request.build_absolute_uri, _org_name())
+    response = HttpResponse(body, content_type="text/calendar; charset=utf-8")
+    response["Content-Disposition"] = 'inline; filename="events.ics"'
+    patch_cache_control(response, public=True, max_age=300)
     return response
 
 

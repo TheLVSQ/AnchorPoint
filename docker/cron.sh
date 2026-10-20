@@ -1,7 +1,8 @@
 #!/bin/sh
 # Scheduler loop for the `cron` sidecar service.
 #
-# Every 60s: deliver any scheduled SMS / phone blasts that are now due.
+# Every 60s: deliver any scheduled SMS / phone blasts that are now due, and
+# rebuild the church website if the public events feed changed (debounced).
 # Once every ~24h: purge old/unused phone-blast audio files and old label images,
 # then run the system health check (emails Maintenance Alerts recipients).
 # Nightly at 07:00 UTC (2am EST / 3am EDT, before the Tuesday 07:30 reboot
@@ -23,6 +24,7 @@ echo "[cron] scheduler started"
 
 while true; do
     python manage.py process_communications || echo "[cron] process_communications failed"
+    python manage.py trigger_site_rebuild || echo "[cron] trigger_site_rebuild failed"
 
     minutes_since_cleanup=$((minutes_since_cleanup + 1))
     if [ "$minutes_since_cleanup" -ge "$CLEANUP_INTERVAL_MIN" ]; then
