@@ -1,3 +1,6 @@
+from urllib.parse import urlsplit
+
+from django.conf import settings
 from django.contrib import messages
 from django.db import transaction
 from django.db.models import Count, F, Max, Min, Q
@@ -272,6 +275,9 @@ def public_events_feed_ics(request):
 
 
 def public_event_list(request):
+    if settings.WEBSITE_URL:
+        # The church website is the public face for events; Anchorpoint stays internal.
+        return redirect(f"{settings.WEBSITE_URL}/events/")
     # Next *upcoming* start (a plain Min would pick a past occurrence of a
     # recurring event and show/sort it by an old date).
     events = (
@@ -286,6 +292,8 @@ def public_event_list(request):
 
 
 def public_event_detail(request, slug):
+    if settings.WEBSITE_URL:
+        return redirect(f"{settings.WEBSITE_URL}/events/{slug}/")
     event = get_object_or_404(
         Event.objects.published()
         .prefetch_related("occurrences", "photos"),
@@ -399,6 +407,31 @@ def event_registration_queue(request):
 
 
 @transaction.atomic
+def _embed_origin():
+    """Origin allowed to frame the sign-up form (scheme://host[:port] of WEBSITE_URL)."""
+    parts = urlsplit(settings.WEBSITE_URL)
+    return f"{parts.scheme}://{parts.netloc}" if parts.scheme and parts.netloc else ""
+
+
+def _render_register(request, context):
+    """Render the sign-up page, or its frameless embed for the church website (?embed=1)."""
+    embed = request.GET.get("embed") == "1"
+    origin = _embed_origin()
+    context = {
+        **context,
+        "embed": embed,
+        "embed_origin": origin,
+        "base_template": "events/public/embed_base.html" if embed else "base.html",
+    }
+    response = render(request, "events/public/event_register.html", context)
+    if embed:
+        # Only the church website may frame it; everyone else still gets DENY.
+        if origin:
+            response.xframe_options_exempt = True
+            response["Content-Security-Policy"] = f"frame-ancestors {origin}"
+    return response
+
+
 def public_event_register(request, registration_token):
     event = get_object_or_404(
         Event.objects.published()
@@ -411,9 +444,8 @@ def public_event_register(request, registration_token):
     registration_closed = False
     if not event.can_register():
         registration_closed = True
-        return render(
+        return _render_register(
             request,
-            "events/public/event_register.html",
             {
                 "event": event,
                 "form": None,
@@ -487,9 +519,8 @@ def public_event_register(request, registration_token):
             form_kwargs={"require_details": event.require_attendee_details},
         )
 
-    return render(
+    return _render_register(
         request,
-        "events/public/event_register.html",
         {
             "event": event,
             "form": form,

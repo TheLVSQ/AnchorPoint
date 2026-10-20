@@ -1,13 +1,17 @@
 """Public, read-only event feeds for the church website (JSON + iCalendar).
 
-Only what the public event pages already show goes out: published events with
-an upcoming occurrence, and none of the contact, capacity, registration or
-release-document fields. The repo is public, so assume the endpoint is known.
+The website renders its own event pages from this feed, so it carries what a
+public event page shows: description, location, dates, photos, cost. It never
+carries contact, capacity, registration counts or release documents. The
+sign-up form link (it embeds the registration token) is included only while
+registration is open, exactly as the public page links it. The repo is public,
+so assume the endpoint is known.
 """
 import hashlib
 import json
 from datetime import timedelta, timezone as dt_timezone
 
+from django.conf import settings
 from django.db.models import Prefetch
 from django.urls import reverse
 from django.utils import timezone
@@ -39,8 +43,15 @@ def upcoming_events():
     return sorted(events, key=lambda e: (e.upcoming_occurrence_list[0].starts_at, e.id))
 
 
-def _detail_path(event):
-    return reverse("events:public_detail", args=[event.slug])
+def event_public_url(event, build_url):
+    """The event's public page: on the church website when WEBSITE_URL is set."""
+    if settings.WEBSITE_URL:
+        return f"{settings.WEBSITE_URL}/events/{event.slug}/"
+    return build_url(reverse("events:public_detail", args=[event.slug]))
+
+
+def registration_embed_url(event, build_url):
+    return build_url(reverse("event_register", args=[event.registration_token])) + "?embed=1"
 
 
 def feed_items(build_url):
@@ -49,12 +60,14 @@ def feed_items(build_url):
     for event in upcoming_events():
         occurrences = event.upcoming_occurrence_list[:MAX_OCCURRENCES_PER_EVENT]
         photos = sorted(event.photos.all(), key=lambda p: (p.display_order, p.id))
+        can_register = event.can_register()
         items.append(
             {
                 "title": event.title,
                 "slug": event.slug,
                 "summary": event.summary,
-                "url": build_url(_detail_path(event)),
+                "description": event.description,
+                "url": event_public_url(event, build_url),
                 "next_start": occurrences[0].starts_at.isoformat(),
                 "occurrences": [
                     {
@@ -65,11 +78,21 @@ def feed_items(build_url):
                     for o in occurrences
                 ],
                 "location_name": event.location_name,
+                "location_address_line1": event.location_address_line1,
+                "location_address_line2": event.location_address_line2,
                 "location_city": event.location_city,
+                "location_state": event.location_state,
+                "location_postal_code": event.location_postal_code,
+                "location_notes": event.location_notes,
                 "photo_url": build_url(photos[0].image.url) if photos else None,
+                "photos": [{"url": build_url(p.image.url), "caption": p.caption} for p in photos],
                 "is_free": event.is_free or not event.cost_amount,
                 "cost_display": event.display_cost,
-                "registration_open": event.can_register(),
+                "registration_open": can_register,
+                "registration_deadline": (
+                    event.registration_deadline.isoformat() if event.registration_deadline else None
+                ),
+                "registration_url": registration_embed_url(event, build_url) if can_register else None,
             }
         )
     return items
@@ -126,7 +149,7 @@ def ics_calendar(build_url, calendar_name):
         "X-WR-TIMEZONE:America/New_York",
     ]
     for event in upcoming_events():
-        url = build_url(_detail_path(event))
+        url = event_public_url(event, build_url)
         description = "\n\n".join(filter(None, [event.summary, url]))
         location = ", ".join(filter(None, [event.location_name, event.location_city]))
         for occ in event.upcoming_occurrence_list:

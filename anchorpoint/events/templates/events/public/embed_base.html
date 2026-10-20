@@ -1,0 +1,40 @@
+{% load static %}<!DOCTYPE html>
+{# Frameless shell for the sign-up form embedded on the church website (?embed=1). #}
+{# No AnchorPoint navigation or branding; the website supplies the page around it. #}
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex">
+    <title>{% block title %}Sign up{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/app.css' %}">
+</head>
+<body class="embed">
+    <main class="embed-main">
+        {% include "partials/messages.html" %}
+        {% block content %}{% endblock %}
+    </main>
+    {% if embed_origin %}
+    {{ embed_origin|json_script:"embed-origin" }}
+    <script>
+        // Tell the website how tall the form is so its frame can fit it (no inner scrollbar),
+        // and that a new page loaded (after submitting) so it can scroll the form into view.
+        (function () {
+            var origin = JSON.parse(document.getElementById("embed-origin").textContent);
+            function send(type) {
+                parent.postMessage({ type: type, height: document.documentElement.scrollHeight }, origin);
+            }
+            send("anchorpoint:loaded");
+            if ("ResizeObserver" in window) {
+                new ResizeObserver(function () { send("anchorpoint:height"); }).observe(document.body);
+            } else {
+                window.addEventListener("resize", function () { send("anchorpoint:height"); });
+            }
+        })();
+    </script>
+    {% endif %}
+</body>
+</html>
