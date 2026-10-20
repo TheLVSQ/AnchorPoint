@@ -77,6 +77,7 @@ Key environment variables (see `.env.production.example`):
 - `python manage.py create_admin --username <u> --email <e> [--password <p>] [--name "First Last"]` - Create or promote a user to admin (staff + superuser + ADMIN role). Idempotent; generates a password if none given. **Preferred way to bootstrap an admin after deployment.**
 - `python manage.py rotate_passwords <username...>` (or `--all-staff`) - Reset the given users' passwords to fresh random values and print them once. Use after a credential exposure or lockout.
 - `python manage.py setup_beta_users` - (Legacy) Creates admin + 2 staff testers with random passwords. Superseded by `create_admin` for new deployments.
+- `python manage.py trigger_site_rebuild` - Rebuild the church website if the public events feed changed (run by the cron sidecar; no-op without `WEBSITE_DEPLOY_HOOK_URL`). See *Church website feed* below.
 - `python manage.py import_signups <csv|-> [--commit] [--group "VBS 2026"]` - Bulk-import families (one CSV row per child; see `docs/signup-import-template.csv`). Dry-run by default; matches existing people via the events-app matching service so re-imports never duplicate. `--group` enrolls imported children for check-in eligibility filtering.
 
 ## Known Limitations
@@ -138,6 +139,19 @@ can fetch it.
   capped (10MB × 3 per service); backups keep 14 days; `cleanup_audio` purges finished
   phone-blast audio after 30 days (`AUDIO_RETENTION_DAYS`).
 - **Dependencies** — Dependabot alerts + weekly PRs (`.github/dependabot.yml`).
+
+## Church website feed (`events/feeds.py`)
+
+The public website (separate repo `bolivar-community-church-site`, Astro on Cloudflare) reads
+events at build time from **`/events/feed.json`**; **`/events/feed.ics`** is the subscribable
+calendar. Both are public, read-only, cached 5 min, and carry only what the public event pages
+show (published events with an upcoming occurrence). Never add contact, capacity, registration or
+release fields; `events/test_feeds.py` asserts they stay out. Registration stays on Anchorpoint's
+own `/events/<slug>/` pages (the site links there).
+
+`trigger_site_rebuild` (cron sidecar, every minute) hashes the feed payload and POSTs
+`WEBSITE_DEPLOY_HOOK_URL` (a Cloudflare Workers Builds deploy hook; secret) when it changes,
+at most once per 5 min. State lives in the one-row `WebsiteRebuildState`. Unset hook = no-op.
 
 ## Reporting (`reporting/` app)
 

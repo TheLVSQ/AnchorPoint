@@ -56,6 +56,11 @@ CSRF_TRUSTED_ORIGINS = [o.strip() for o in _csrf_origins.split(",") if o.strip()
 # and CSRF_TRUSTED_ORIGINS when unset (see messaging.services.get_site_base_url).
 SITE_BASE_URL = os.getenv("SITE_BASE_URL", "")
 
+# Church website (separate repo) deploy hook. When set, the cron sidecar's
+# `trigger_site_rebuild` POSTs it whenever the public events feed changes, so
+# event edits reach the website within minutes. Treat it as a secret.
+WEBSITE_DEPLOY_HOOK_URL = os.getenv("WEBSITE_DEPLOY_HOOK_URL", "")
+
 
 # Application definition
 
