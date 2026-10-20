@@ -39,9 +39,11 @@ def _repoint_relations(obj, survivor):
     """Move every reverse FK/O2O row from `obj` onto `survivor`. When a unique
     constraint means the survivor already has the equivalent row (e.g. the same
     group membership), drop the duplicate's row instead of re-pointing it."""
-    for rel in obj._meta.related_objects:
-        if rel.many_to_many:
-            continue  # the through model's own FK relation covers this
+    # include_hidden: related_name="+" FKs (e.g. FamilyConflictFlag.guardian)
+    # aren't in `related_objects` but still point at this record.
+    for rel in obj._meta.get_fields(include_hidden=True):
+        if not (rel.auto_created and not rel.concrete) or rel.many_to_many:
+            continue  # only reverse FK/O2O; the through model's FK covers M2M
         if rel.related_model._meta.label in _SKIP_REPOINT:
             continue
         fk = rel.field.name

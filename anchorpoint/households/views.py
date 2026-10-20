@@ -1,3 +1,5 @@
+import logging
+
 from django.contrib import messages
 from django.core.paginator import Paginator
 from django.db.models import Count, Q
@@ -13,6 +15,8 @@ from .forms import HouseholdForm, HouseholdNewPersonForm
 from . import family_flags as flags_service
 from . import hygiene
 from .models import CleanupFinding, FamilyConflictFlag, Household, HouseholdMember
+
+logger = logging.getLogger(__name__)
 
 
 @staff_required
@@ -363,7 +367,7 @@ def cleanup_list(request):
             f.cards = [hygiene.person_card(f.person_a), hygiene.person_card(f.person_b)]
         else:
             f.cards = [hygiene.household_card(f.household_a), hygiene.household_card(f.household_b)]
-    last_run = CleanupFinding.objects.order_by("-last_seen_at").values_list("last_seen_at", flat=True).first()
+    last_run = hygiene.last_run()
     return render(request, "households/cleanup.html", {
         "page_obj": page_obj, "show": show, "kind": kind,
         "kinds": hygiene.counts_by_kind(), "last_run": last_run,
@@ -380,7 +384,10 @@ def _cleanup_back(request):
 
 
 def _cleanup_done(request):
-    hygiene.run()  # a merge can create (or clear) other findings
+    try:
+        hygiene.run()  # a merge can create (or clear) other findings
+    except Exception:  # the action itself already succeeded; tonight's run catches up
+        logger.exception("Data cleanup re-check failed")
     return _cleanup_back(request)
 
 

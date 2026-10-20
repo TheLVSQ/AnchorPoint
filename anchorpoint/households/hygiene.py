@@ -24,6 +24,7 @@ import re
 from collections import defaultdict
 from itertools import combinations
 
+from django.core.cache import cache
 from django.db import transaction
 from django.db.models import Count
 from django.utils import timezone
@@ -178,6 +179,7 @@ def detect():
 # Queue
 
 
+LAST_RUN_CACHE_KEY = "hygiene:last_run"
 _FK_FIELDS = ("person_a", "person_b", "household_a", "household_b")
 
 
@@ -209,11 +211,16 @@ def run(dry_run=False):
             counts["opened"] += 1
         finding.save()
 
+    cache.set(LAST_RUN_CACHE_KEY, now, None)
     stale = CleanupFinding.objects.filter(status=F.STATUS_OPEN).exclude(key__in=[x["key"] for x in found])
     counts["resolved"] = stale.update(
         status=F.STATUS_RESOLVED, resolution="No longer applies", resolved_at=now, resolved_by=None,
     )
     return dict(counts)
+
+
+def last_run():
+    return cache.get(LAST_RUN_CACHE_KEY)
 
 
 def open_count():

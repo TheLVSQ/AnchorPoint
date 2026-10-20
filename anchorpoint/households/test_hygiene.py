@@ -174,6 +174,15 @@ class MergeSafetyTests(TestCase):
         self.assertEqual(keep.custody_notes, "Mom only")  # same text, not doubled
         self.assertEqual(keep.unauthorized_pickup, "Uncle Ray")
 
+    def test_hidden_relations_follow_the_merge(self):
+        keep = Person.objects.create(first_name="Rae", last_name="Wynn")
+        dup = Person.objects.create(first_name="Rae", last_name="Wynn")
+        kid = Person.objects.create(first_name="Kit", last_name="Wynn")
+        flag = FamilyConflictFlag.objects.create(child=kid, guardian=dup)
+        merge_persons(keep, dup)
+        flag.refresh_from_db()
+        self.assertEqual(flag.guardian, keep)
+
     def test_two_logins_block_the_merge(self):
         User = get_user_model()
         a = Person.objects.create(first_name="Tim", last_name="Ng")
