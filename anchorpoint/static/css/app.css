@@ -1061,3 +1061,16 @@ label + .help-text, label + small.help-text { display: block; margin: -0.15rem 0
     .guide td img { max-height: 4.5cm; }
     .guide .admonition { break-inside: avoid; }
 }
+
+/* ----------------------------------------------------- Data cleanup -- */
+.tabs--compact { margin-bottom: 0; }
+.cleanup-item .muted-text { margin: 0 0 0.75rem; }
+.cleanup-compare { display: grid; gap: 1rem; }
+.cleanup-compare--pair { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (max-width: 760px) { .cleanup-compare--pair { grid-template-columns: 1fr; } }
+.cleanup-side { display: flex; flex-direction: column; padding: 0.9rem 1rem; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface-sunken); }
+.cleanup-side h3 { margin: 0 0 0.6rem; font-size: 1rem; }
+.cleanup-side form { margin-top: auto; padding-top: 0.75rem; }
+.cleanup-side .kv > div { grid-template-columns: 6rem minmax(0, 1fr); }
+.cleanup-item .action-row { margin-top: 1rem; }
+.cleanup-item .action-row form { margin: 0; }

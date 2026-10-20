@@ -150,6 +150,18 @@ list/detail/CSV-export views at `/reports/` pick it up with no new URLs. Ships w
 image. Captured on the person form, kiosk quick-register, and `import_signups` (a `photo_consent`
 column, set on create only); shown on the profile and in reports.
 
+## Data cleanup (`households/hygiene.py`, `/families/cleanup/`)
+
+Nightly (cron sidecar, 07:00 UTC) `manage.py family_hygiene` finds likely duplicate people,
+likely duplicate families, empty families, and families with no adult, and syncs them into
+`CleanupFinding` (stable `key` per pair: dismissed stays dismissed, no-longer-matching
+auto-resolves, re-matching reopens). Admin-only page with merge (pick which record to keep),
+delete-empty-family, dismiss, reopen; re-runs detection after each action. Rules are
+conservative (first name must match; differing birthdates veto; a shared child is never a
+family-duplicate signal; different `external_id`s never pair). `--dry-run` prints counts only.
+Merges go through `people/services/merge.py`: safety text (allergies, custody, pickup, notes)
+is combined, not dropped, and merging two people who both have logins is blocked.
+
 ## Help guides (`helpcenter/` app, `/help/`)
 
 User-facing how-to guides, linked from the sidebar footer for every logged-in user. Each guide
@@ -224,7 +236,7 @@ Manual equivalents, from `anchorpoint/`:
 - `../.venv/bin/python manage.py test`
 - `cd ../agent && ../.venv/bin/python -m unittest test_agent`
 
-Baseline (2026-10-01): 516 Django tests + 22 agent tests, all passing. `checkin` has the most
+Baseline (2026-10-19): 628 Django tests + 22 agent tests, all passing. `checkin` has the most
 coverage (~195 tests); `events/tests.py` covers registration matching.
 
 Prod shell (once SSH'd into the droplet):

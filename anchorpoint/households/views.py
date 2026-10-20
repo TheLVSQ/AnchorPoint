@@ -1,15 +1,22 @@
+import logging
+
 from django.contrib import messages
 from django.core.paginator import Paginator
 from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 
-from core.permissions import staff_required
+from core.permissions import admin_required, staff_required
 from people.models import Person
+from people.services.merge import MergeBlocked, merge_households, merge_persons
 
 from .forms import HouseholdForm, HouseholdNewPersonForm
 from . import family_flags as flags_service
-from .models import FamilyConflictFlag, Household, HouseholdMember
+from . import hygiene
+from .models import CleanupFinding, FamilyConflictFlag, Household, HouseholdMember
+
+logger = logging.getLogger(__name__)
 
 
 @staff_required
@@ -332,3 +339,122 @@ def family_flag_reviewed(request, pk):
     flags_service.mark_reviewed(flag, request.user)
     messages.success(request, f"Marked OK: {flag.child} stays in both families.")
     return redirect("households:family_flags")
+
+
+# ---------------------------------------------------------------------------
+# Data cleanup (nightly hygiene findings) — admins only
+
+
+@admin_required
+def cleanup_list(request):
+    show = request.GET.get("show", "open")
+    kind = request.GET.get("kind", "")
+    qs = CleanupFinding.objects.select_related(
+        "person_a", "person_b", "household_a", "household_b", "resolved_by",
+    )
+    if show == "dismissed":
+        qs = qs.filter(status=CleanupFinding.STATUS_DISMISSED)
+    elif show == "resolved":
+        qs = qs.filter(status=CleanupFinding.STATUS_RESOLVED).order_by("-resolved_at")
+    else:
+        show = "open"
+        qs = qs.filter(status=CleanupFinding.STATUS_OPEN)
+    if kind in dict(CleanupFinding.KIND_CHOICES):
+        qs = qs.filter(kind=kind)
+    page_obj = Paginator(qs, 25).get_page(request.GET.get("page"))
+    for f in page_obj:
+        if f.kind == CleanupFinding.KIND_DUPLICATE_PERSON:
+            f.cards = [hygiene.person_card(f.person_a), hygiene.person_card(f.person_b)]
+        else:
+            f.cards = [hygiene.household_card(f.household_a), hygiene.household_card(f.household_b)]
+    last_run = hygiene.last_run()
+    return render(request, "households/cleanup.html", {
+        "page_obj": page_obj, "show": show, "kind": kind,
+        "kinds": hygiene.counts_by_kind(), "last_run": last_run,
+    })
+
+
+def _cleanup_back(request):
+    """Back to the list the admin was on (same-site paths only)."""
+    nxt = request.POST.get("next", "")
+    if nxt and url_has_allowed_host_and_scheme(nxt, allowed_hosts={request.get_host()},
+                                               require_https=request.is_secure()):
+        return redirect(nxt)
+    return redirect("households:cleanup_list")
+
+
+def _cleanup_done(request):
+    try:
+        hygiene.run()  # a merge can create (or clear) other findings
+    except Exception:  # the action itself already succeeded; tonight's run catches up
+        logger.exception("Data cleanup re-check failed")
+    return _cleanup_back(request)
+
+
+@admin_required
+@require_POST
+def cleanup_merge(request, pk):
+    finding = get_object_or_404(CleanupFinding, pk=pk, status=CleanupFinding.STATUS_OPEN)
+    keep = request.POST.get("keep")
+    if finding.kind == CleanupFinding.KIND_DUPLICATE_PERSON:
+        pair = [finding.person_a, finding.person_b]
+        merge = merge_persons
+    elif finding.kind == CleanupFinding.KIND_DUPLICATE_HOUSEHOLD:
+        pair = [finding.household_a, finding.household_b]
+        merge = merge_households
+    else:
+        return redirect("households:cleanup_list")
+    if None in pair or keep not in {str(pair[0].pk), str(pair[1].pk)}:
+        messages.error(request, "One of these records no longer exists. Refreshing the list.")
+        return _cleanup_done(request)
+    survivor, duplicate = pair if str(pair[0].pk) == keep else pair[::-1]
+    dup_name = f"{duplicate} (#{duplicate.pk})"
+    try:
+        merge(survivor, duplicate)
+    except MergeBlocked as exc:
+        messages.error(request, str(exc))
+        return _cleanup_back(request)
+    finding.refresh_from_db()  # the merged-away side is now NULL
+    hygiene.resolve(finding, request.user, CleanupFinding.STATUS_RESOLVED,
+                    f"Merged {dup_name} into #{survivor.pk}")
+    messages.success(request, f"Merged {dup_name} into {survivor} (#{survivor.pk}).")
+    return _cleanup_done(request)
+
+
+@admin_required
+@require_POST
+def cleanup_delete_household(request, pk):
+    finding = get_object_or_404(CleanupFinding, pk=pk, status=CleanupFinding.STATUS_OPEN,
+                                kind=CleanupFinding.KIND_EMPTY_HOUSEHOLD)
+    household = finding.household_a
+    if household is not None:
+        if household.memberships.exists():
+            messages.error(request, f"{household.name} has members now — not deleted.")
+            return _cleanup_done(request)
+        name = household.name
+        household.delete()
+        finding.refresh_from_db()
+        messages.success(request, f"Deleted the empty family “{name}”.")
+    hygiene.resolve(finding, request.user, CleanupFinding.STATUS_RESOLVED, "Deleted empty family")
+    return _cleanup_done(request)
+
+
+@admin_required
+@require_POST
+def cleanup_dismiss(request, pk):
+    finding = get_object_or_404(CleanupFinding, pk=pk, status=CleanupFinding.STATUS_OPEN)
+    duplicate = finding.kind in (CleanupFinding.KIND_DUPLICATE_PERSON, CleanupFinding.KIND_DUPLICATE_HOUSEHOLD)
+    hygiene.resolve(finding, request.user, CleanupFinding.STATUS_DISMISSED,
+                    "Not duplicates" if duplicate else "OK as-is")
+    messages.success(request, f"Dismissed: {finding.label}. It won't be flagged again.")
+    return _cleanup_back(request)
+
+
+@admin_required
+@require_POST
+def cleanup_reopen(request, pk):
+    finding = get_object_or_404(CleanupFinding, pk=pk, status=CleanupFinding.STATUS_DISMISSED)
+    finding.status, finding.resolution, finding.resolved_at, finding.resolved_by = (
+        CleanupFinding.STATUS_OPEN, "", None, None)
+    finding.save(update_fields=["status", "resolution", "resolved_at", "resolved_by"])
+    return _cleanup_done(request)

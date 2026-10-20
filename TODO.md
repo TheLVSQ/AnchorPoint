@@ -8,11 +8,6 @@ _(empty — the UI refresh and security review both shipped 2026-10-01; see Comp
 
 ## Next up
 
-- [ ] **Nightly family/person hygiene job + admin review page.** Run at 2–3am via the cron sidecar. (The admin review page pattern exists now: `/families/review/` for family-safety flags — extend it for duplicates/orphans.)
-  - Detect orphaned households (0 members, or no adults).
-  - Detect likely duplicate people and households (same normalized phone, address, or last name).
-  - Write the findings to a review queue. Add an **admin-only page** that lists them, with merge, edit, delete and dismiss actions.
-  - The merge service already exists (#59). It re-points HouseholdMembers, check-ins and event registrations.
 - [ ] **Address verification on person add.** Compare USPS Web Tools API (free, US-only) with Smarty/Lob (paid, easier).
   - Pattern: normalize, autocomplete on blur, store a `verified` flag.
   - Degrade gracefully when no API is configured.
@@ -66,3 +61,4 @@ _(empty — the UI refresh and security review both shipped 2026-10-01; see Comp
 - [x] Maintenance: daily health email, host status cron, Tuesday security reboot, Docker prune, Dependabot
 - [x] UI refresh ("Harbor" design system, Figtree, dark mode, sidebar, every staff page redesigned; kiosk unchanged)
 - [x] Events: per-event "require birthdate + grade for each attendee" (kids' events)
+- [x] Nightly family/person hygiene job + admin Data cleanup page (merge/delete/dismiss)

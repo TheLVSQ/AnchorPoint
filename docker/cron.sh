@@ -4,6 +4,8 @@
 # Every 60s: deliver any scheduled SMS / phone blasts that are now due.
 # Once every ~24h: purge old/unused phone-blast audio files and old label images,
 # then run the system health check (emails Maintenance Alerts recipients).
+# Nightly at 07:00 UTC (2am EST / 3am EDT, before the Tuesday 07:30 reboot
+# window): family/person hygiene → the admin "Data cleanup" queue.
 #
 # Dependency-free on purpose (no system cron / supercronic) — a plain loop is
 # enough for a single-instance deployment and keeps the image lean.
@@ -15,6 +17,7 @@ cd /app/anchorpoint
 # the first boot, then settles into a daily cadence.
 CLEANUP_INTERVAL_MIN=1440
 minutes_since_cleanup=$CLEANUP_INTERVAL_MIN
+last_hygiene_day=""
 
 echo "[cron] scheduler started"
 
@@ -27,6 +30,13 @@ while true; do
         python manage.py purge_print_images || echo "[cron] purge_print_images failed"
         python manage.py system_health || echo "[cron] system_health failed"
         minutes_since_cleanup=0
+    fi
+
+    # Once per UTC day during the 07:00 hour (idempotent, so a re-run after a
+    # restart in that hour is harmless).
+    if [ "$(date -u +%H)" = "07" ] && [ "$last_hygiene_day" != "$(date -u +%F)" ]; then
+        python manage.py family_hygiene || echo "[cron] family_hygiene failed"
+        last_hygiene_day=$(date -u +%F)
     fi
 
     sleep 60
