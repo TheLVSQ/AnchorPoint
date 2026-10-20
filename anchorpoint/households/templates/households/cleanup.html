@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}Data cleanup{% endblock %}
+{% block content %}
+
+<div class="page-header page-header--split">
+    <div>
+        <h1>Data cleanup</h1>
+        <p class="page-subtitle">Possible duplicate people and families, and families with no members or no adult. Checked every night{% if last_run %} · last checked {{ last_run|date:"M j, g:i A" }}{% endif %}.</p>
+    </div>
+    <div class="page-actions">
+        <nav class="tabs tabs--compact" aria-label="Status">
+            <a class="tabs__tab" href="?show=open"{% if show == "open" %} aria-current="page"{% endif %}>Open</a>
+            <a class="tabs__tab" href="?show=dismissed"{% if show == "dismissed" %} aria-current="page"{% endif %}>Dismissed</a>
+            <a class="tabs__tab" href="?show=resolved"{% if show == "resolved" %} aria-current="page"{% endif %}>Resolved</a>
+        </nav>
+    </div>
+</div>
+
+{% if show == "open" %}
+<nav class="tabs" aria-label="Filter by kind">
+    <a class="tabs__tab" href="?show=open"{% if not kind %} aria-current="page"{% endif %}>All</a>
+    {% for k in kinds %}
+        <a class="tabs__tab" href="?show=open&amp;kind={{ k.kind }}"{% if kind == k.kind %} aria-current="page"{% endif %}>{{ k.label }} <span>{{ k.count }}</span></a>
+    {% endfor %}
+</nav>
+{% endif %}
+
+{% for f in page_obj %}
+<section class="card cleanup-item">
+    <div class="card__head">
+        <h2>{{ f.label }}</h2>
+        <span class="chip{% if f.kind == 'empty_household' or f.kind == 'no_adult_household' %} chip--warning{% endif %}">{{ f.get_kind_display }}</span>
+    </div>
+    <p class="muted-text">{{ f.reasons }}{% if f.status != "open" %} · {{ f.get_status_display }}{% if f.resolution %}: {{ f.resolution }}{% endif %}{% if f.resolved_by %} by {{ f.resolved_by.get_full_name|default:f.resolved_by.username }}{% endif %}{% if f.resolved_at %} · {{ f.resolved_at|date:"M j, g:i A" }}{% endif %}{% endif %}</p>
+
+    <div class="cleanup-compare{% if f.cards.1 %} cleanup-compare--pair{% endif %}">
+    {% for card in f.cards %}{% if card %}
+        <div class="cleanup-side">
+        {% if f.kind == "duplicate_person" %}
+            {% with p=card.obj %}
+            <h3><a href="{% url 'people_detail' p.pk %}">{{ p.first_name }} {{ p.last_name }}</a> <span class="muted-text">#{{ p.pk }}</span></h3>
+            <dl class="kv">
+                <div><dt>Birthdate</dt><dd>{% if p.birthdate %}{{ p.birthdate|date:"M j, Y" }}{% if p.age is not None %} (age {{ p.age }}){% endif %}{% else %}—{% endif %}</dd></div>
+                <div><dt>Email</dt><dd>{{ p.email|default:"—" }}</dd></div>
+                <div><dt>Phone</dt><dd>{{ p.phone|default:"—" }}</dd></div>
+                <div><dt>Families</dt><dd>{% for h in card.families %}<a href="{% url 'households:family_detail' h.pk %}">{{ h.name }}</a>{% if not forloop.last %}, {% endif %}{% empty %}—{% endfor %}</dd></div>
+                <div><dt>History</dt><dd>{{ card.checkins }} check-in{{ card.checkins|pluralize }} · {{ card.registrations }} registration{{ card.registrations|pluralize }} · {{ card.groups }} group{{ card.groups|pluralize }}</dd></div>
+                {% if p.allergies %}<div><dt>Allergies</dt><dd>{{ p.allergies }}</dd></div>{% endif %}
+                {% if p.custody_flag %}<div><dt>Custody</dt><dd><span class="chip chip--danger">Custody note</span></dd></div>{% endif %}
+                {% if card.has_login %}<div><dt>Login</dt><dd><span class="chip chip--neutral">Has a login</span></dd></div>{% endif %}
+            </dl>
+            {% endwith %}
+        {% else %}
+            {% with h=card.obj %}
+            <h3><a href="{% url 'households:family_detail' h.pk %}">{{ h.name }}</a> <span class="muted-text">#{{ h.pk }}</span></h3>
+            <dl class="kv">
+                <div><dt>Address</dt><dd class="household-address">{{ h.formatted_address|default:"—" }}</dd></div>
+                <div><dt>Phone</dt><dd>{{ h.phone|default:"—" }}</dd></div>
+                <div><dt>Members</dt><dd>{% for m in card.members %}<a href="{% url 'people_detail' m.person.pk %}">{{ m.person.first_name }} {{ m.person.last_name }}</a> <span class="muted-text">({{ m.get_relationship_type_display|lower }}{% if m.person.age is not None %}, {{ m.person.age }}{% endif %})</span>{% if not forloop.last %}, {% endif %}{% empty %}None{% endfor %}</dd></div>
+            </dl>
+            {% endwith %}
+        {% endif %}
+        {% if f.status == "open" and f.cards.1 and f.cards.0 %}
+            <form method="post" action="{% url 'households:cleanup_merge' f.pk %}"
+                  onsubmit="return confirm('Keep #{{ card.obj.pk }} and merge the other record into it? The other record is deleted after its history moves over. This can’t be undone.');">
+                {% csrf_token %}
+                <input type="hidden" name="keep" value="{{ card.obj.pk }}">
+                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                <button type="submit" class="btn btn-sm">Keep this one, merge the other in</button>
+            </form>
+        {% endif %}
+        </div>
+    {% endif %}{% empty %}{% endfor %}
+    {% if f.status == "open" and not f.cards.0 %}<p class="muted-text">This record no longer exists — it will clear on the next check.</p>{% endif %}
+    </div>
+
+    <div class="action-row">
+    {% if f.status == "open" %}
+        {% if f.kind == "empty_household" and f.household_a %}
+            <form method="post" action="{% url 'households:cleanup_delete_household' f.pk %}"
+                  onsubmit="return confirm('Delete the empty family “{{ f.household_a.name|escapejs }}”?');">
+                {% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}">
+                <button type="submit" class="btn danger btn-sm">Delete family</button>
+            </form>
+        {% elif f.kind == "no_adult_household" and f.household_a %}
+            <a class="btn btn-sm" href="{% url 'households:family_detail' f.household_a.pk %}">Open family to add an adult</a>
+        {% endif %}
+        <form method="post" action="{% url 'households:cleanup_dismiss' f.pk %}">
+            {% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}">
+            <button type="submit" class="btn ghost btn-sm">{% if f.kind == "duplicate_person" or f.kind == "duplicate_household" %}Not duplicates — dismiss{% else %}It’s fine — dismiss{% endif %}</button>
+        </form>
+    {% elif f.status == "dismissed" %}
+        <form method="post" action="{% url 'households:cleanup_reopen' f.pk %}">
+            {% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}">
+            <button type="submit" class="btn ghost btn-sm">Reopen</button>
+        </form>
+    {% endif %}
+    </div>
+</section>
+{% empty %}
+    <p class="empty-state">{% if show == "open" %}Nothing to clean up. 🎉{% else %}Nothing here yet.{% endif %}</p>
+{% endfor %}
+
+{% include "partials/pagination.html" %}
+{% endblock %}

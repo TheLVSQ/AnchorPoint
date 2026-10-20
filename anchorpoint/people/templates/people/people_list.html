@@ -14,6 +14,7 @@
                 {% if request.user.is_superuser or request.user.profile.role == 'admin' or request.user.profile.role == 'staff' %}
                     <a role="menuitem" href="{% url 'rock_import' %}">Import from another CMS</a>
                 {% endif %}
+                {% if nav.admin %}<a role="menuitem" href="{% url 'households:cleanup_list' %}">Data cleanup (merge duplicates)</a>{% endif %}
                 <a role="menuitem" href="{% url 'people_duplicates' %}">Find duplicates</a>
                 <a role="menuitem" href="{% url 'people_cleanup' %}">Clean up inactive</a>
             </div>

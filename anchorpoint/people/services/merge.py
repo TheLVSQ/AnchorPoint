@@ -11,16 +11,28 @@ from django.db import IntegrityError, transaction
 
 from households.models import HouseholdMember
 
+
+class MergeBlocked(Exception):
+    """The pair can't be merged safely (shown to the admin as-is)."""
+
 # Survivor's *blank* scalar fields get filled from the duplicate (we never
 # overwrite a value the survivor already has).
 _FILL_FIELDS = [
     "email", "phone", "birthdate", "grade", "gender", "marital_status",
-    "allergies", "security_notes", "notes",
     "address_line1", "address_line2", "city", "state", "postal_code",
     "salvation_date", "baptism_date", "first_visit_date",
-    "custody_notes", "unauthorized_pickup",
     "emergency_contact_name", "emergency_contact_phone", "emergency_contact_relationship",
 ]
+
+# Safety/notes text is *combined* when both records have different values —
+# dropping a duplicate's allergy or custody note would be a check-in safety gap.
+_APPEND_FIELDS = [
+    "allergies", "security_notes", "notes", "custody_notes", "unauthorized_pickup",
+]
+
+# Cleanup findings point at the records being merged; they're re-evaluated
+# after a merge rather than carried across (that could pair a record with itself).
+_SKIP_REPOINT = {"households.CleanupFinding"}
 
 
 def _repoint_relations(obj, survivor):
@@ -30,6 +42,8 @@ def _repoint_relations(obj, survivor):
     for rel in obj._meta.related_objects:
         if rel.many_to_many:
             continue  # the through model's own FK relation covers this
+        if rel.related_model._meta.label in _SKIP_REPOINT:
+            continue
         fk = rel.field.name
         related = rel.related_model
         for pk in list(related._base_manager.filter(**{fk: obj}).values_list("pk", flat=True)):
@@ -45,11 +59,22 @@ def merge_persons(survivor, duplicate):
     """Merge `duplicate` Person into `survivor` and delete the duplicate."""
     if survivor.pk == duplicate.pk:
         return survivor
+    if _has_login(survivor) and _has_login(duplicate):
+        raise MergeBlocked(
+            f"Both {survivor} records have their own login. Remove one login "
+            "(Admin → Users) before merging."
+        )
 
     changed = []
     for f in _FILL_FIELDS:
         if not getattr(survivor, f, None) and getattr(duplicate, f, None):
             setattr(survivor, f, getattr(duplicate, f))
+            changed.append(f)
+    for f in _APPEND_FIELDS:
+        mine = (getattr(survivor, f, None) or "").strip()
+        theirs = (getattr(duplicate, f, None) or "").strip()
+        if theirs and theirs.lower() not in mine.lower():
+            setattr(survivor, f, f"{mine}\n{theirs}" if mine else theirs)
             changed.append(f)
     if not survivor.custody_flag and duplicate.custody_flag:
         survivor.custody_flag = True
@@ -63,6 +88,11 @@ def merge_persons(survivor, duplicate):
     _repoint_relations(duplicate, survivor)
     duplicate.delete()
     return survivor
+
+
+def _has_login(person):
+    from core.models import UserProfile
+    return UserProfile.objects.filter(person=person).exists()
 
 
 @transaction.atomic
@@ -85,5 +115,7 @@ def merge_households(canonical, duplicate):
             setattr(canonical, f, getattr(duplicate, f))
     canonical.save()
 
-    duplicate.delete()  # cascades its membership rows (members already on canonical)
+    # Anything else pointing at the duplicate (e.g. family-safety flags) follows it.
+    _repoint_relations(duplicate, canonical)
+    duplicate.delete()
     return canonical

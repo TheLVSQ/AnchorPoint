@@ -151,3 +151,62 @@ class FamilyConflictFlag(models.Model):
 
     def __str__(self):
         return f"Family conflict: {self.child} ({self.get_status_display()})"
+
+
+class CleanupFinding(models.Model):
+    """One item in the nightly data-cleanup queue (see ``households/hygiene.py``):
+    a likely duplicate person/family pair, or a family with no members/adults.
+
+    ``key`` is stable across runs (kind + sorted ids), so a dismissed finding
+    stays dismissed and one that no longer matches is auto-resolved. FKs are
+    SET_NULL because merging deletes one side; ``label`` keeps the names.
+    """
+
+    KIND_DUPLICATE_PERSON = "duplicate_person"
+    KIND_DUPLICATE_HOUSEHOLD = "duplicate_household"
+    KIND_EMPTY_HOUSEHOLD = "empty_household"
+    KIND_NO_ADULT_HOUSEHOLD = "no_adult_household"
+    KIND_CHOICES = [
+        (KIND_DUPLICATE_PERSON, "Possible duplicate person"),
+        (KIND_DUPLICATE_HOUSEHOLD, "Possible duplicate family"),
+        (KIND_EMPTY_HOUSEHOLD, "Family with no members"),
+        (KIND_NO_ADULT_HOUSEHOLD, "Family with no adult"),
+    ]
+
+    STATUS_OPEN = "open"
+    STATUS_DISMISSED = "dismissed"
+    STATUS_RESOLVED = "resolved"
+    STATUS_CHOICES = [
+        (STATUS_OPEN, "Needs review"),
+        (STATUS_DISMISSED, "Dismissed"),
+        (STATUS_RESOLVED, "Resolved"),
+    ]
+
+    kind = models.CharField(max_length=30, choices=KIND_CHOICES)
+    key = models.CharField(max_length=100, unique=True)
+    person_a = models.ForeignKey("people.Person", on_delete=models.SET_NULL,
+                                 null=True, blank=True, related_name="+")
+    person_b = models.ForeignKey("people.Person", on_delete=models.SET_NULL,
+                                 null=True, blank=True, related_name="+")
+    household_a = models.ForeignKey(Household, on_delete=models.SET_NULL,
+                                    null=True, blank=True, related_name="+")
+    household_b = models.ForeignKey(Household, on_delete=models.SET_NULL,
+                                    null=True, blank=True, related_name="+")
+    label = models.CharField(max_length=255, help_text="Names at detection time.")
+    reasons = models.CharField(max_length=255, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_OPEN)
+    resolution = models.CharField(max_length=255, blank=True)
+    first_seen_at = models.DateTimeField(auto_now_add=True)
+    last_seen_at = models.DateTimeField(auto_now_add=True)
+    resolved_at = models.DateTimeField(null=True, blank=True)
+    resolved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="+",
+    )
+
+    class Meta:
+        ordering = ["kind", "label"]
+        indexes = [models.Index(fields=["status", "kind"])]
+
+    def __str__(self):
+        return f"{self.get_kind_display()}: {self.label}"

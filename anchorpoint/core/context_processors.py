@@ -6,12 +6,14 @@ def organization_settings(request):
         "organization_settings": OrganizationSettings.load(),
         "family_flags_open": _family_flags_badge(request),
         "nav": _nav(request),
+        "cleanup_open": _cleanup_badge(request),
     }
 
 
 # Longest prefix wins; values are the sidebar link keys.
 _NAV_SECTIONS = [
     ("/families/review/", "family_review"),
+    ("/families/cleanup/", "cleanup"),
     ("/people/", "people"),
     ("/families/", "families"),
     ("/groups/", "groups"),
@@ -60,3 +62,15 @@ def _family_flags_badge(request):
     if not (is_admin(user) or is_alert_recipient(user)):
         return 0
     return open_flag_count()
+
+
+def _cleanup_badge(request):
+    """Open data-cleanup findings (admins only)."""
+    user = getattr(request, "user", None)
+    if not user or not user.is_authenticated:
+        return 0
+    from core.permissions import is_admin
+    if not is_admin(user):
+        return 0
+    from households.hygiene import open_count
+    return open_count()
