@@ -14,6 +14,7 @@ Consent is re-checked when a broadcast is actually sent, not only when it was wr
 someone who opts out after a text is scheduled is skipped, with the reason recorded.
 """
 from dataclasses import dataclass, field
+from datetime import timedelta
 
 from django.conf import settings as django_settings
 from django.db import transaction
@@ -35,6 +36,11 @@ _ADDRESS_FIELD = {Channel.SMS: "phone", Channel.VOICE: "phone"}
 _CONSENT_FIELD = {Channel.SMS: "phone_opt_in", Channel.VOICE: "phone_opt_in"}
 
 _NOT_READY = "Add your Twilio SID, auth token, and phone number in Organization Settings."
+
+# A call with no status callback after this long is settled as "no status received",
+# so one lost callback can't leave a blast "Sending" forever.
+STALE_CALL_AFTER = timedelta(hours=2)
+_NO_STATUS = "No status received from Twilio"
 
 # Twilio CallStatus -> Delivery status. Anything else (ringing, in-progress) is ignored.
 _CALL_STATUS = {
@@ -65,6 +71,7 @@ class DispatchReport:
     sent: list = field(default_factory=list)  # Communications that went out (or are ringing)
     failed: list = field(default_factory=list)  # Communications where every send failed
     deferred: int = 0  # due broadcasts held back by the blackout window
+    stale_calls: int = 0  # ringing calls settled because no status callback arrived
 
 
 # --------------------------------------------------------------------------- public
@@ -192,7 +199,7 @@ def dispatch_due(now=None) -> DispatchReport:
     """Send every broadcast that is due. Run by ``process_communications`` each minute."""
     settings_obj = OrganizationSettings.load()
     now = now or timezone.now()
-    report = DispatchReport()
+    report = DispatchReport(stale_calls=_settle_stale_calls(now))
     due = (
         Communication.objects.filter(
             kind=Communication.Kind.BROADCAST, status=Communication.Status.SCHEDULED
@@ -302,6 +309,24 @@ def _send_pending(comm, adapter, *, recheck_consent):
         delivery.save(update_fields=["address", "status", "provider_id", "sent_at"])
         sent += 1
     _settle(comm, attempted=sent + failed, sent=sent)
+
+
+def _settle_stale_calls(now):
+    stale = Delivery.objects.filter(
+        communication__channel=Channel.VOICE,
+        status=Delivery.Status.SENT,
+        sent_at__lt=now - STALE_CALL_AFTER,
+    )
+    comm_ids = set(stale.values_list("communication_id", flat=True))
+    count = stale.update(status=Delivery.Status.FAILED, error_message=_NO_STATUS, completed_at=now)
+    for comm in Communication.objects.filter(pk__in=comm_ids, status=Communication.Status.SENDING):
+        if comm.deliveries.filter(status__in=[Delivery.Status.PENDING, Delivery.Status.SENT]).exists():
+            continue
+        reached = comm.deliveries.filter(
+            status__in=[Delivery.Status.ANSWERED, Delivery.Status.NO_ANSWER]
+        ).exists()
+        _settle(comm, attempted=1, sent=1 if reached else 0)
+    return count
 
 
 def _skip(delivery, reason):

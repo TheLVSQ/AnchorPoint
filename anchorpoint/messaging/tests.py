@@ -326,6 +326,43 @@ class BroadcastTests(MessagingTestCase):
         self.assertEqual(comm.deliveries.get().status, Delivery.Status.SENT)
 
 
+class StaleCallTests(MessagingTestCase):
+    """A call whose status callback never arrives must not leave a blast 'Sending' forever."""
+
+    def setUp(self):
+        super().setUp()
+        self.comm = self.voice_broadcast()
+        outbound.dispatch_due()
+        self.delivery = self.comm.deliveries.get()
+
+    def test_recent_call_keeps_ringing(self):
+        outbound.dispatch_due(now=dj_timezone.now() + timedelta(minutes=30))
+        self.delivery.refresh_from_db()
+        self.assertEqual(self.delivery.status, Delivery.Status.SENT)
+
+    def test_call_with_no_callback_after_two_hours_is_settled(self):
+        report = outbound.dispatch_due(now=dj_timezone.now() + timedelta(hours=3))
+        self.assertEqual(report.stale_calls, 1)
+        self.delivery.refresh_from_db()
+        self.assertEqual(self.delivery.status, Delivery.Status.FAILED)
+        self.assertIn("No status received", self.delivery.error_message)
+        self.comm.refresh_from_db()
+        self.assertEqual(self.comm.status, Communication.Status.FAILED)
+
+    def test_settles_to_completed_when_other_calls_answered(self):
+        Delivery.objects.create(communication=self.comm, person=self.person, address="+15550001111",
+                                provider_id="CA_OK", status=Delivery.Status.ANSWERED)
+        outbound.dispatch_due(now=dj_timezone.now() + timedelta(hours=3))
+        self.comm.refresh_from_db()
+        self.assertEqual(self.comm.status, Communication.Status.COMPLETED)
+
+    def test_runs_even_inside_blackout(self):
+        self.blackout_all_day()
+        outbound.dispatch_due(now=dj_timezone.now() + timedelta(hours=3))
+        self.delivery.refresh_from_db()
+        self.assertEqual(self.delivery.status, Delivery.Status.FAILED)
+
+
 class RecordCallStatusTests(MessagingTestCase):
     def setUp(self):
         super().setUp()
@@ -535,8 +572,8 @@ class PhoneCallWebhookTests(MessagingTestCase):
         self.call = self.blast.deliveries.get()
         self.url = reverse("messaging:phone_call_status_webhook")
 
-    def _post(self, params, sign=True):
-        full = "http://testserver" + self.url
+    def _post(self, params, sign=True, signed_url=None):
+        full = signed_url or ("http://testserver" + self.url)
         payload = full + "".join(f"{k}{v}" for k, v in sorted(params.items()))
         mac = hmac.new(b"test_auth_token", payload.encode(), hashlib.sha1)
         sig = base64.b64encode(mac.digest()).decode() if sign else "invalidsignature"
@@ -555,6 +592,23 @@ class PhoneCallWebhookTests(MessagingTestCase):
         self.assertEqual(resp.status_code, 403)
         self.call.refresh_from_db()
         self.assertEqual(self.call.status, Delivery.Status.SENT)
+
+    @override_settings(SITE_BASE_URL="https://anchorpoint.example")
+    def test_accepts_signature_for_the_registered_public_url(self):
+        # Behind Cloudflare Tunnel the request arrives as plain http on an internal
+        # host, but Twilio signs the public https callback URL we registered.
+        public = "https://anchorpoint.example/communications/phone-blast/webhook/call-status/"
+        resp = self._post({"CallSid": "CA_TEST_001", "CallStatus": "completed"},
+                          signed_url=public)
+        self.assertEqual(resp.status_code, 200)
+        self.call.refresh_from_db()
+        self.assertEqual(self.call.status, Delivery.Status.ANSWERED)
+
+    @override_settings(SITE_BASE_URL="https://anchorpoint.example")
+    def test_rejects_signature_for_some_other_url(self):
+        resp = self._post({"CallSid": "CA_TEST_001", "CallStatus": "completed"},
+                          signed_url="https://evil.example/communications/phone-blast/webhook/call-status/")
+        self.assertEqual(resp.status_code, 403)
 
     def test_unknown_call_sid_returns_404(self):
         resp = self._post({"CallSid": "CA_UNKNOWN", "CallStatus": "completed"})
