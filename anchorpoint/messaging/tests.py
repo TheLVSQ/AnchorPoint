@@ -739,3 +739,14 @@ class TranscodeTests(TestCase):
         with patch.object(services.shutil, "which", return_value=None):
             with self.assertRaises(AudioProcessingError):
                 services.transcode_to_mp3(SimpleUploadedFile("a.webm", b"x"))
+
+
+class MergeKeepsHistoryTests(MessagingTestCase):
+    def test_merging_people_moves_deliveries_to_the_survivor(self):
+        from people.services.merge import merge_persons
+
+        dupe = Person.objects.create(first_name="Recipient", last_name="One",
+                                     phone="+15551112222", phone_opt_in=True)
+        outbound.send_transactional(SMS, people=[dupe], body="Pickup code ABCD")
+        merge_persons(self.person, dupe)
+        self.assertEqual(Delivery.objects.get().person, self.person)
