@@ -119,6 +119,7 @@
                 <div class="form-field">
                     <label for="{{ form.twilio_account_sid.id_for_label }}">Twilio Account SID</label>
                     {{ form.twilio_account_sid }}
+                    <p class="help-text">Starts with AC. Use the Account SID and Auth Token from Twilio Console &gt; Account Info, not an API key.</p>
                     {% if form.twilio_account_sid.errors %}
                         <p class="error-text">{{ form.twilio_account_sid.errors.0 }}</p>
                     {% endif %}

@@ -184,3 +184,21 @@ class OrganizationSettingsForm(forms.ModelForm):
             self.fields["family_alert_recipients"].label_from_instance
         )
 
+    def clean_twilio_account_sid(self):
+        # Twilio signs phone-blast status callbacks with the account's primary Auth
+        # Token. An API Key (SK...) + secret can still send, but every callback then
+        # fails signature checks and blasts stay "Sending" forever.
+        sid = self.cleaned_data.get("twilio_account_sid") or ""
+        if sid.startswith("SK"):
+            raise forms.ValidationError(
+                "This is an API Key SID (starts with SK). Use your Account SID (starts "
+                "with AC) and primary Auth Token from Twilio Console > Account Info. "
+                "Twilio signs phone-blast call updates with the Auth Token, so an API "
+                "Key breaks them."
+            )
+        if sid and not sid.startswith("AC"):
+            raise forms.ValidationError(
+                "Twilio Account SIDs start with AC. Copy it from Twilio Console > Account Info."
+            )
+        return sid
+
