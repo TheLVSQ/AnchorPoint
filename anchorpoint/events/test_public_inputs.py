@@ -10,7 +10,7 @@ from django.utils import timezone
 
 from core.csv_safe import safe_cell
 from core.models import UserProfile
-from events.models import Event, EventOccurrence, EventRegistration
+from events.models import Event, EventOccurrence, EventRegistration, EventRegistrationAttendee
 from people.models import Person
 
 
@@ -76,6 +76,17 @@ class PublicRegistrationGuardTests(TestCase):
         self.client.post(self.url, _payload(), HTTP_CF_CONNECTING_IP="203.0.113.44",
                          HTTP_X_FORWARDED_FOR="1.1.1.1")
         self.assertEqual(EventRegistration.objects.get().liability_release_ip, "203.0.113.44")
+
+    def test_failure_mid_registration_saves_nothing(self, confirm, notify):
+        # The view is atomic: a crash after the rows are written must roll them back,
+        # not leave a half-saved registration with no confirmation email.
+        with mock.patch("events.views.match_registration_attendees",
+                        side_effect=RuntimeError("boom")):
+            with self.assertRaises(RuntimeError):
+                self.client.post(self.url, _payload())
+        self.assertEqual(EventRegistration.objects.count(), 0)
+        self.assertEqual(EventRegistrationAttendee.objects.count(), 0)
+        confirm.assert_not_called()
 
 
 class CsvFormulaInjectionTests(TestCase):

@@ -406,7 +406,6 @@ def event_registration_queue(request):
     )
 
 
-@transaction.atomic
 def _embed_origin():
     """Origin allowed to frame the sign-up form (scheme://host[:port] of WEBSITE_URL)."""
     parts = urlsplit(settings.WEBSITE_URL)
@@ -432,6 +431,7 @@ def _render_register(request, context):
     return response
 
 
+@transaction.atomic
 def public_event_register(request, registration_token):
     event = get_object_or_404(
         Event.objects.published()
