@@ -4,7 +4,7 @@ from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
-from messaging.models import PhoneBlast
+from messaging.models import Communication
 
 
 DEFAULT_RETENTION_DAYS = 30
@@ -15,7 +15,7 @@ class Command(BaseCommand):
     help = (
         "Delete phone-blast audio files that are no longer needed: recordings for "
         "blasts that finished more than N days ago, plus any orphaned files on disk "
-        "not referenced by a PhoneBlast."
+        "not referenced by a phone blast."
     )
 
     def add_arguments(self, parser):
@@ -55,8 +55,9 @@ class Command(BaseCommand):
 
     def _purge_aged_blasts(self, cutoff, dry_run):
         """Clear audio_file for finished blasts older than the cutoff."""
-        finished = (PhoneBlast.Status.COMPLETED, PhoneBlast.Status.FAILED)
-        queryset = PhoneBlast.objects.filter(
+        finished = (Communication.Status.COMPLETED, Communication.Status.FAILED)
+        queryset = Communication.objects.filter(
+            channel=Communication.Channel.VOICE,
             status__in=finished,
             completed_at__lt=cutoff,
         ).exclude(audio_file="")
@@ -82,7 +83,7 @@ class Command(BaseCommand):
 
         referenced = {
             os.path.normpath(os.path.join(str(media_root), name))
-            for name in PhoneBlast.objects.exclude(audio_file="").values_list(
+            for name in Communication.objects.exclude(audio_file="").values_list(
                 "audio_file", flat=True
             )
         }

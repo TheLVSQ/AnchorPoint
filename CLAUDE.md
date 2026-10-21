@@ -56,12 +56,26 @@ Unmatched attendees go to a queue for manual review.
 
 The `Person.normalized_phone` field stores digits-only version for fast lookups. Auto-populated on save via `normalize_phone()` function. Indexed for O(1) queries instead of O(n) iteration.
 
-### Twilio Integration (`messaging/services.py`)
+### Outbound communications (`messaging/outbound.py`)
 
-- `TwilioService` class handles SMS and voice calls
-- Phone blasts require absolute URLs for audio files (Twilio fetches them)
-- Blackout windows prevent sends during configured quiet hours
-- All communications logged to `CommunicationLog` for audit trail
+Every text / phone blast to people in the directory goes through this one module
+(terms in `GLOSSARY.md`): a **Communication** with one **Delivery** per recipient.
+
+- **Broadcasts** (staff-written): `check_broadcast()` (forms) → `broadcast()` queues it →
+  `dispatch_due()` (cron, every minute) sends it. "Send now" = within a minute. Opt-in is
+  re-checked at send time (opted-out → Delivery `skipped`/`opted_out`); a due broadcast
+  inside the blackout window waits until it ends.
+- **Transactional** (event-triggered, e.g. check-in pickup code): `send_transactional()`
+  sends immediately, obeys opt-in, ignores blackout; records nothing if Twilio isn't set up.
+- **Adapters** (`messaging/adapters.py`): `settings.OUTBOUND_ADAPTERS` maps channel →
+  `TwilioSms` / `TwilioVoice`; under tests every channel is `FakeAdapter` (call
+  `FakeAdapter.reset()` in setUp; set `is_ready` / `fail_with` to simulate). Email = a new
+  adapter + consent field.
+- The Delivery is the audit trail (person page "Communications History" reads Deliveries).
+- Staff operational alerts (family flags, health email, welcome/registration emails) are
+  *not* Communications; they use `messaging/twilio_client.py` / `send_mail` directly.
+- Phone blasts need absolute audio + status-callback URLs (`SITE_BASE_URL`); the webhook
+  calls `record_call_status()`.
 
 ## Environment Configuration
 
@@ -98,7 +112,7 @@ per household.
 ## Scheduled communications & phone-blast audio
 
 The `cron` sidecar (see `docker/docker-compose.yml` + `docker/cron.sh`) runs
-`process_communications` every minute to deliver due scheduled SMS/phone blasts, and
+`process_communications` every minute to send due broadcasts (`outbound.dispatch_due`), and
 `cleanup_audio` + `purge_print_images` daily (old phone-blast recordings; label PNGs
 from print jobs older than 24h — finished jobs are already cleared on ack). Scheduled phone blasts need
 `SITE_BASE_URL` (or Organization Settings > Website) so the headless worker can build
@@ -221,11 +235,14 @@ person = Person.objects.filter(normalized_phone=phone_digits).first()
 
 ### Sending SMS programmatically
 ```python
-from messaging.services import TwilioService, deliver_sms_message
-from messaging.models import SmsMessage, SmsRecipient
+from messaging import outbound
+from messaging.models import Communication
 
-# Create message and recipients, then:
-deliver_sms_message(sms_message)
+# Event-triggered text, sent now (opt-in enforced, blackout ignored):
+outbound.send_transactional(Communication.Channel.SMS, people=[person], body="...", title="...")
+
+# Staff broadcast, sent by the scheduler (raises outbound.BroadcastRejected on problems):
+outbound.broadcast(Communication.Channel.SMS, created_by=user, group=group, body="...")
 ```
 
 ## Deployment

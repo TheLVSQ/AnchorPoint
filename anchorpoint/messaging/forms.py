@@ -1,30 +1,54 @@
-from django import forms
-from django.utils import timezone
+import os
 
-from core.models import OrganizationSettings
+from django import forms
+
 from groups.models import Group
 from people.models import Person
 
-from .models import PhoneBlast, SmsMessage
-from .services import is_within_blackout_window
+from . import outbound
+from .models import Communication
 
 
-def get_group_phone_recipients(group):
-    """Return all Person records in a group who have a phone number and opt-in."""
-    return list(
-        Person.objects.filter(
-            group_memberships__group=group,
-            phone__isnull=False,
-            phone_opt_in=True,
-        )
-        .exclude(phone__exact="")
-        .distinct()
+class _BroadcastForm(forms.ModelForm):
+    """Compose form for a broadcast. Consent, schedule and blackout rules live in the
+    outbound communications module; this form only maps its Problems onto fields."""
+
+    channel = None
+
+    def _target(self, cleaned):
+        """Return (person, group) the broadcast is aimed at."""
+        raise NotImplementedError
+
+    def clean(self):
+        cleaned = super().clean()
+        if self.errors:
+            return cleaned
+        person, group = self._target(cleaned)
+        if person is None and group is None:
+            return cleaned  # _target already added a field error
+        for problem in outbound.check_broadcast(
+            self.channel, person=person, group=group,
+            scheduled_for=cleaned.get("scheduled_for"),
+        ):
+            if problem.field in self.fields:
+                self.add_error(problem.field, problem.message)
+            else:
+                self.add_error(None, problem.message)
+        return cleaned
+
+    def target(self):
+        return self._target(self.cleaned_data)
+
+
+class SmsBroadcastForm(_BroadcastForm):
+    channel = Communication.Channel.SMS
+
+    target_type = forms.ChoiceField(
+        choices=Communication.TargetType.choices, initial=Communication.TargetType.PERSON
     )
 
-
-class SmsMessageForm(forms.ModelForm):
     class Meta:
-        model = SmsMessage
+        model = Communication
         fields = ["target_type", "person", "group", "body", "scheduled_for"]
         widgets = {
             "body": forms.Textarea(
@@ -40,75 +64,30 @@ class SmsMessageForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
-        self.organization_settings = kwargs.pop(
-            "organization_settings", OrganizationSettings.load()
-        )
         super().__init__(*args, **kwargs)
+        self.fields["body"].required = True
         self.fields["person"].required = False
         self.fields["group"].required = False
-        self.fields["person"].queryset = Person.objects.order_by(
-            "last_name", "first_name"
-        )
-        self.fields["group"].queryset = Group.objects.filter(is_active=True).order_by(
-            "name"
-        )
-        self._recipients = []
+        self.fields["person"].queryset = Person.objects.order_by("last_name", "first_name")
+        self.fields["group"].queryset = Group.objects.filter(is_active=True).order_by("name")
 
-    def clean(self):
-        cleaned = super().clean()
-        target_type = cleaned.get("target_type")
-        person = cleaned.get("person")
-        group = cleaned.get("group")
-        self._recipients = self._resolve_recipients(target_type, person, group)
-
-        if not self._recipients and target_type:
-            raise forms.ValidationError(
-                "No recipients have a valid mobile number and opt-in enabled."
-            )
-
-        when = cleaned.get("scheduled_for")
-        now = timezone.now()
-        if when:
-            if when < now:
-                self.add_error("scheduled_for", "Schedule time must be in the future.")
-            elif is_within_blackout_window(self.organization_settings, when):
-                self.add_error(
-                    "scheduled_for",
-                    "This time falls inside your configured blackout window.",
-                )
-        else:
-            if is_within_blackout_window(self.organization_settings, now):
-                raise forms.ValidationError(
-                    "You are inside the configured blackout window. Choose a later send time."
-                )
-
-        return cleaned
-
-    def _resolve_recipients(self, target_type, person, group):
-        recipients = []
-        if target_type == SmsMessage.TargetType.PERSON:
-            if not person:
-                self.add_error("person", "Select a person to send this message to.")
-            elif not person.phone:
-                self.add_error("person", "That person does not have a phone number.")
-            elif not person.phone_opt_in:
-                self.add_error("person", "This person has opted out of phone contact.")
-            else:
-                recipients = [person]
-        elif target_type == SmsMessage.TargetType.GROUP:
-            if not group:
+    def _target(self, cleaned):
+        if cleaned.get("target_type") == Communication.TargetType.GROUP:
+            group = cleaned.get("group")
+            if not group and "group" not in self.errors:
                 self.add_error("group", "Select a group to broadcast your SMS.")
-            else:
-                recipients = get_group_phone_recipients(group)
-        return recipients
+            return None, group
+        person = cleaned.get("person")
+        if not person and "person" not in self.errors:
+            self.add_error("person", "Select a person to send this message to.")
+        return person, None
 
-    def get_recipients(self):
-        return list(self._recipients)
 
+class PhoneBlastForm(_BroadcastForm):
+    channel = Communication.Channel.VOICE
 
-class PhoneBlastForm(forms.ModelForm):
     class Meta:
-        model = PhoneBlast
+        model = Communication
         fields = ["title", "group", "audio_file", "scheduled_for", "notes"]
         widgets = {
             "notes": forms.Textarea(attrs={"rows": 3, "placeholder": "Optional notes"}),
@@ -120,15 +99,13 @@ class PhoneBlastForm(forms.ModelForm):
     MAX_AUDIO_BYTES = 10 * 1024 * 1024  # 10 MB
 
     def __init__(self, *args, **kwargs):
-        self.organization_settings = kwargs.pop(
-            "organization_settings", OrganizationSettings.load()
-        )
         super().__init__(*args, **kwargs)
-        self.fields["group"].queryset = Group.objects.filter(is_active=True).order_by(
-            "name"
-        )
+        self.fields["title"].required = True
+        self.fields["audio_file"].required = True
+        self.fields["group"].required = True
+        self.fields["group"].queryset = Group.objects.filter(is_active=True).order_by("name")
         self.fields["group"].empty_label = None
-        self._recipients = []
+        self.fields["group"].error_messages["required"] = "Select the group you want to contact."
 
     def clean_audio_file(self):
         audio = self.cleaned_data.get("audio_file")
@@ -138,8 +115,6 @@ class PhoneBlastForm(forms.ModelForm):
             raise forms.ValidationError(
                 "Audio file is too large (max 10 MB). Record a shorter message."
             )
-        import os
-
         ext = os.path.splitext(audio.name or "")[1].lower()
         if ext not in self.ALLOWED_AUDIO_EXTENSIONS:
             raise forms.ValidationError(
@@ -147,36 +122,5 @@ class PhoneBlastForm(forms.ModelForm):
             )
         return audio
 
-    def clean(self):
-        cleaned = super().clean()
-        group = cleaned.get("group")
-        if not group:
-            self.add_error("group", "Select the group you want to contact.")
-        else:
-            self._recipients = get_group_phone_recipients(group)
-
-        if not self._recipients and group:
-            raise forms.ValidationError(
-                "Nobody in this group has a phone number with communication opt-in."
-            )
-
-        when = cleaned.get("scheduled_for")
-        now = timezone.now()
-        if when:
-            if when < now:
-                self.add_error("scheduled_for", "Schedule time must be in the future.")
-            elif is_within_blackout_window(self.organization_settings, when):
-                self.add_error(
-                    "scheduled_for",
-                    "This time falls inside your blackout window.",
-                )
-        else:
-            if is_within_blackout_window(self.organization_settings, now):
-                raise forms.ValidationError(
-                    "You are inside the configured blackout window. Choose a future time."
-                )
-
-        return cleaned
-
-    def get_recipients(self):
-        return list(self._recipients)
+    def _target(self, cleaned):
+        return None, cleaned.get("group")

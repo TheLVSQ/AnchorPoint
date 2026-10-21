@@ -1,7 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
-from messaging.models import CommunicationLog
+from messaging.models import Communication, Delivery
 
 from core.models import UserProfile
 from .models import Person
@@ -56,11 +56,15 @@ class PeopleDetailCommunicationTests(TestCase):
             last_name="Banks",
             phone="555-202-3030",
         )
-        CommunicationLog.objects.create(
-            person=self.person,
-            communication_type=CommunicationLog.CommunicationType.SMS,
-            summary="SMS sent",
-            detail="Reminder note",
+        comm = Communication.objects.create(
+            channel=Communication.Channel.SMS,
+            kind=Communication.Kind.TRANSACTIONAL,
+            title="SMS sent",
+            body="Reminder note",
+        )
+        Delivery.objects.create(
+            communication=comm, person=self.person, address=self.person.phone,
+            status=Delivery.Status.SENT,
         )
 
     def test_logs_render_on_detail_page(self):

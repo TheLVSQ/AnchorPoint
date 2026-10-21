@@ -16,7 +16,8 @@ from checkin.models import (
 from checkin.services.checkin_sms import send_security_code_sms
 from core.models import OrganizationSettings, UserProfile
 from households.models import Household, HouseholdMember
-from messaging.models import CommunicationLog
+from messaging.adapters import FakeAdapter
+from messaging.models import Communication, Delivery
 from people.models import Person
 from checkin.tests.kiosk_helpers import unlock_kiosk
 
@@ -276,11 +277,8 @@ class CheckinSmsTests(KioskFixtureMixin, TestCase):
 
     def setUp(self):
         super().setUp()
-        org = OrganizationSettings.load()
-        org.twilio_account_sid = "AC123"
-        org.twilio_auth_token = "token"
-        org.twilio_phone_number = "+15551234567"
-        org.save()
+        FakeAdapter.reset()
+        self.addCleanup(FakeAdapter.reset)
         self.session = CheckInSession.objects.create(
             name="VBS Day 1", date=timezone.localdate(),
             checkin_opens=time(0, 0), event_starts=time(0, 5),
@@ -292,71 +290,67 @@ class CheckinSmsTests(KioskFixtureMixin, TestCase):
         )
 
     def test_sends_to_opted_in_adult_and_logs(self):
-        with mock.patch(
-            "messaging.services.TwilioService.send_sms", return_value="SM1"
-        ) as mock_send:
-            sent = send_security_code_sms(
-                self.household, [self.checkin], "ABCD", self.session
-            )
+        sent = send_security_code_sms(
+            self.household, [self.checkin], "ABCD", self.session
+        )
         self.assertEqual(sent, 1)
-        mock_send.assert_called_once()
-        self.assertIn("ABCD", mock_send.call_args[0][1])
-        self.assertIn("Ava", mock_send.call_args[0][1])
-        log = CommunicationLog.objects.get(person=self.parent)
-        self.assertEqual(log.summary, "Check-in pickup code")
-        self.assertEqual(log.metadata["security_code"], "ABCD")
+        self.assertEqual(len(FakeAdapter.sent), 1)
+        comm = Communication.objects.get()
+        self.assertEqual(comm.kind, Communication.Kind.TRANSACTIONAL)
+        self.assertIn("ABCD", comm.body)
+        self.assertIn("Ava", comm.body)
+        self.assertEqual(comm.title, "Check-in pickup code")
+        self.assertEqual(comm.metadata["security_code"], "ABCD")
+        self.assertEqual(comm.deliveries.get().person, self.parent)
 
     def test_no_send_without_opt_in(self):
         self.parent.phone_opt_in = False
         self.parent.save()
-        with mock.patch(
-            "messaging.services.TwilioService.send_sms"
-        ) as mock_send:
-            sent = send_security_code_sms(
-                self.household, [self.checkin], "ABCD", self.session
-            )
-        self.assertEqual(sent, 0)
-        mock_send.assert_not_called()
-
-    def test_no_send_without_twilio_config(self):
-        org = OrganizationSettings.load()
-        org.twilio_account_sid = ""
-        org.save()
         sent = send_security_code_sms(
             self.household, [self.checkin], "ABCD", self.session
         )
         self.assertEqual(sent, 0)
+        self.assertEqual(FakeAdapter.sent, [])
 
-    def test_twilio_error_does_not_raise(self):
-        from messaging.services import TwilioRequestError
+    def test_no_send_without_twilio_config(self):
+        FakeAdapter.is_ready = False
+        sent = send_security_code_sms(
+            self.household, [self.checkin], "ABCD", self.session
+        )
+        self.assertEqual(sent, 0)
+        self.assertFalse(Communication.objects.exists())
 
+    def test_send_error_does_not_raise(self):
+        FakeAdapter.fail_with = "boom"
+        sent = send_security_code_sms(
+            self.household, [self.checkin], "ABCD", self.session
+        )
+        self.assertEqual(sent, 0)
+        self.assertEqual(
+            Delivery.objects.get().status, Delivery.Status.FAILED
+        )
+
+    def test_unexpected_error_does_not_break_checkin(self):
         with mock.patch(
-            "messaging.services.TwilioService.send_sms",
-            side_effect=TwilioRequestError("boom"),
+            "messaging.outbound.send_transactional", side_effect=RuntimeError("db")
         ):
             sent = send_security_code_sms(
                 self.household, [self.checkin], "ABCD", self.session
             )
         self.assertEqual(sent, 0)
-        self.assertEqual(CommunicationLog.objects.count(), 0)
 
     def test_kiosk_flow_sends_sms_and_shows_note(self):
         self._start_kiosk_session()
-        with mock.patch(
-            "messaging.services.TwilioService.send_sms", return_value="SM2"
-        ):
-            self.client.post(
-                reverse("checkin:kiosk_family_select", args=[self.household.pk]),
-                {
-                    f"select_{self.kid2.pk}": "on",
-                    f"room_{self.kid2.pk}": str(self.room_a.pk),
-                },
-            )
-            response = self.client.get(reverse("checkin:kiosk_confirmation"))
-        self.assertContains(response, "Code texted to your phone")
-        self.assertTrue(
-            CommunicationLog.objects.filter(person=self.parent).exists()
+        self.client.post(
+            reverse("checkin:kiosk_family_select", args=[self.household.pk]),
+            {
+                f"select_{self.kid2.pk}": "on",
+                f"room_{self.kid2.pk}": str(self.room_a.pk),
+            },
         )
+        response = self.client.get(reverse("checkin:kiosk_confirmation"))
+        self.assertContains(response, "Code texted to your phone")
+        self.assertTrue(Delivery.objects.filter(person=self.parent).exists())
 
 
 class SessionStatsTests(TestCase):

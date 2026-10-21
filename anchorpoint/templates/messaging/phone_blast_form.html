@@ -64,7 +64,7 @@
                 <div class="form-field">
                     <label for="{{ form.scheduled_for.id_for_label }}">Call Time</label>
                     {{ form.scheduled_for }}
-                    <p class="help-text">Leave blank to call immediately.</p>
+                    <p class="help-text">Leave blank to start calling right away (within a minute).</p>
                     {% if form.scheduled_for.errors %}
                         <p class="error-text">{{ form.scheduled_for.errors.0 }}</p>
                     {% endif %}

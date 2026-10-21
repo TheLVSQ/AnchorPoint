@@ -178,16 +178,18 @@
 
         <section class="card">
             <div class="card__head"><h2>Communications History</h2></div>
-            {% if communication_logs %}
+            {% if deliveries %}
                 <ul class="row-list">
-                {% for log in communication_logs %}
+                {% for delivery in deliveries %}
+                    {% with comm=delivery.communication %}
                     <li class="row-list__item">
                         <div class="row-list__main">
-                            <strong>{{ log.get_communication_type_display }} · {{ log.summary }}</strong>
-                            <span class="muted-text">{{ log.created_at|date:"M j, Y g:ia" }} · {% if log.recorded_by %}{{ log.recorded_by.get_full_name|default:log.recorded_by.username }}{% else %}System{% endif %}</span>
-                            {% if log.detail %}<span class="muted-text">{{ log.detail|truncatechars:140 }}</span>{% endif %}
+                            <strong>{{ comm.get_channel_display }} · {{ comm.summary }}</strong>
+                            <span class="muted-text">{{ delivery.created_at|date:"M j, Y g:ia" }} · {% if comm.created_by %}{{ comm.created_by.get_full_name|default:comm.created_by.username }}{% else %}System{% endif %} · {{ delivery.get_status_display }}{% if delivery.skip_reason %} ({{ delivery.get_skip_reason_display|lower }}){% endif %}</span>
+                            {% if comm.body %}<span class="muted-text">{{ comm.body|truncatechars:140 }}</span>{% endif %}
                         </div>
                     </li>
+                    {% endwith %}
                 {% endfor %}
                 </ul>
             {% else %}

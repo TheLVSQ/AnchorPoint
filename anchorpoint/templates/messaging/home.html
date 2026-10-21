@@ -27,7 +27,7 @@
                         <strong>{{ sms.body|truncatechars:70 }}</strong>
                         <span class="muted-text">{{ sms.created_by.get_full_name|default:sms.created_by.username }}{% if sms.scheduled_for %} · scheduled {{ sms.scheduled_for|date:"M j, g:i A" }}{% endif %}</span>
                     </div>
-                    <span class="chip {% if sms.status == 'completed' %}chip--success{% elif sms.status == 'failed' %}chip--danger{% elif sms.status == 'scheduled' or sms.status == 'processing' %}chip--warning{% else %}chip--neutral{% endif %}">{{ sms.get_status_display }}</span>
+                    <span class="chip {% if sms.status == 'completed' %}chip--success{% elif sms.status == 'failed' %}chip--danger{% elif sms.status == 'scheduled' or sms.status == 'sending' %}chip--warning{% else %}chip--neutral{% endif %}">{% if sms.status == 'scheduled' and not sms.scheduled_for %}Queued{% else %}{{ sms.get_status_display }}{% endif %}</span>
                 </li>
             {% endfor %}
             </ul>
@@ -45,14 +45,14 @@
                     <div class="row-list__main">
                         <a href="{% url 'messaging:phone_blast_detail' blast.pk %}"><strong>{{ blast.title }}</strong></a>
                         <span class="muted-text">
-                            {% if blast.status == "processing" %}Sending&hellip;{% if stats.pending %} ({{ stats.pending }} pending){% endif %}
+                            {% if blast.status == "sending" %}Sending&hellip;{% if stats.pending %} ({{ stats.pending }} pending){% endif %}
                             {% elif blast.status == "completed" %}{{ stats.answered }} answered{% if stats.no_answer %} &middot; {{ stats.no_answer }} no answer{% endif %}{% if stats.failed %} &middot; {{ stats.failed }} failed{% endif %}
-                            {% elif blast.status == "scheduled" %}Scheduled {{ blast.scheduled_for|date:"M j, g:i A" }}
+                            {% elif blast.status == "scheduled" %}{% if blast.scheduled_for %}Scheduled {{ blast.scheduled_for|date:"M j, g:i A" }}{% else %}Queued{% endif %}
                             {% else %}{{ blast.get_status_display }}{% endif %}
                             · {{ blast.created_by.get_full_name|default:blast.created_by.username }}
                         </span>
                     </div>
-                    <span class="chip {% if blast.status == 'completed' %}chip--success{% elif blast.status == 'failed' %}chip--danger{% elif blast.status == 'processing' or blast.status == 'scheduled' %}chip--warning{% else %}chip--neutral{% endif %}">{{ blast.get_status_display }}</span>
+                    <span class="chip {% if blast.status == 'completed' %}chip--success{% elif blast.status == 'failed' %}chip--danger{% elif blast.status == 'sending' or blast.status == 'scheduled' %}chip--warning{% else %}chip--neutral{% endif %}">{% if blast.status == 'scheduled' and not blast.scheduled_for %}Queued{% else %}{{ blast.get_status_display }}{% endif %}</span>
                 </li>
             {% endfor %}
             </ul>

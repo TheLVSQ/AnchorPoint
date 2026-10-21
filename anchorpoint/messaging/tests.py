@@ -6,9 +6,9 @@ import shutil
 import tempfile
 from datetime import datetime, time, timedelta, timezone as dt_timezone
 from unittest.mock import patch
-from urllib.parse import urlencode
 
 from django.contrib.auth import get_user_model
+from django.core.files.base import ContentFile
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
 from django.test import TestCase, override_settings
@@ -19,439 +19,550 @@ from core.models import OrganizationSettings
 from groups.models import Group, GroupMembership
 from people.models import Person
 
-from .forms import PhoneBlastForm, SmsMessageForm
-from .models import PhoneBlast, PhoneCall, SmsMessage, SmsRecipient
-from .services import (
-    AudioProcessingError,
-    TwilioConfigurationError,
-    TwilioRequestError,
-    TwilioService,
-    deliver_phone_blast,
-    deliver_sms_message,
-    get_site_base_url,
-    is_within_blackout_window,
-)
+from . import outbound
+from .adapters import DeliveryError, FakeAdapter, TwilioSms, TwilioVoice
+from .forms import PhoneBlastForm, SmsBroadcastForm
+from .models import Communication, Delivery
+from .services import AudioProcessingError, get_site_base_url
+from .twilio_client import TwilioClient, TwilioConfigurationError
+
+SMS = Communication.Channel.SMS
+VOICE = Communication.Channel.VOICE
 
 
-class SmsMessageFormTests(TestCase):
+class MessagingTestCase(TestCase):
+    """Fresh fake adapter + throwaway media dir + a consenting person."""
+
     def setUp(self):
+        FakeAdapter.reset()
+        self.addCleanup(FakeAdapter.reset)
+        self.temp_media = tempfile.mkdtemp()
+        self.addCleanup(lambda: shutil.rmtree(self.temp_media, ignore_errors=True))
+        media_override = override_settings(MEDIA_ROOT=self.temp_media)
+        media_override.enable()
+        self.addCleanup(media_override.disable)
         self.settings_obj = OrganizationSettings.load()
+        self.user = get_user_model().objects.create_user(username="comm", password="pw")
         self.person = Person.objects.create(
-            first_name="Test",
-            last_name="Person",
-            phone="+15555550100",
-            phone_opt_in=True,
-        )
-
-    def test_blocked_when_inside_blackout_window(self):
-        self.settings_obj.sms_blackout_start = time(0, 0)
-        self.settings_obj.sms_blackout_end = time(23, 59)
-        self.settings_obj.save()
-
-        form = SmsMessageForm(
-            data={
-                "target_type": SmsMessage.TargetType.PERSON,
-                "person": self.person.pk,
-                "group": "",
-                "body": "Hi there",
-                "scheduled_for": "",
-            },
-            organization_settings=self.settings_obj,
-        )
-        self.assertFalse(form.is_valid())
-        self.assertIn("blackout", form.non_field_errors()[0])
-
-    def test_group_recipient_selection(self):
-        group = Group.objects.create(name="Students", category="other")
-        GroupMembership.objects.create(group=group, person=self.person)
-
-        future = datetime.now(dt_timezone.utc) + timedelta(days=1)
-        form = SmsMessageForm(
-            data={
-                "target_type": SmsMessage.TargetType.GROUP,
-                "person": "",
-                "group": group.pk,
-                "body": "Reminder",
-                "scheduled_for": future.isoformat(),
-            },
-            organization_settings=self.settings_obj,
-        )
-        self.assertTrue(form.is_valid(), form.errors)
-        recipients = form.get_recipients()
-        self.assertEqual(len(recipients), 1)
-        self.assertEqual(recipients[0], self.person)
-
-
-class PhoneBlastFormTests(TestCase):
-    def setUp(self):
-        self.settings_obj = OrganizationSettings.load()
-        self.person = Person.objects.create(
-            first_name="Call",
-            last_name="Receiver",
-            phone="+15555550123",
-            phone_opt_in=True,
+            first_name="Recipient", last_name="One", phone="+15551112222", phone_opt_in=True
         )
         self.group = Group.objects.create(name="Leaders", category="volunteer")
         GroupMembership.objects.create(group=self.group, person=self.person)
 
-    def test_prevents_blank_group(self):
-        form = PhoneBlastForm(
-            data={
-                "title": "Voicemail",
-                "group": "",
-                "scheduled_for": "",
-                "notes": "",
-            },
-            files={
-                "audio_file": SimpleUploadedFile("note.mp3", b"data"),
-            },
-            organization_settings=self.settings_obj,
-        )
-        self.assertFalse(form.is_valid())
-        self.assertIn("group", form.errors)
-
-
-class MessagingDeliveryTests(TestCase):
-    def setUp(self):
-        self.temp_media = tempfile.mkdtemp()
-        self.addCleanup(lambda: shutil.rmtree(self.temp_media, ignore_errors=True))
-        media_override = override_settings(MEDIA_ROOT=self.temp_media)
-        media_override.enable()
-        self.addCleanup(media_override.disable)
-        self.settings_obj = OrganizationSettings.load()
-        self.settings_obj.twilio_account_sid = "AC123"
-        self.settings_obj.twilio_auth_token = "token"
-        self.settings_obj.twilio_phone_number = "+15551234567"
+    def blackout_all_day(self):
+        self.settings_obj.sms_blackout_start = time(0, 0)
+        self.settings_obj.sms_blackout_end = time(23, 59, 59)
         self.settings_obj.save()
-        self.user = get_user_model().objects.create_user(
-            username="comm", password="password"
-        )
-        self.person = Person.objects.create(
-            first_name="Recipient",
-            last_name="One",
-            phone="+15551112222",
-            phone_opt_in=True,
+
+    def voice_broadcast(self, **kwargs):
+        kwargs.setdefault("group", self.group)
+        return outbound.broadcast(
+            VOICE, created_by=self.user, title="Weekly Update",
+            audio_file=ContentFile(b"audio", name="blast.mp3"), **kwargs
         )
 
-    def test_deliver_sms_updates_log(self):
-        message = SmsMessage.objects.create(
-            created_by=self.user,
-            body="Test SMS",
-            target_type=SmsMessage.TargetType.PERSON,
+    def make_blast(self, status=Communication.Status.COMPLETED, calls=()):
+        """A voice Communication with Deliveries in the given statuses (for view tests)."""
+        blast = Communication.objects.create(
+            channel=VOICE, created_by=self.user, title="Sunday Announcement",
+            audio_file=ContentFile(b"audio", name="blast.mp3"), status=status,
+            target_type=Communication.TargetType.GROUP, group=self.group,
         )
-        SmsRecipient.objects.create(
-            message=message,
-            person=self.person,
-            phone_number=self.person.phone,
-        )
-        with patch("messaging.services.TwilioService.send_sms", return_value="SM123"):
-            success, failure = deliver_sms_message(
-                message, settings_obj=self.settings_obj
+        for i, (call_status, kwargs) in enumerate(calls):
+            Delivery.objects.create(
+                communication=blast, person=kwargs.pop("person", self.person),
+                address=kwargs.pop("address", f"+1555000000{i}"),
+                provider_id=kwargs.pop("provider_id", f"CA{i}"), status=call_status, **kwargs
             )
-        self.assertEqual(success, 1)
-        self.assertEqual(failure, 0)
-        recipient = message.recipients.first()
-        self.assertEqual(recipient.status, SmsRecipient.Status.SENT)
-        self.assertEqual(recipient.twilio_sid, "SM123")
-        self.assertEqual(
-            self.person.communication_logs.count(),
-            1,
-        )
-
-    def test_deliver_phone_blast_tracks_calls(self):
-        audio = SimpleUploadedFile("message.mp3", b"audio-bytes")
-        blast = PhoneBlast.objects.create(
-            created_by=self.user,
-            title="Weekly Update",
-            audio_file=audio,
-        )
-        PhoneCall.objects.create(
-            blast=blast,
-            person=self.person,
-            phone_number=self.person.phone,
-        )
-        with patch(
-            "messaging.services.TwilioService.initiate_call", return_value="CA123"
-        ):
-            success, failure = deliver_phone_blast(
-                blast, settings_obj=self.settings_obj
-            )
-        self.assertEqual(success, 1)
-        self.assertEqual(failure, 0)
-        call = blast.calls.first()
-        self.assertEqual(call.status, PhoneCall.Status.PENDING)  # stays PENDING until webhook
-        self.assertEqual(call.call_sid, "CA123")
-        self.assertEqual(self.person.communication_logs.count(), 1)
-        blast.refresh_from_db()
-        self.assertEqual(blast.status, PhoneBlast.Status.PROCESSING)
-
-    def test_deliver_phone_blast_passes_status_callback(self):
-        """deliver_phone_blast passes the StatusCallback URL to initiate_call."""
-        audio = SimpleUploadedFile("message.mp3", b"audio-bytes")
-        blast = PhoneBlast.objects.create(
-            created_by=self.user,
-            title="Callback Test",
-            audio_file=audio,
-        )
-        PhoneCall.objects.create(
-            blast=blast,
-            person=self.person,
-            phone_number=self.person.phone,
-        )
-        with patch(
-            "messaging.services.TwilioService.initiate_call", return_value="CA999"
-        ) as mock_call:
-            deliver_phone_blast(
-                blast,
-                settings_obj=self.settings_obj,
-                base_url="https://example.com",
-            )
-        # Derive the expected audio URL from the stored file so the assertion is
-        # robust to filename suffixing when the test media dir already holds a
-        # file of the same name.
-        mock_call.assert_called_once_with(
-            self.person.phone,
-            f"https://example.com{blast.audio_file.url}",
-            status_callback_url="https://example.com/communications/phone-blast/webhook/call-status/",
-        )
-
-
-class PhoneCallWebhookTests(TestCase):
-    def setUp(self):
-        self.settings_obj = OrganizationSettings.load()
-        self.settings_obj.twilio_account_sid = "AC123"
-        self.settings_obj.twilio_auth_token = "test_auth_token"
-        self.settings_obj.twilio_phone_number = "+15551234567"
-        self.settings_obj.save()
-        self.user = get_user_model().objects.create_user(
-            username="webhookuser", password="pw"
-        )
-        self.person = Person.objects.create(
-            first_name="Jane", last_name="Doe", phone="+15559876543"
-        )
-        audio = SimpleUploadedFile("blast.mp3", b"audio")
-        self.blast = PhoneBlast.objects.create(
-            created_by=self.user,
-            title="Test Blast",
-            audio_file=audio,
-            status=PhoneBlast.Status.PROCESSING,
-        )
-        self.call = PhoneCall.objects.create(
-            blast=self.blast,
-            person=self.person,
-            phone_number=self.person.phone,
-            call_sid="CA_TEST_001",
-            status=PhoneCall.Status.PENDING,
-        )
-        self.webhook_url = reverse("messaging:phone_call_status_webhook")
-
-    def _make_signature(self, url, params):
-        sorted_params = "".join(f"{k}{v}" for k, v in sorted(params.items()))
-        s = url + sorted_params
-        mac = hmac.new(
-            self.settings_obj.twilio_auth_token.encode("utf-8"),
-            s.encode("utf-8"),
-            hashlib.sha1,
-        )
-        return base64.b64encode(mac.digest()).decode()
-
-    def _post_webhook(self, params, sign=True):
-        url = "http://testserver" + self.webhook_url
-        sig = self._make_signature(url, params) if sign else "invalidsignature"
-        return self.client.post(
-            self.webhook_url,
-            data=params,
-            HTTP_X_TWILIO_SIGNATURE=sig,
-        )
-
-    def test_completed_call_marks_completed(self):
-        params = {"CallSid": "CA_TEST_001", "CallStatus": "completed"}
-        response = self._post_webhook(params)
-        self.assertEqual(response.status_code, 200)
-        self.call.refresh_from_db()
-        self.assertEqual(self.call.status, PhoneCall.Status.COMPLETED)
-
-    def test_no_answer_marks_no_answer(self):
-        params = {"CallSid": "CA_TEST_001", "CallStatus": "no-answer"}
-        response = self._post_webhook(params)
-        self.assertEqual(response.status_code, 200)
-        self.call.refresh_from_db()
-        self.assertEqual(self.call.status, PhoneCall.Status.NO_ANSWER)
-
-    def test_busy_marks_failed(self):
-        params = {"CallSid": "CA_TEST_001", "CallStatus": "busy"}
-        response = self._post_webhook(params)
-        self.assertEqual(response.status_code, 200)
-        self.call.refresh_from_db()
-        self.assertEqual(self.call.status, PhoneCall.Status.FAILED)
-
-    def test_failed_marks_failed(self):
-        params = {"CallSid": "CA_TEST_001", "CallStatus": "failed"}
-        response = self._post_webhook(params)
-        self.assertEqual(response.status_code, 200)
-        self.call.refresh_from_db()
-        self.assertEqual(self.call.status, PhoneCall.Status.FAILED)
-
-    def test_blast_marked_complete_when_last_call_settles(self):
-        params = {"CallSid": "CA_TEST_001", "CallStatus": "completed"}
-        self._post_webhook(params)
-        self.blast.refresh_from_db()
-        self.assertEqual(self.blast.status, PhoneBlast.Status.COMPLETED)
-        self.assertIsNotNone(self.blast.completed_at)
-
-    def test_blast_stays_processing_while_calls_pending(self):
-        # Add a second pending call
-        PhoneCall.objects.create(
-            blast=self.blast,
-            person=self.person,
-            phone_number="+15550001111",
-            call_sid="CA_TEST_002",
-            status=PhoneCall.Status.PENDING,
-        )
-        params = {"CallSid": "CA_TEST_001", "CallStatus": "completed"}
-        self._post_webhook(params)
-        self.blast.refresh_from_db()
-        self.assertEqual(self.blast.status, PhoneBlast.Status.PROCESSING)
-
-    def test_invalid_signature_returns_403(self):
-        params = {"CallSid": "CA_TEST_001", "CallStatus": "completed"}
-        response = self._post_webhook(params, sign=False)
-        self.assertEqual(response.status_code, 403)
-        self.call.refresh_from_db()
-        self.assertEqual(self.call.status, PhoneCall.Status.PENDING)
-
-    def test_unknown_call_sid_returns_404(self):
-        params = {"CallSid": "CA_UNKNOWN", "CallStatus": "completed"}
-        response = self._post_webhook(params)
-        self.assertEqual(response.status_code, 404)
-
-
-class PhoneBlastDetailViewTests(TestCase):
-    def setUp(self):
-        self.temp_media = tempfile.mkdtemp()
-        self.addCleanup(lambda: shutil.rmtree(self.temp_media, ignore_errors=True))
-        media_override = override_settings(MEDIA_ROOT=self.temp_media)
-        media_override.enable()
-        self.addCleanup(media_override.disable)
-
-        self.user = get_user_model().objects.create_user(
-            username="staffuser", password="pw"
-        )
-        self.user.profile.can_manage_communications = True
-        self.user.profile.save()
-        self.client.force_login(self.user)
-
-        self.person = Person.objects.create(
-            first_name="Test", last_name="Person", phone="+15551112222"
-        )
-        audio = SimpleUploadedFile("blast.mp3", b"audio")
-        self.blast = PhoneBlast.objects.create(
-            created_by=self.user,
-            title="Sunday Announcement",
-            audio_file=audio,
-            status=PhoneBlast.Status.COMPLETED,
-        )
-        PhoneCall.objects.create(
-            blast=self.blast, person=self.person,
-            phone_number=self.person.phone,
-            call_sid="CA001", status=PhoneCall.Status.COMPLETED,
-        )
-        PhoneCall.objects.create(
-            blast=self.blast, person=self.person,
-            phone_number="+15550000001",
-            call_sid="CA002", status=PhoneCall.Status.NO_ANSWER,
-        )
-
-    def test_detail_page_returns_200(self):
-        response = self.client.get(
-            reverse("messaging:phone_blast_detail", args=[self.blast.pk])
-        )
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Sunday Announcement")
-
-    def test_stats_partial_returns_counts(self):
-        response = self.client.get(
-            reverse("messaging:phone_blast_stats", args=[self.blast.pk])
-        )
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "1")  # 1 answered, 1 no answer
-
-    def test_stats_partial_includes_polling_when_processing(self):
-        self.blast.status = PhoneBlast.Status.PROCESSING
-        self.blast.save()
-        response = self.client.get(
-            reverse("messaging:phone_blast_stats", args=[self.blast.pk])
-        )
-        self.assertContains(response, "every 5s")
-
-    def test_stats_partial_omits_polling_when_complete(self):
-        response = self.client.get(
-            reverse("messaging:phone_blast_stats", args=[self.blast.pk])
-        )
-        self.assertNotContains(response, "every 5s")
-
-
-class MessagingHomeViewTests(TestCase):
-    def setUp(self):
-        self.temp_media = tempfile.mkdtemp()
-        self.addCleanup(lambda: shutil.rmtree(self.temp_media, ignore_errors=True))
-        media_override = override_settings(MEDIA_ROOT=self.temp_media)
-        media_override.enable()
-        self.addCleanup(media_override.disable)
-
-        self.user = get_user_model().objects.create_user(
-            username="staffuser2", password="pw"
-        )
-        self.user.profile.can_manage_communications = True
-        self.user.profile.save()
-        self.client.force_login(self.user)
-
-    def test_home_shows_blast_stats_summary(self):
-        person = Person.objects.create(
-            first_name="A", last_name="B", phone="+15550001111"
-        )
-        audio = SimpleUploadedFile("blast.mp3", b"audio")
-        blast = PhoneBlast.objects.create(
-            created_by=self.user,
-            title="Test Blast",
-            audio_file=audio,
-            status=PhoneBlast.Status.COMPLETED,
-        )
-        PhoneCall.objects.create(
-            blast=blast, person=person,
-            phone_number=person.phone,
-            call_sid="CA01", status=PhoneCall.Status.COMPLETED,
-        )
-        PhoneCall.objects.create(
-            blast=blast, person=person,
-            phone_number="+15550002222",
-            call_sid="CA02", status=PhoneCall.Status.NO_ANSWER,
-        )
-        response = self.client.get(reverse("messaging:home"))
-        self.assertContains(response, "1 answered")
-        self.assertContains(response, "1 no answer")
-
-    def test_home_shows_sending_label_when_processing(self):
-        audio = SimpleUploadedFile("blast.mp3", b"audio")
-        blast = PhoneBlast.objects.create(
-            created_by=self.user,
-            title="In Progress",
-            audio_file=audio,
-            status=PhoneBlast.Status.PROCESSING,
-        )
-        PhoneCall.objects.create(
-            blast=blast, person=Person.objects.create(
-                first_name="X", last_name="Y", phone="+15550003333"
-            ),
-            phone_number="+15550003333",
-            status=PhoneCall.Status.PENDING,
-        )
-        response = self.client.get(reverse("messaging:home"))
-        self.assertContains(response, "Sending")
+        return blast
 
 
 # ---------------------------------------------------------------------------
-# Blackout window unit tests
+# Compose-time checks (check_broadcast via the forms)
+# ---------------------------------------------------------------------------
+
+class SmsBroadcastFormTests(MessagingTestCase):
+    def _form(self, **data):
+        base = {"target_type": "person", "person": self.person.pk, "group": "",
+                "body": "Hi there", "scheduled_for": ""}
+        base.update(data)
+        return SmsBroadcastForm(data=base)
+
+    def test_valid_person_message(self):
+        self.assertTrue(self._form().is_valid())
+
+    def test_blocked_when_inside_blackout_window(self):
+        self.blackout_all_day()
+        form = self._form()
+        self.assertFalse(form.is_valid())
+        self.assertIn("blackout", form.non_field_errors()[0])
+
+    def test_scheduled_time_inside_blackout_is_a_field_error(self):
+        self.settings_obj.sms_blackout_start = time(1, 0)
+        self.settings_obj.sms_blackout_end = time(2, 0)
+        self.settings_obj.save()
+        when = dj_timezone.localtime() + timedelta(days=1)
+        when = when.replace(hour=1, minute=30)
+        form = self._form(scheduled_for=when.strftime("%Y-%m-%dT%H:%M"))
+        self.assertFalse(form.is_valid())
+        self.assertIn("scheduled_for", form.errors)
+
+    def test_past_schedule_rejected(self):
+        past = dj_timezone.localtime() - timedelta(hours=1)
+        form = self._form(scheduled_for=past.strftime("%Y-%m-%dT%H:%M"))
+        self.assertFalse(form.is_valid())
+        self.assertIn("scheduled_for", form.errors)
+
+    def test_opted_out_person_rejected(self):
+        self.person.phone_opt_in = False
+        self.person.save()
+        form = self._form()
+        self.assertFalse(form.is_valid())
+        self.assertIn("opted out", form.errors["person"][0])
+
+    def test_person_without_phone_rejected(self):
+        self.person.phone = ""
+        self.person.save()
+        form = self._form()
+        self.assertFalse(form.is_valid())
+        self.assertIn("phone number", form.errors["person"][0])
+
+    def test_group_target(self):
+        future = datetime.now(dt_timezone.utc) + timedelta(days=1)
+        form = self._form(target_type="group", person="", group=self.group.pk,
+                          scheduled_for=future.isoformat())
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(form.target(), (None, self.group))
+
+    def test_group_with_nobody_reachable_rejected(self):
+        empty = Group.objects.create(name="Empty", category="other")
+        form = self._form(target_type="group", person="", group=empty.pk)
+        self.assertFalse(form.is_valid())
+        self.assertIn("Nobody in this group", form.non_field_errors()[0])
+
+    def test_missing_person_selection(self):
+        form = self._form(person="")
+        self.assertFalse(form.is_valid())
+        self.assertIn("person", form.errors)
+
+
+class PhoneBlastFormTests(MessagingTestCase):
+    def _form(self, audio=None, **data):
+        base = {"title": "Voicemail", "group": self.group.pk, "scheduled_for": "", "notes": ""}
+        base.update(data)
+        audio = audio or SimpleUploadedFile("note.mp3", b"data")
+        return PhoneBlastForm(data=base, files={"audio_file": audio})
+
+    def test_prevents_blank_group(self):
+        form = self._form(group="")
+        self.assertFalse(form.is_valid())
+        self.assertIn("group", form.errors)
+
+    def test_rejects_unsupported_extension(self):
+        form = self._form(SimpleUploadedFile("notes.txt", b"hello", content_type="text/plain"))
+        self.assertFalse(form.is_valid())
+        self.assertIn("audio_file", form.errors)
+
+    def test_rejects_oversized_file(self):
+        with patch.object(PhoneBlastForm, "MAX_AUDIO_BYTES", 3):
+            form = self._form(SimpleUploadedFile("big.mp3", b"way too big"))
+            self.assertFalse(form.is_valid())
+            self.assertIn("audio_file", form.errors)
+
+    def test_accepts_valid_audio(self):
+        form = self._form(SimpleUploadedFile("ok.mp3", b"audio-bytes"))
+        self.assertTrue(form.is_valid(), form.errors)
+
+
+class CheckBroadcastTests(MessagingTestCase):
+    def test_not_ready_channel_is_a_problem(self):
+        FakeAdapter.is_ready = False
+        problems = outbound.check_broadcast(SMS, person=self.person)
+        self.assertTrue(any("Twilio" in p.message for p in problems))
+
+    def test_no_target_is_a_problem(self):
+        self.assertTrue(outbound.check_broadcast(SMS))
+
+    def test_ok_returns_no_problems(self):
+        self.assertEqual(outbound.check_broadcast(SMS, group=self.group), [])
+
+    def test_broadcast_raises_on_problems(self):
+        self.blackout_all_day()
+        with self.assertRaises(outbound.BroadcastRejected):
+            outbound.broadcast(SMS, created_by=self.user, person=self.person, body="x")
+        self.assertFalse(Communication.objects.exists())
+
+
+# ---------------------------------------------------------------------------
+# broadcast() + dispatch_due(): the scheduler path every broadcast takes
+# ---------------------------------------------------------------------------
+
+class BroadcastTests(MessagingTestCase):
+    def test_broadcast_queues_without_sending(self):
+        comm = outbound.broadcast(SMS, created_by=self.user, group=self.group, body="Hello")
+        self.assertEqual(comm.status, Communication.Status.SCHEDULED)
+        self.assertEqual(comm.kind, Communication.Kind.BROADCAST)
+        delivery = comm.deliveries.get()
+        self.assertEqual(delivery.status, Delivery.Status.PENDING)
+        self.assertEqual(delivery.address, self.person.phone)
+        self.assertEqual(FakeAdapter.sent, [])
+
+    def test_group_broadcast_only_includes_consenting_people_with_phones(self):
+        no_consent = Person.objects.create(first_name="No", last_name="Consent",
+                                           phone="+15550000001", phone_opt_in=False)
+        no_phone = Person.objects.create(first_name="No", last_name="Phone", phone_opt_in=True)
+        for p in (no_consent, no_phone):
+            GroupMembership.objects.create(group=self.group, person=p)
+        comm = outbound.broadcast(SMS, created_by=self.user, group=self.group, body="Hi")
+        self.assertEqual([d.person for d in comm.deliveries.all()], [self.person])
+
+    def test_send_now_goes_out_on_next_dispatch(self):
+        comm = outbound.broadcast(SMS, created_by=self.user, person=self.person, body="Now")
+        report = outbound.dispatch_due()
+        self.assertEqual(report.sent, [comm])
+        comm.refresh_from_db()
+        self.assertEqual(comm.status, Communication.Status.COMPLETED)
+        delivery = comm.deliveries.get()
+        self.assertEqual(delivery.status, Delivery.Status.SENT)
+        self.assertTrue(delivery.provider_id.startswith("FAKE"))
+        self.assertEqual(FakeAdapter.sent, [(SMS, self.person.phone, comm.pk)])
+
+    def test_future_broadcast_waits(self):
+        later = dj_timezone.now() + timedelta(hours=2)
+        comm = outbound.broadcast(SMS, created_by=self.user, person=self.person,
+                                  body="Later", scheduled_for=later)
+        outbound.dispatch_due()
+        comm.refresh_from_db()
+        self.assertEqual(comm.status, Communication.Status.SCHEDULED)
+        self.assertEqual(FakeAdapter.sent, [])
+        outbound.dispatch_due(now=later + timedelta(minutes=1))
+        comm.refresh_from_db()
+        self.assertEqual(comm.status, Communication.Status.COMPLETED)
+
+    def test_dispatch_is_idempotent(self):
+        outbound.broadcast(SMS, created_by=self.user, person=self.person, body="Once")
+        outbound.dispatch_due()
+        outbound.dispatch_due()
+        self.assertEqual(len(FakeAdapter.sent), 1)
+
+    def test_person_who_opts_out_after_scheduling_is_skipped(self):
+        other = Person.objects.create(first_name="Still", last_name="In",
+                                      phone="+15553334444", phone_opt_in=True)
+        GroupMembership.objects.create(group=self.group, person=other)
+        comm = outbound.broadcast(SMS, created_by=self.user, group=self.group, body="Hi")
+        self.person.phone_opt_in = False
+        self.person.save()
+
+        outbound.dispatch_due()
+
+        skipped = comm.deliveries.get(person=self.person)
+        self.assertEqual(skipped.status, Delivery.Status.SKIPPED)
+        self.assertEqual(skipped.skip_reason, Delivery.SkipReason.OPTED_OUT)
+        self.assertEqual(comm.deliveries.get(person=other).status, Delivery.Status.SENT)
+        self.assertEqual([s[1] for s in FakeAdapter.sent], [other.phone])
+
+    def test_everyone_skipped_completes_rather_than_fails(self):
+        comm = outbound.broadcast(SMS, created_by=self.user, person=self.person, body="Hi")
+        self.person.phone_opt_in = False
+        self.person.save()
+        outbound.dispatch_due()
+        comm.refresh_from_db()
+        self.assertEqual(comm.status, Communication.Status.COMPLETED)
+
+    def test_removed_phone_number_is_skipped_as_no_address(self):
+        comm = outbound.broadcast(SMS, created_by=self.user, person=self.person, body="Hi")
+        self.person.phone = ""
+        self.person.save()
+        outbound.dispatch_due()
+        self.assertEqual(comm.deliveries.get().skip_reason, Delivery.SkipReason.NO_ADDRESS)
+
+    def test_send_uses_the_current_phone_number(self):
+        comm = outbound.broadcast(SMS, created_by=self.user, person=self.person, body="Hi")
+        self.person.phone = "+15559998888"
+        self.person.save()
+        outbound.dispatch_due()
+        self.assertEqual(comm.deliveries.get().address, "+15559998888")
+
+    def test_due_broadcast_waits_out_the_blackout_window(self):
+        comm = outbound.broadcast(SMS, created_by=self.user, person=self.person, body="Hi")
+        self.blackout_all_day()
+        report = outbound.dispatch_due()
+        self.assertEqual(report.deferred, 1)
+        comm.refresh_from_db()
+        self.assertEqual(comm.status, Communication.Status.SCHEDULED)
+        self.assertEqual(FakeAdapter.sent, [])
+
+        self.settings_obj.sms_blackout_start = None
+        self.settings_obj.save()
+        outbound.dispatch_due()
+        comm.refresh_from_db()
+        self.assertEqual(comm.status, Communication.Status.COMPLETED)
+
+    def test_send_failure_is_recorded_and_all_failed_marks_failed(self):
+        comm = outbound.broadcast(SMS, created_by=self.user, person=self.person, body="Hi")
+        FakeAdapter.fail_with = "connection refused"
+        report = outbound.dispatch_due()
+        self.assertEqual(report.failed, [comm])
+        delivery = comm.deliveries.get()
+        self.assertEqual(delivery.status, Delivery.Status.FAILED)
+        self.assertIn("connection refused", delivery.error_message)
+        comm.refresh_from_db()
+        self.assertEqual(comm.status, Communication.Status.FAILED)
+
+    def test_channel_unconfigured_at_send_time_fails_the_broadcast(self):
+        comm = outbound.broadcast(SMS, created_by=self.user, person=self.person, body="Hi")
+        FakeAdapter.is_ready = False
+        outbound.dispatch_due()
+        comm.refresh_from_db()
+        self.assertEqual(comm.status, Communication.Status.FAILED)
+        self.assertIn("Twilio", comm.deliveries.get().error_message)
+        self.assertEqual(FakeAdapter.sent, [])
+
+    def test_voice_broadcast_rings_until_status_callback(self):
+        comm = self.voice_broadcast()
+        outbound.dispatch_due()
+        comm.refresh_from_db()
+        self.assertEqual(comm.status, Communication.Status.SENDING)
+        self.assertEqual(comm.deliveries.get().status, Delivery.Status.SENT)
+
+
+class RecordCallStatusTests(MessagingTestCase):
+    def setUp(self):
+        super().setUp()
+        self.comm = self.voice_broadcast()
+        outbound.dispatch_due()
+        self.delivery = self.comm.deliveries.get()
+
+    def test_settles_delivery_and_completes_communication(self):
+        outbound.record_call_status(self.delivery.provider_id, "completed")
+        self.delivery.refresh_from_db()
+        self.assertEqual(self.delivery.status, Delivery.Status.ANSWERED)
+        self.comm.refresh_from_db()
+        self.assertEqual(self.comm.status, Communication.Status.COMPLETED)
+        self.assertIsNotNone(self.comm.completed_at)
+
+    def test_mapping(self):
+        for twilio_status, expected in [("no-answer", Delivery.Status.NO_ANSWER),
+                                        ("busy", Delivery.Status.FAILED),
+                                        ("failed", Delivery.Status.FAILED)]:
+            outbound.record_call_status(self.delivery.provider_id, twilio_status)
+            self.delivery.refresh_from_db()
+            self.assertEqual(self.delivery.status, expected)
+
+    def test_stays_sending_while_other_calls_ring(self):
+        Delivery.objects.create(communication=self.comm, person=self.person,
+                                address="+15550001111", provider_id="CA2",
+                                status=Delivery.Status.SENT)
+        outbound.record_call_status(self.delivery.provider_id, "completed")
+        self.comm.refresh_from_db()
+        self.assertEqual(self.comm.status, Communication.Status.SENDING)
+
+    def test_unknown_id_returns_none(self):
+        self.assertIsNone(outbound.record_call_status("CA_UNKNOWN", "completed"))
+        self.assertIsNone(outbound.record_call_status("", "completed"))
+
+
+# ---------------------------------------------------------------------------
+# send_transactional()
+# ---------------------------------------------------------------------------
+
+class SendTransactionalTests(MessagingTestCase):
+    def test_sends_immediately_and_records(self):
+        comm = outbound.send_transactional(SMS, people=[self.person], body="Code ABCD",
+                                           title="Check-in pickup code",
+                                           metadata={"security_code": "ABCD"})
+        self.assertEqual(comm.kind, Communication.Kind.TRANSACTIONAL)
+        self.assertEqual(comm.status, Communication.Status.COMPLETED)
+        self.assertEqual(comm.metadata["security_code"], "ABCD")
+        self.assertEqual(comm.deliveries.get().status, Delivery.Status.SENT)
+        self.assertEqual(len(FakeAdapter.sent), 1)
+
+    def test_ignores_blackout(self):
+        self.blackout_all_day()
+        self.assertIsNotNone(outbound.send_transactional(SMS, people=[self.person], body="x"))
+        self.assertEqual(len(FakeAdapter.sent), 1)
+
+    def test_respects_opt_in(self):
+        self.person.phone_opt_in = False
+        self.person.save()
+        self.assertIsNone(outbound.send_transactional(SMS, people=[self.person], body="x"))
+        self.assertFalse(Communication.objects.exists())
+
+    def test_unconfigured_channel_records_nothing(self):
+        FakeAdapter.is_ready = False
+        self.assertIsNone(outbound.send_transactional(SMS, people=[self.person], body="x"))
+        self.assertFalse(Communication.objects.exists())
+
+    def test_send_failure_recorded_not_raised(self):
+        FakeAdapter.fail_with = "boom"
+        comm = outbound.send_transactional(SMS, people=[self.person], body="x")
+        self.assertEqual(comm.status, Communication.Status.FAILED)
+        self.assertEqual(comm.deliveries.get().error_message, "boom")
+
+    def test_duplicate_people_get_one_delivery(self):
+        comm = outbound.send_transactional(SMS, people=[self.person, self.person], body="x")
+        self.assertEqual(comm.deliveries.count(), 1)
+
+
+# ---------------------------------------------------------------------------
+# Views
+# ---------------------------------------------------------------------------
+
+class StaffViewTestCase(MessagingTestCase):
+    def setUp(self):
+        super().setUp()
+        self.user.profile.can_manage_communications = True
+        self.user.profile.save()
+        self.client.force_login(self.user)
+
+
+class ComposeViewTests(StaffViewTestCase):
+    def test_sms_compose_queues_a_broadcast(self):
+        resp = self.client.post(reverse("messaging:sms_compose"), {
+            "target_type": "person", "person": self.person.pk, "group": "",
+            "body": "Hello from staff", "scheduled_for": "",
+        })
+        self.assertRedirects(resp, reverse("messaging:home"))
+        comm = Communication.objects.get()
+        self.assertEqual((comm.channel, comm.status, comm.body),
+                         (SMS, Communication.Status.SCHEDULED, "Hello from staff"))
+        self.assertEqual(comm.created_by, self.user)
+        self.assertEqual(FakeAdapter.sent, [])  # the scheduler sends it
+
+    def test_sms_compose_redirects_when_channel_not_ready(self):
+        FakeAdapter.is_ready = False
+        resp = self.client.post(reverse("messaging:sms_compose"), {
+            "target_type": "person", "person": self.person.pk, "body": "x",
+        })
+        self.assertRedirects(resp, reverse("organization_settings"), fetch_redirect_response=False)
+        self.assertFalse(Communication.objects.exists())
+
+    def test_phone_blast_create_transcodes_and_queues(self):
+        with patch("messaging.views.transcode_to_mp3",
+                   return_value=ContentFile(b"mp3", name="x.mp3")) as transcode:
+            resp = self.client.post(reverse("messaging:phone_blast_create"), {
+                "title": "Snow day", "group": self.group.pk, "scheduled_for": "", "notes": "",
+                "audio_file": SimpleUploadedFile("rec.webm", b"webm"),
+            })
+        self.assertRedirects(resp, reverse("messaging:home"))
+        transcode.assert_called_once()
+        comm = Communication.objects.get()
+        self.assertEqual((comm.channel, comm.title), (VOICE, "Snow day"))
+        self.assertTrue(comm.audio_file.name.endswith(".mp3"))
+        self.assertEqual(comm.deliveries.count(), 1)
+
+    def test_phone_blast_audio_error_shows_on_form(self):
+        with patch("messaging.views.transcode_to_mp3",
+                   side_effect=AudioProcessingError("could not process")):
+            resp = self.client.post(reverse("messaging:phone_blast_create"), {
+                "title": "Snow day", "group": self.group.pk,
+                "audio_file": SimpleUploadedFile("rec.webm", b"webm"),
+            })
+        self.assertContains(resp, "could not process")
+        self.assertFalse(Communication.objects.exists())
+
+
+class PhoneBlastDetailViewTests(StaffViewTestCase):
+    def setUp(self):
+        super().setUp()
+        self.blast = self.make_blast(calls=[
+            (Delivery.Status.ANSWERED, {}), (Delivery.Status.NO_ANSWER, {}),
+        ])
+
+    def test_detail_page_returns_200(self):
+        resp = self.client.get(reverse("messaging:phone_blast_detail", args=[self.blast.pk]))
+        self.assertContains(resp, "Sunday Announcement")
+        self.assertContains(resp, "Answered")
+
+    def test_sms_pk_is_not_a_phone_blast(self):
+        sms = Communication.objects.create(channel=SMS, created_by=self.user, body="x")
+        resp = self.client.get(reverse("messaging:phone_blast_detail", args=[sms.pk]))
+        self.assertEqual(resp.status_code, 404)
+
+    def test_stats_partial_includes_polling_when_sending(self):
+        self.blast.status = Communication.Status.SENDING
+        self.blast.save()
+        resp = self.client.get(reverse("messaging:phone_blast_stats", args=[self.blast.pk]))
+        self.assertContains(resp, "every 5s")
+
+    def test_stats_partial_omits_polling_when_complete(self):
+        resp = self.client.get(reverse("messaging:phone_blast_stats", args=[self.blast.pk]))
+        self.assertNotContains(resp, "every 5s")
+
+    def test_stats_partial_shows_progress_percentage(self):
+        blast = self.make_blast(calls=[(Delivery.Status.ANSWERED, {}), (Delivery.Status.SENT, {})])
+        resp = self.client.get(reverse("messaging:phone_blast_stats", args=[blast.pk]))
+        self.assertContains(resp, "50%")  # 1 of 2 settled
+
+    def test_detail_shows_error_and_skip_reason(self):
+        blast = self.make_blast(calls=[
+            (Delivery.Status.FAILED, {"error_message": "Carrier rejected the call"}),
+            (Delivery.Status.SKIPPED, {"skip_reason": Delivery.SkipReason.OPTED_OUT}),
+        ])
+        resp = self.client.get(reverse("messaging:phone_blast_detail", args=[blast.pk]))
+        self.assertContains(resp, "Carrier rejected the call")
+        self.assertContains(resp, "Opted out")
+
+
+class MessagingHomeViewTests(StaffViewTestCase):
+    def test_home_shows_blast_stats_summary(self):
+        self.make_blast(calls=[(Delivery.Status.ANSWERED, {}), (Delivery.Status.NO_ANSWER, {})])
+        resp = self.client.get(reverse("messaging:home"))
+        self.assertContains(resp, "1 answered")
+        self.assertContains(resp, "1 no answer")
+
+    def test_home_shows_sending_label(self):
+        self.make_blast(status=Communication.Status.SENDING, calls=[(Delivery.Status.SENT, {})])
+        self.assertContains(self.client.get(reverse("messaging:home")), "Sending")
+
+    def test_queued_text_shows_queued(self):
+        outbound.broadcast(SMS, created_by=self.user, person=self.person, body="Soon")
+        self.assertContains(self.client.get(reverse("messaging:home")), "Queued")
+
+    def test_transactional_texts_are_not_listed(self):
+        outbound.send_transactional(SMS, people=[self.person], body="Pickup code ZZZZ")
+        self.assertNotContains(self.client.get(reverse("messaging:home")), "ZZZZ")
+
+
+class PhoneCallWebhookTests(MessagingTestCase):
+    def setUp(self):
+        super().setUp()
+        self.settings_obj.twilio_auth_token = "test_auth_token"
+        self.settings_obj.save()
+        self.blast = self.make_blast(status=Communication.Status.SENDING, calls=[
+            (Delivery.Status.SENT, {"provider_id": "CA_TEST_001"}),
+        ])
+        self.call = self.blast.deliveries.get()
+        self.url = reverse("messaging:phone_call_status_webhook")
+
+    def _post(self, params, sign=True):
+        full = "http://testserver" + self.url
+        payload = full + "".join(f"{k}{v}" for k, v in sorted(params.items()))
+        mac = hmac.new(b"test_auth_token", payload.encode(), hashlib.sha1)
+        sig = base64.b64encode(mac.digest()).decode() if sign else "invalidsignature"
+        return self.client.post(self.url, data=params, HTTP_X_TWILIO_SIGNATURE=sig)
+
+    def test_completed_call_settles_blast(self):
+        resp = self._post({"CallSid": "CA_TEST_001", "CallStatus": "completed"})
+        self.assertEqual(resp.status_code, 200)
+        self.call.refresh_from_db()
+        self.assertEqual(self.call.status, Delivery.Status.ANSWERED)
+        self.blast.refresh_from_db()
+        self.assertEqual(self.blast.status, Communication.Status.COMPLETED)
+
+    def test_invalid_signature_returns_403(self):
+        resp = self._post({"CallSid": "CA_TEST_001", "CallStatus": "completed"}, sign=False)
+        self.assertEqual(resp.status_code, 403)
+        self.call.refresh_from_db()
+        self.assertEqual(self.call.status, Delivery.Status.SENT)
+
+    def test_unknown_call_sid_returns_404(self):
+        resp = self._post({"CallSid": "CA_UNKNOWN", "CallStatus": "completed"})
+        self.assertEqual(resp.status_code, 404)
+
+
+# ---------------------------------------------------------------------------
+# Blackout window
 # ---------------------------------------------------------------------------
 
 @override_settings(TIME_ZONE="UTC")
@@ -459,268 +570,88 @@ class BlackoutWindowTests(TestCase):
     def setUp(self):
         self.settings_obj = OrganizationSettings.load()
 
-    def _moment(self, hour, minute=0):
-        """UTC-aware datetime at the given hour/minute."""
-        from django.utils import timezone as tz
-        return tz.now().replace(hour=hour, minute=minute, second=0, microsecond=0)
+    def _check(self, start, end, hour, minute=0):
+        self.settings_obj.sms_blackout_start = start
+        self.settings_obj.sms_blackout_end = end
+        moment = dj_timezone.now().replace(hour=hour, minute=minute, second=0, microsecond=0)
+        return outbound.is_within_blackout_window(self.settings_obj, moment)
 
-    def test_no_blackout_configured_returns_false(self):
-        self.settings_obj.sms_blackout_start = None
-        self.settings_obj.sms_blackout_end = None
-        self.settings_obj.save()
-        self.assertFalse(is_within_blackout_window(self.settings_obj, self._moment(10)))
-
-    def test_start_equals_end_returns_false(self):
-        self.settings_obj.sms_blackout_start = time(22, 0)
-        self.settings_obj.sms_blackout_end = time(22, 0)
-        self.settings_obj.save()
-        self.assertFalse(is_within_blackout_window(self.settings_obj, self._moment(22)))
-
-    def test_inside_normal_window(self):
-        self.settings_obj.sms_blackout_start = time(22, 0)
-        self.settings_obj.sms_blackout_end = time(23, 0)
-        self.settings_obj.save()
-        self.assertTrue(is_within_blackout_window(self.settings_obj, self._moment(22, 30)))
-
-    def test_outside_normal_window(self):
-        self.settings_obj.sms_blackout_start = time(22, 0)
-        self.settings_obj.sms_blackout_end = time(23, 0)
-        self.settings_obj.save()
-        self.assertFalse(is_within_blackout_window(self.settings_obj, self._moment(10)))
-
-    def test_at_window_start_is_inside(self):
-        self.settings_obj.sms_blackout_start = time(22, 0)
-        self.settings_obj.sms_blackout_end = time(23, 0)
-        self.settings_obj.save()
-        self.assertTrue(is_within_blackout_window(self.settings_obj, self._moment(22, 0)))
-
-    def test_at_window_end_is_outside(self):
-        # End is exclusive
-        self.settings_obj.sms_blackout_start = time(22, 0)
-        self.settings_obj.sms_blackout_end = time(23, 0)
-        self.settings_obj.save()
-        self.assertFalse(is_within_blackout_window(self.settings_obj, self._moment(23, 0)))
-
-    def test_inside_overnight_window_after_midnight(self):
-        # 22:00 → 08:00; checking at 03:00
-        self.settings_obj.sms_blackout_start = time(22, 0)
-        self.settings_obj.sms_blackout_end = time(8, 0)
-        self.settings_obj.save()
-        self.assertTrue(is_within_blackout_window(self.settings_obj, self._moment(3)))
-
-    def test_inside_overnight_window_before_midnight(self):
-        # 22:00 → 08:00; checking at 23:00
-        self.settings_obj.sms_blackout_start = time(22, 0)
-        self.settings_obj.sms_blackout_end = time(8, 0)
-        self.settings_obj.save()
-        self.assertTrue(is_within_blackout_window(self.settings_obj, self._moment(23)))
-
-    def test_outside_overnight_window(self):
-        # 22:00 → 08:00; checking at 12:00
-        self.settings_obj.sms_blackout_start = time(22, 0)
-        self.settings_obj.sms_blackout_end = time(8, 0)
-        self.settings_obj.save()
-        self.assertFalse(is_within_blackout_window(self.settings_obj, self._moment(12)))
+    def test_cases(self):
+        cases = [
+            (None, None, 10, 0, False),                      # not configured
+            (time(22, 0), time(22, 0), 22, 0, False),        # start == end
+            (time(22, 0), time(23, 0), 22, 30, True),        # inside
+            (time(22, 0), time(23, 0), 10, 0, False),        # outside
+            (time(22, 0), time(23, 0), 22, 0, True),         # start inclusive
+            (time(22, 0), time(23, 0), 23, 0, False),        # end exclusive
+            (time(22, 0), time(8, 0), 3, 0, True),           # overnight, after midnight
+            (time(22, 0), time(8, 0), 23, 0, True),          # overnight, before midnight
+            (time(22, 0), time(8, 0), 12, 0, False),         # overnight, midday
+        ]
+        for start, end, hour, minute, expected in cases:
+            with self.subTest(start=start, end=end, at=(hour, minute)):
+                self.assertEqual(self._check(start, end, hour, minute), expected)
 
 
 # ---------------------------------------------------------------------------
-# TwilioService initialisation
+# Twilio adapters + client (the real provider side of the seam)
 # ---------------------------------------------------------------------------
 
-class TwilioServiceInitTests(TestCase):
-    def _settings(self, sid="AC123", token="token", phone="+15551234567"):
-        s = OrganizationSettings.load()
-        s.twilio_account_sid = sid
-        s.twilio_auth_token = token
-        s.twilio_phone_number = phone
-        s.save()
-        return s
-
-    def test_raises_when_sid_missing(self):
-        with self.assertRaises(TwilioConfigurationError):
-            TwilioService(self._settings(sid=""))
-
-    def test_raises_when_token_missing(self):
-        with self.assertRaises(TwilioConfigurationError):
-            TwilioService(self._settings(token=""))
-
-    def test_raises_when_phone_missing(self):
-        with self.assertRaises(TwilioConfigurationError):
-            TwilioService(self._settings(phone=""))
-
-    def test_no_error_when_all_configured(self):
-        service = TwilioService(self._settings())
-        self.assertEqual(service.account_sid, "AC123")
-        self.assertEqual(service.from_number, "+15551234567")
-
-
-# ---------------------------------------------------------------------------
-# deliver_sms_message — failure and skip paths
-# ---------------------------------------------------------------------------
-
-class SmsDeliveryEdgeCaseTests(TestCase):
+class TwilioAdapterTests(MessagingTestCase):
     def setUp(self):
-        self.temp_media = tempfile.mkdtemp()
-        self.addCleanup(lambda: shutil.rmtree(self.temp_media, ignore_errors=True))
-        media_override = override_settings(MEDIA_ROOT=self.temp_media)
-        media_override.enable()
-        self.addCleanup(media_override.disable)
-        self.settings_obj = OrganizationSettings.load()
+        super().setUp()
         self.settings_obj.twilio_account_sid = "AC123"
         self.settings_obj.twilio_auth_token = "token"
         self.settings_obj.twilio_phone_number = "+15551234567"
         self.settings_obj.save()
-        self.user = get_user_model().objects.create_user(username="smsedge", password="pw")
-        self.person = Person.objects.create(
-            first_name="Edge", last_name="Case", phone="+15559990000", phone_opt_in=True
-        )
 
-    def _make_message(self):
-        msg = SmsMessage.objects.create(
-            created_by=self.user,
-            body="Hello",
-            target_type=SmsMessage.TargetType.PERSON,
-        )
-        SmsRecipient.objects.create(
-            message=msg, person=self.person, phone_number=self.person.phone
-        )
-        return msg
+    def _delivery(self, channel, **comm_kwargs):
+        comm = Communication.objects.create(channel=channel, created_by=self.user, **comm_kwargs)
+        return Delivery.objects.create(communication=comm, person=self.person,
+                                       address=self.person.phone)
 
-    def test_twilio_error_marks_recipient_failed(self):
-        msg = self._make_message()
-        with patch(
-            "messaging.services.TwilioService.send_sms",
-            side_effect=TwilioRequestError("connection refused"),
-        ):
-            success, failure = deliver_sms_message(msg, settings_obj=self.settings_obj)
-        self.assertEqual(success, 0)
-        self.assertEqual(failure, 1)
-        recipient = msg.recipients.first()
-        self.assertEqual(recipient.status, SmsRecipient.Status.FAILED)
-        self.assertIn("connection refused", recipient.error_message)
+    def test_ready_requires_all_three_credentials(self):
+        self.assertTrue(TwilioSms(self.settings_obj).ready())
+        self.settings_obj.twilio_phone_number = ""
+        self.assertFalse(TwilioSms(self.settings_obj).ready())
+        self.assertFalse(TwilioVoice(self.settings_obj).ready())
 
-    def test_all_failed_marks_message_failed(self):
-        msg = self._make_message()
-        with patch(
-            "messaging.services.TwilioService.send_sms",
-            side_effect=TwilioRequestError("fail"),
-        ):
-            deliver_sms_message(msg, settings_obj=self.settings_obj)
-        msg.refresh_from_db()
-        self.assertEqual(msg.status, SmsMessage.Status.FAILED)
+    def test_client_raises_when_unconfigured(self):
+        self.settings_obj.twilio_account_sid = ""
+        with self.assertRaises(TwilioConfigurationError):
+            TwilioClient(self.settings_obj)
 
-    def test_non_pending_recipient_is_skipped(self):
-        msg = self._make_message()
-        recipient = msg.recipients.first()
-        recipient.status = SmsRecipient.Status.SENT
-        recipient.save()
-        with patch("messaging.services.TwilioService.send_sms", return_value="SM999") as mock_send:
-            deliver_sms_message(msg, settings_obj=self.settings_obj)
-        mock_send.assert_not_called()
+    def test_sms_adapter_posts_body(self):
+        with patch.object(TwilioClient, "_post", return_value={"sid": "SM1"}) as post:
+            sid = TwilioSms(self.settings_obj).send(self._delivery(SMS, body="Hello"))
+        self.assertEqual(sid, "SM1")
+        data = post.call_args.kwargs["data"]
+        self.assertEqual((data["To"], data["From"], data["Body"]),
+                         (self.person.phone, "+15551234567", "Hello"))
 
-    def test_failed_recipient_does_not_create_communication_log(self):
-        msg = self._make_message()
-        with patch(
-            "messaging.services.TwilioService.send_sms",
-            side_effect=TwilioRequestError("fail"),
-        ):
-            deliver_sms_message(msg, settings_obj=self.settings_obj)
-        self.assertEqual(self.person.communication_logs.count(), 0)
+    @override_settings(SITE_BASE_URL="https://church.example")
+    def test_voice_adapter_uses_absolute_audio_and_status_callback(self):
+        delivery = self._delivery(VOICE, title="T",
+                                  audio_file=ContentFile(b"a", name="blast.mp3"))
+        with patch.object(TwilioClient, "_post", return_value={"sid": "CA1"}) as post:
+            TwilioVoice(self.settings_obj).send(delivery)
+        data = post.call_args.kwargs["data"]
+        audio_url = f"https://church.example{delivery.communication.audio_file.url}"
+        self.assertIn(f"<Play>{audio_url}</Play>", data["Twiml"])
+        self.assertEqual(data["StatusCallback"],
+                         "https://church.example/communications/phone-blast/webhook/call-status/")
 
+    def test_voice_adapter_without_audio_raises_delivery_error(self):
+        with self.assertRaises(DeliveryError):
+            TwilioVoice(self.settings_obj).send(self._delivery(VOICE, title="No audio"))
 
-# ---------------------------------------------------------------------------
-# deliver_phone_blast — failure, skip, and URL fallback paths
-# ---------------------------------------------------------------------------
+    def test_provider_error_becomes_delivery_error(self):
+        from .twilio_client import TwilioRequestError
 
-class PhoneBlastDeliveryEdgeCaseTests(TestCase):
-    def setUp(self):
-        self.temp_media = tempfile.mkdtemp()
-        self.addCleanup(lambda: shutil.rmtree(self.temp_media, ignore_errors=True))
-        media_override = override_settings(MEDIA_ROOT=self.temp_media)
-        media_override.enable()
-        self.addCleanup(media_override.disable)
-        self.settings_obj = OrganizationSettings.load()
-        self.settings_obj.twilio_account_sid = "AC123"
-        self.settings_obj.twilio_auth_token = "token"
-        self.settings_obj.twilio_phone_number = "+15551234567"
-        self.settings_obj.save()
-        self.user = get_user_model().objects.create_user(username="blstedge", password="pw")
-        self.person = Person.objects.create(
-            first_name="Blast", last_name="Edge", phone="+15558880000", phone_opt_in=True
-        )
+        with patch.object(TwilioClient, "_post", side_effect=TwilioRequestError("timeout")):
+            with self.assertRaisesMessage(DeliveryError, "timeout"):
+                TwilioSms(self.settings_obj).send(self._delivery(SMS, body="x"))
 
-    def _make_blast(self):
-        audio = SimpleUploadedFile("msg.mp3", b"audio")
-        blast = PhoneBlast.objects.create(
-            created_by=self.user, title="Edge Blast", audio_file=audio
-        )
-        call = PhoneCall.objects.create(
-            blast=blast, person=self.person, phone_number=self.person.phone
-        )
-        return blast, call
-
-    def test_no_audio_file_raises(self):
-        blast = PhoneBlast.objects.create(created_by=self.user, title="No Audio")
-        with self.assertRaises(TwilioRequestError):
-            deliver_phone_blast(blast, settings_obj=self.settings_obj)
-
-    def test_twilio_error_marks_call_failed(self):
-        blast, call = self._make_blast()
-        with patch(
-            "messaging.services.TwilioService.initiate_call",
-            side_effect=TwilioRequestError("timeout"),
-        ):
-            success, failure = deliver_phone_blast(blast, settings_obj=self.settings_obj)
-        self.assertEqual(success, 0)
-        self.assertEqual(failure, 1)
-        call.refresh_from_db()
-        self.assertEqual(call.status, PhoneCall.Status.FAILED)
-        self.assertIn("timeout", call.error_message)
-
-    def test_all_calls_failed_marks_blast_failed(self):
-        blast, _ = self._make_blast()
-        with patch(
-            "messaging.services.TwilioService.initiate_call",
-            side_effect=TwilioRequestError("fail"),
-        ):
-            deliver_phone_blast(blast, settings_obj=self.settings_obj)
-        blast.refresh_from_db()
-        self.assertEqual(blast.status, PhoneBlast.Status.FAILED)
-
-    def test_non_pending_call_is_skipped(self):
-        blast, call = self._make_blast()
-        call.status = PhoneCall.Status.COMPLETED
-        call.save()
-        with patch(
-            "messaging.services.TwilioService.initiate_call", return_value="CA999"
-        ) as mock_call:
-            deliver_phone_blast(blast, settings_obj=self.settings_obj)
-        mock_call.assert_not_called()
-
-    def test_audio_url_falls_back_to_website_setting(self):
-        self.settings_obj.website = "https://church.example.com"
-        self.settings_obj.save()
-        blast, _ = self._make_blast()
-        with patch(
-            "messaging.services.TwilioService.initiate_call", return_value="CA123"
-        ) as mock_call:
-            deliver_phone_blast(blast, settings_obj=self.settings_obj)
-        called_url = mock_call.call_args[0][1]
-        self.assertTrue(called_url.startswith("https://church.example.com"))
-
-    def test_failed_call_does_not_create_communication_log(self):
-        blast, _ = self._make_blast()
-        with patch(
-            "messaging.services.TwilioService.initiate_call",
-            side_effect=TwilioRequestError("fail"),
-        ):
-            deliver_phone_blast(blast, settings_obj=self.settings_obj)
-        self.assertEqual(self.person.communication_logs.count(), 0)
-
-
-# ---------------------------------------------------------------------------
-# get_site_base_url resolution
-# ---------------------------------------------------------------------------
 
 class SiteBaseUrlTests(TestCase):
     def setUp(self):
@@ -750,182 +681,56 @@ class SiteBaseUrlTests(TestCase):
 
 
 # ---------------------------------------------------------------------------
-# Scheduled delivery via process_communications (the live-bug fix)
+# Management commands
 # ---------------------------------------------------------------------------
 
-class ProcessCommunicationsCommandTests(TestCase):
-    def setUp(self):
-        self.temp_media = tempfile.mkdtemp()
-        self.addCleanup(lambda: shutil.rmtree(self.temp_media, ignore_errors=True))
-        media_override = override_settings(MEDIA_ROOT=self.temp_media)
-        media_override.enable()
-        self.addCleanup(media_override.disable)
-        self.settings_obj = OrganizationSettings.load()
-        self.settings_obj.twilio_account_sid = "AC123"
-        self.settings_obj.twilio_auth_token = "token"
-        self.settings_obj.twilio_phone_number = "+15551234567"
-        self.settings_obj.website = "https://church.example"
-        self.settings_obj.save()
-        self.user = get_user_model().objects.create_user(username="sched", password="pw")
-        self.person = Person.objects.create(
-            first_name="Sched", last_name="Target", phone="+15557778888", phone_opt_in=True
-        )
-
-    @override_settings(SITE_BASE_URL="https://church.example")
-    def test_due_scheduled_phone_blast_is_delivered_with_callback(self):
-        audio = SimpleUploadedFile("msg.mp3", b"audio")
-        blast = PhoneBlast.objects.create(
-            created_by=self.user,
-            title="Scheduled Blast",
-            audio_file=audio,
-            status=PhoneBlast.Status.SCHEDULED,
-            scheduled_for=dj_timezone.now() - timedelta(minutes=1),
-        )
-        PhoneCall.objects.create(
-            blast=blast, person=self.person, phone_number=self.person.phone
-        )
-        with patch(
-            "messaging.services.TwilioService.initiate_call", return_value="CA_SCHED"
-        ) as mock_call:
-            call_command("process_communications")
-
-        # The headless path must pass a StatusCallback so calls can settle.
-        self.assertEqual(mock_call.call_count, 1)
-        self.assertEqual(
-            mock_call.call_args.kwargs["status_callback_url"],
-            "https://church.example/communications/phone-blast/webhook/call-status/",
-        )
-        call = blast.calls.first()
-        self.assertEqual(call.call_sid, "CA_SCHED")
-        blast.refresh_from_db()
-        self.assertEqual(blast.status, PhoneBlast.Status.PROCESSING)
-
-    def test_future_scheduled_blast_is_not_delivered_yet(self):
-        audio = SimpleUploadedFile("later.mp3", b"audio")
-        blast = PhoneBlast.objects.create(
-            created_by=self.user,
-            title="Future Blast",
-            audio_file=audio,
-            status=PhoneBlast.Status.SCHEDULED,
-            scheduled_for=dj_timezone.now() + timedelta(hours=2),
-        )
-        PhoneCall.objects.create(
-            blast=blast, person=self.person, phone_number=self.person.phone
-        )
-        with patch(
-            "messaging.services.TwilioService.initiate_call", return_value="CA_X"
-        ) as mock_call:
-            call_command("process_communications")
-        mock_call.assert_not_called()
-        blast.refresh_from_db()
-        self.assertEqual(blast.status, PhoneBlast.Status.SCHEDULED)
+class ProcessCommunicationsCommandTests(MessagingTestCase):
+    def test_sends_due_broadcasts(self):
+        comm = self.voice_broadcast()
+        call_command("process_communications")
+        comm.refresh_from_db()
+        self.assertEqual(comm.status, Communication.Status.SENDING)
+        self.assertEqual(len(FakeAdapter.sent), 1)
 
 
-# ---------------------------------------------------------------------------
-# PhoneBlastForm.clean_audio_file validation
-# ---------------------------------------------------------------------------
-
-class PhoneBlastAudioValidationTests(TestCase):
-    def setUp(self):
-        self.settings_obj = OrganizationSettings.load()
-        self.person = Person.objects.create(
-            first_name="V", last_name="A", phone="+15551110000", phone_opt_in=True
-        )
-        self.group = Group.objects.create(name="Vols", category="volunteer")
-        GroupMembership.objects.create(group=self.group, person=self.person)
-
-    def _form(self, audio):
-        return PhoneBlastForm(
-            data={"title": "T", "group": self.group.pk, "scheduled_for": "", "notes": ""},
-            files={"audio_file": audio},
-            organization_settings=self.settings_obj,
-        )
-
-    def test_rejects_unsupported_extension(self):
-        form = self._form(SimpleUploadedFile("notes.txt", b"hello", content_type="text/plain"))
-        self.assertFalse(form.is_valid())
-        self.assertIn("audio_file", form.errors)
-
-    def test_rejects_oversized_file(self):
-        with patch.object(PhoneBlastForm, "MAX_AUDIO_BYTES", 3):
-            form = self._form(SimpleUploadedFile("big.mp3", b"way too big"))
-            self.assertFalse(form.is_valid())
-            self.assertIn("audio_file", form.errors)
-
-    def test_accepts_valid_audio(self):
-        form = self._form(SimpleUploadedFile("ok.mp3", b"audio-bytes"))
-        self.assertTrue(form.is_valid(), form.errors)
-
-
-# ---------------------------------------------------------------------------
-# cleanup_audio management command
-# ---------------------------------------------------------------------------
-
-class CleanupAudioCommandTests(TestCase):
-    def setUp(self):
-        self.temp_media = tempfile.mkdtemp()
-        self.addCleanup(lambda: shutil.rmtree(self.temp_media, ignore_errors=True))
-        media_override = override_settings(MEDIA_ROOT=self.temp_media)
-        media_override.enable()
-        self.addCleanup(media_override.disable)
-        self.user = get_user_model().objects.create_user(username="cleanup", password="pw")
-
+class CleanupAudioCommandTests(MessagingTestCase):
     def test_purges_aged_blast_audio(self):
-        audio = SimpleUploadedFile("old.mp3", b"audio")
-        blast = PhoneBlast.objects.create(
-            created_by=self.user,
-            title="Old Blast",
-            audio_file=audio,
-            status=PhoneBlast.Status.COMPLETED,
-            completed_at=dj_timezone.now() - timedelta(days=60),
-        )
-        file_path = blast.audio_file.path
-        self.assertTrue(os.path.exists(file_path))
-
+        blast = self.make_blast()
+        blast.completed_at = dj_timezone.now() - timedelta(days=60)
+        blast.save()
+        path = blast.audio_file.path
+        self.assertTrue(os.path.exists(path))
         call_command("cleanup_audio", days=30)
-
         blast.refresh_from_db()
         self.assertFalse(blast.audio_file)
-        self.assertFalse(os.path.exists(file_path))
+        self.assertFalse(os.path.exists(path))
 
     def test_keeps_recent_blast_audio(self):
-        audio = SimpleUploadedFile("recent.mp3", b"audio")
-        blast = PhoneBlast.objects.create(
-            created_by=self.user,
-            title="Recent Blast",
-            audio_file=audio,
-            status=PhoneBlast.Status.COMPLETED,
-            completed_at=dj_timezone.now() - timedelta(days=1),
-        )
+        blast = self.make_blast()
+        blast.completed_at = dj_timezone.now() - timedelta(days=1)
+        blast.save()
         call_command("cleanup_audio", days=30)
         blast.refresh_from_db()
         self.assertTrue(blast.audio_file)
 
-    def test_removes_orphaned_files(self):
+    def _orphan(self, name):
         orphan_dir = os.path.join(self.temp_media, "communications", "phone_blasts")
         os.makedirs(orphan_dir, exist_ok=True)
-        orphan_path = os.path.join(orphan_dir, "orphan.mp3")
-        with open(orphan_path, "wb") as fh:
+        path = os.path.join(orphan_dir, name)
+        with open(path, "wb") as fh:
             fh.write(b"abandoned")
-        self.assertTrue(os.path.exists(orphan_path))
+        return path
 
+    def test_removes_orphaned_files(self):
+        path = self._orphan("orphan.mp3")
         call_command("cleanup_audio", days=0)
-
-        self.assertFalse(os.path.exists(orphan_path))
+        self.assertFalse(os.path.exists(path))
 
     def test_dry_run_keeps_files(self):
-        orphan_dir = os.path.join(self.temp_media, "communications", "phone_blasts")
-        os.makedirs(orphan_dir, exist_ok=True)
-        orphan_path = os.path.join(orphan_dir, "keep.mp3")
-        with open(orphan_path, "wb") as fh:
-            fh.write(b"data")
+        path = self._orphan("keep.mp3")
         call_command("cleanup_audio", days=0, dry_run=True)
-        self.assertTrue(os.path.exists(orphan_path))
+        self.assertTrue(os.path.exists(path))
 
-
-# ---------------------------------------------------------------------------
-# Audio transcoding + delivery-visualization polish
-# ---------------------------------------------------------------------------
 
 class TranscodeTests(TestCase):
     def test_raises_when_ffmpeg_missing(self):
@@ -936,49 +741,12 @@ class TranscodeTests(TestCase):
                 services.transcode_to_mp3(SimpleUploadedFile("a.webm", b"x"))
 
 
-class DeliveryVisualizationTests(TestCase):
-    def setUp(self):
-        self.temp_media = tempfile.mkdtemp()
-        self.addCleanup(lambda: shutil.rmtree(self.temp_media, ignore_errors=True))
-        media_override = override_settings(MEDIA_ROOT=self.temp_media)
-        media_override.enable()
-        self.addCleanup(media_override.disable)
-        self.user = get_user_model().objects.create_user(username="viz", password="pw")
-        self.user.profile.can_manage_communications = True
-        self.user.profile.save()
-        self.client.force_login(self.user)
-        self.person = Person.objects.create(
-            first_name="Failed", last_name="Caller", phone="+15554443333"
-        )
-        audio = SimpleUploadedFile("blast.mp3", b"audio")
-        self.blast = PhoneBlast.objects.create(
-            created_by=self.user,
-            title="Viz Blast",
-            audio_file=audio,
-            status=PhoneBlast.Status.COMPLETED,
-        )
+class MergeKeepsHistoryTests(MessagingTestCase):
+    def test_merging_people_moves_deliveries_to_the_survivor(self):
+        from people.services.merge import merge_persons
 
-    def test_detail_shows_error_message_for_failed_call(self):
-        PhoneCall.objects.create(
-            blast=self.blast, person=self.person, phone_number=self.person.phone,
-            status=PhoneCall.Status.FAILED, error_message="Carrier rejected the call",
-        )
-        response = self.client.get(
-            reverse("messaging:phone_blast_detail", args=[self.blast.pk])
-        )
-        self.assertContains(response, "Carrier rejected the call")
-
-    def test_stats_partial_shows_progress_percentage(self):
-        PhoneCall.objects.create(
-            blast=self.blast, person=self.person, phone_number=self.person.phone,
-            status=PhoneCall.Status.COMPLETED,
-        )
-        PhoneCall.objects.create(
-            blast=self.blast, phone_number="+15550009999",
-            status=PhoneCall.Status.PENDING,
-        )
-        response = self.client.get(
-            reverse("messaging:phone_blast_stats", args=[self.blast.pk])
-        )
-        # 1 of 2 settled → 50%
-        self.assertContains(response, "50%")
+        dupe = Person.objects.create(first_name="Recipient", last_name="One",
+                                     phone="+15551112222", phone_opt_in=True)
+        outbound.send_transactional(SMS, people=[dupe], body="Pickup code ABCD")
+        merge_persons(self.person, dupe)
+        self.assertEqual(Delivery.objects.get().person, self.person)

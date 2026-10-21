@@ -2,210 +2,129 @@ from django.conf import settings
 from django.db import models
 
 
-class SmsMessage(models.Model):
+class Communication(models.Model):
+    """One thing sent to one person or many (see GLOSSARY.md)."""
+
+    class Channel(models.TextChoices):
+        SMS = "sms", "SMS"
+        VOICE = "voice", "Phone call"
+        EMAIL = "email", "Email"
+
+    class Kind(models.TextChoices):
+        BROADCAST = "broadcast", "Broadcast"
+        TRANSACTIONAL = "transactional", "Transactional"
+
     class TargetType(models.TextChoices):
         PERSON = "person", "Individual person"
         GROUP = "group", "Group"
 
     class Status(models.TextChoices):
         SCHEDULED = "scheduled", "Scheduled"
-        PROCESSING = "processing", "Processing"
+        SENDING = "sending", "Sending"
         COMPLETED = "completed", "Completed"
         FAILED = "failed", "Failed"
 
+    channel = models.CharField(max_length=10, choices=Channel.choices)
+    kind = models.CharField(max_length=20, choices=Kind.choices, default=Kind.BROADCAST)
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.SCHEDULED)
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        on_delete=models.PROTECT,
-        related_name="sms_messages",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="communications",
     )
-    body = models.TextField(help_text="Plain-text body sent to all recipients.")
-    target_type = models.CharField(
-        max_length=20, choices=TargetType.choices, default=TargetType.PERSON
-    )
+    title = models.CharField(max_length=255, blank=True)
+    subject = models.CharField(max_length=255, blank=True)
+    body = models.TextField(blank=True)
+    audio_file = models.FileField(upload_to="communications/phone_blasts/", blank=True)
+    notes = models.TextField(blank=True)
+    target_type = models.CharField(max_length=20, choices=TargetType.choices, blank=True)
     person = models.ForeignKey(
         "people.Person",
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
-        related_name="direct_messages",
+        related_name="targeted_communications",
     )
     group = models.ForeignKey(
         "groups.Group",
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
-        related_name="group_messages",
+        related_name="communications",
     )
     scheduled_for = models.DateTimeField(blank=True, null=True)
-    sent_at = models.DateTimeField(blank=True, null=True)
-    status = models.CharField(
-        max_length=20, choices=Status.choices, default=Status.SCHEDULED
-    )
+    started_at = models.DateTimeField(blank=True, null=True)
+    completed_at = models.DateTimeField(blank=True, null=True)
+    metadata = models.JSONField(default=dict, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         ordering = ["-created_at"]
+        indexes = [models.Index(fields=["kind", "status", "scheduled_for"])]
 
     def __str__(self):
-        return f"SMS #{self.pk or 'new'}"
+        return self.title or f"{self.get_channel_display()} #{self.pk or 'new'}"
 
     @property
-    def is_scheduled(self):
-        return bool(self.scheduled_for)
+    def summary(self):
+        """One line for a person's communication history."""
+        if self.kind == self.Kind.TRANSACTIONAL:
+            return self.title or "Automatic message"
+        if self.channel == self.Channel.VOICE:
+            return f"Phone blast '{self.title}'"
+        sender = self.created_by.get_full_name() or self.created_by.username if self.created_by else "staff"
+        return f"{self.get_channel_display()} sent by {sender}"
+
+    def delivery_counts(self):
+        """{status: count} over this Communication's Deliveries."""
+        from django.db.models import Count
+
+        return {
+            row["status"]: row["count"]
+            for row in self.deliveries.values("status").annotate(count=Count("id"))
+        }
 
 
-class SmsRecipient(models.Model):
+class Delivery(models.Model):
+    """One recipient's copy of a Communication (see GLOSSARY.md)."""
+
     class Status(models.TextChoices):
         PENDING = "pending", "Pending"
         SENT = "sent", "Sent"
+        ANSWERED = "answered", "Answered"
+        NO_ANSWER = "no_answer", "No answer"
         FAILED = "failed", "Failed"
+        SKIPPED = "skipped", "Skipped"
 
-    message = models.ForeignKey(
-        SmsMessage,
-        related_name="recipients",
-        on_delete=models.CASCADE,
+    class SkipReason(models.TextChoices):
+        OPTED_OUT = "opted_out", "Opted out"
+        NO_ADDRESS = "no_address", "No phone or email on file"
+
+    communication = models.ForeignKey(
+        Communication, related_name="deliveries", on_delete=models.CASCADE
     )
     person = models.ForeignKey(
         "people.Person",
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
-        related_name="received_messages",
+        related_name="deliveries",
     )
-    phone_number = models.CharField(max_length=50)
-    status = models.CharField(
-        max_length=20, choices=Status.choices, default=Status.PENDING
-    )
+    address = models.CharField(max_length=255, blank=True)
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
+    skip_reason = models.CharField(max_length=20, choices=SkipReason.choices, blank=True)
+    provider_id = models.CharField(max_length=64, blank=True, db_index=True)
+    error_message = models.TextField(blank=True)
     sent_at = models.DateTimeField(blank=True, null=True)
-    twilio_sid = models.CharField(max_length=64, blank=True)
-    error_message = models.TextField(blank=True)
-
-    class Meta:
-        ordering = ["message", "person"]
-
-    def __str__(self):
-        return f"{self.person or self.phone_number} for SMS {self.message_id}"
-
-
-class PhoneBlast(models.Model):
-    class Status(models.TextChoices):
-        SCHEDULED = "scheduled", "Scheduled"
-        PROCESSING = "processing", "Processing"
-        COMPLETED = "completed", "Completed"
-        FAILED = "failed", "Failed"
-
-    created_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.PROTECT,
-        related_name="phone_blasts",
-    )
-    title = models.CharField(max_length=255)
-    group = models.ForeignKey(
-        "groups.Group",
-        null=True,
-        blank=True,
-        on_delete=models.SET_NULL,
-        related_name="phone_blasts",
-    )
-    audio_file = models.FileField(upload_to="communications/phone_blasts/")
-    notes = models.TextField(blank=True)
-    scheduled_for = models.DateTimeField(blank=True, null=True)
-    started_at = models.DateTimeField(blank=True, null=True)
     completed_at = models.DateTimeField(blank=True, null=True)
-    status = models.CharField(
-        max_length=20, choices=Status.choices, default=Status.SCHEDULED
-    )
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        ordering = ["-created_at"]
-
-    def __str__(self):
-        return self.title or f"Phone blast #{self.pk or 'new'}"
-
-    @property
-    def is_scheduled(self):
-        return bool(self.scheduled_for)
-
-
-class PhoneCall(models.Model):
-    class Status(models.TextChoices):
-        PENDING = "pending", "Pending"
-        COMPLETED = "completed", "Completed"
-        FAILED = "failed", "Failed"
-        NO_ANSWER = "no_answer", "No Answer"
-
-    blast = models.ForeignKey(
-        PhoneBlast,
-        related_name="calls",
-        on_delete=models.CASCADE,
-    )
-    person = models.ForeignKey(
-        "people.Person",
-        null=True,
-        blank=True,
-        on_delete=models.SET_NULL,
-        related_name="phone_calls",
-    )
-    phone_number = models.CharField(max_length=50)
-    status = models.CharField(
-        max_length=20, choices=Status.choices, default=Status.PENDING
-    )
-    call_sid = models.CharField(max_length=64, blank=True)
-    started_at = models.DateTimeField(blank=True, null=True)
-    completed_at = models.DateTimeField(blank=True, null=True)
-    error_message = models.TextField(blank=True)
-
-    class Meta:
-        ordering = ["blast", "person"]
-
-    def __str__(self):
-        return f"{self.person or self.phone_number} call"
-
-
-class CommunicationLog(models.Model):
-    class CommunicationType(models.TextChoices):
-        SMS = "sms", "SMS"
-        PHONE = "phone", "Phone Call"
-
-    person = models.ForeignKey(
-        "people.Person",
-        related_name="communication_logs",
-        on_delete=models.CASCADE,
-    )
-    communication_type = models.CharField(
-        max_length=20, choices=CommunicationType.choices
-    )
-    summary = models.CharField(max_length=255)
-    detail = models.TextField(blank=True)
-    metadata = models.JSONField(blank=True, null=True)
-    recorded_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        null=True,
-        blank=True,
-        on_delete=models.SET_NULL,
-        related_name="communication_logs",
-    )
-    sms_message = models.ForeignKey(
-        SmsMessage,
-        null=True,
-        blank=True,
-        on_delete=models.SET_NULL,
-        related_name="logs",
-    )
-    phone_blast = models.ForeignKey(
-        PhoneBlast,
-        null=True,
-        blank=True,
-        on_delete=models.SET_NULL,
-        related_name="logs",
-    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        ordering = ["-created_at"]
+        ordering = ["communication", "person"]
+        verbose_name_plural = "deliveries"
 
     def __str__(self):
-        return f"{self.get_communication_type_display()} log for {self.person}"
+        return f"{self.person or self.address} for {self.communication}"
