@@ -10,7 +10,7 @@ AnchorPoint is a lightweight church operations platform for small-to-mid-sized c
 - Database: PostgreSQL 16
 - Deployment: Docker Compose with Cloudflare Tunnel on a DigitalOcean droplet. Deploys run through the manual `Deploy to Production` GitHub Action (`.github/workflows/deploy.yml`).
 
-**Backlog lives in `TODO.md`.** This file is reference only.
+**Backlog lives in `TODO.md`, with bigger work as GitHub Issues** (see *Agent skills*). This file is reference only.
 
 ## Project Structure
 
@@ -315,3 +315,17 @@ Pi already stuck this way: `sudo systemctl mask --now ipp-usb && sudo systemctl 
 restart the service. Agent code: `_print_brother_ql` (fits the PNG to the label's printable
 width, `convert` + blocking `send`). `brother_ql`/PIL are imported lazily so cups-mode
 agents don't need them.
+
+## Agent skills
+
+### Issue tracker
+
+Small items in `TODO.md`; bigger work as GitHub Issues with a TODO.md pointer. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default five labels (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`). See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: `GLOSSARY.md` + `docs/adr/` at the repo root. See `docs/agents/domain.md`.
