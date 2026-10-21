@@ -1097,5 +1097,10 @@ body.embed {
     min-height: 0;
 }
 html.embed-html { overflow-y: auto; background: transparent; }
-.embed-main { padding: 0; }
+.embed-main {
+    /* flow-root keeps the last child's bottom margin inside, so the reported
+       height covers everything and the frame never needs a scrollbar. */
+    display: flow-root;
+    padding: 0 0 4px;
+}
 .embed-main > .container { padding: 0; max-width: none; }
