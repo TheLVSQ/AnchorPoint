@@ -74,10 +74,13 @@ def collect_issues(now=None):
                           "(offline, or deactivate it on the Print Agents page if retired).")
 
     # Failed communications in the last day.
-    from messaging.models import PhoneBlast, SmsMessage
+    from messaging.models import Communication
     day_ago = now - timedelta(days=1)
-    failed_blasts = PhoneBlast.objects.filter(status=PhoneBlast.Status.FAILED, updated_at__gte=day_ago).count()
-    failed_sms = SmsMessage.objects.filter(status=SmsMessage.Status.FAILED, updated_at__gte=day_ago).count()
+    failed = Communication.objects.filter(
+        status=Communication.Status.FAILED, updated_at__gte=day_ago
+    )
+    failed_blasts = failed.filter(channel=Communication.Channel.VOICE).count()
+    failed_sms = failed.filter(channel=Communication.Channel.SMS).count()
     if failed_blasts:
         issues.append(f"{failed_blasts} phone blast(s) failed in the last 24 hours.")
     if failed_sms:

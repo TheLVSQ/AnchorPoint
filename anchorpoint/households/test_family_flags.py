@@ -133,7 +133,7 @@ class FamilyFlagTests(TestCase):
         self.client.force_login(_user("va", UserProfile.Role.VOLUNTEER_ADMIN))
         self.assertEqual(self.client.get(reverse("households:family_flags")).status_code, 403)
 
-    @mock.patch("messaging.services.TwilioService")
+    @mock.patch("messaging.twilio_client.TwilioClient")
     def test_kiosk_checkin_of_flagged_child_emails_and_texts_once_per_session(self, twilio):
         from datetime import time
         from django.utils import timezone

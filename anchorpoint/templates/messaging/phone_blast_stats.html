@@ -1,5 +1,5 @@
 <div id="blast-stats"
-     {% if blast.status == "processing" %}
+     {% if blast.status == "sending" %}
      hx-get="{% url 'messaging:phone_blast_stats' blast.pk %}"
      hx-trigger="every 5s"
      hx-swap="outerHTML"
@@ -16,4 +16,5 @@
         <div class="stat-card"><p class="stat-label">Failed</p><p class="stat-value text-danger">{{ stats.failed }}</p></div>
         <div class="stat-card"><p class="stat-label">Pending</p><p class="stat-value text-warning">{{ stats.pending }}</p></div>
     </div>
+    {% if stats.skipped %}<p class="muted-text">{{ stats.skipped }} skipped (opted out or no phone number by send time).</p>{% endif %}
 </div>

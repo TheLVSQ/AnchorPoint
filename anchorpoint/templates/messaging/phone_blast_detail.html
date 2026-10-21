@@ -7,7 +7,7 @@
     <p class="eyebrow">Phone blast</p>
     <h1>{{ blast.title }}</h1>
     <div class="chip-row">
-        {% if blast.status == "processing" %}<span class="chip chip--warning">Sending...</span>
+        {% if blast.status == "sending" %}<span class="chip chip--warning">Sending...</span>
         {% elif blast.status == "completed" %}<span class="chip chip--success">Completed</span>
         {% else %}<span class="chip chip--neutral">{{ blast.get_status_display }}</span>{% endif %}
         <span class="muted-text">{% if blast.group %}{{ blast.group.name }} · {% endif %}sent by {{ blast.created_by.get_full_name|default:blast.created_by.username }}{% if blast.started_at %} · {{ blast.started_at|date:"M j, Y g:i A" }}{% endif %}</span>
@@ -32,13 +32,14 @@
         {% for call in calls %}
         <li class="row-list__item">
             <div class="row-list__main">
-                <strong>{{ call.person.get_full_name|default:call.phone_number }}</strong>
-                <span class="muted-text">{{ call.phone_number }}{% if call.completed_at %} · {{ call.completed_at|time:"g:i A" }}{% endif %}</span>
+                <strong>{% if call.person %}{{ call.person }}{% else %}{{ call.address }}{% endif %}</strong>
+                <span class="muted-text">{{ call.address }}{% if call.completed_at %} · {{ call.completed_at|time:"g:i A" }}{% endif %}</span>
                 {% if call.status == "failed" and call.error_message %}<span class="text-danger">{{ call.error_message }}</span>{% endif %}
             </div>
-            {% if call.status == "completed" %}<span class="chip chip--success">Answered</span>
+            {% if call.status == "answered" %}<span class="chip chip--success">Answered</span>
             {% elif call.status == "no_answer" %}<span class="chip chip--neutral">No Answer</span>
             {% elif call.status == "failed" %}<span class="chip chip--danger">Failed</span>
+            {% elif call.status == "skipped" %}<span class="chip chip--neutral">Skipped · {{ call.get_skip_reason_display }}</span>
             {% else %}<span class="chip chip--warning">Pending</span>{% endif %}
         </li>
         {% endfor %}

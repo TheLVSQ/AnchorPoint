@@ -2,19 +2,17 @@
 
 Pickup tags get lost; text messages don't. Sends are best-effort and must never
 block or fail a check-in — no Twilio config or no opted-in adult simply means
-zero sends. Consent is the existing Person.phone_opt_in flag.
+zero sends. Consent (Person.phone_opt_in) is enforced by the outbound
+communications module; this is a transactional Communication, so it ignores
+the blackout window.
 """
 
 import logging
 
 from core.models import OrganizationSettings
 from households.models import HouseholdMember
-from messaging.models import CommunicationLog
-from messaging.services import (
-    TwilioConfigurationError,
-    TwilioRequestError,
-    TwilioService,
-)
+from messaging import outbound
+from messaging.models import Communication, Delivery
 
 logger = logging.getLogger(__name__)
 
@@ -33,44 +31,26 @@ def send_security_code_sms(household, checkins, security_code, session) -> int:
         for membership in household.memberships.filter(
             relationship_type=HouseholdMember.RelationshipType.ADULT
         ).select_related("person")
-        if membership.person.phone and membership.person.phone_opt_in
     ]
-    if not adults:
-        return 0
-
-    settings_obj = OrganizationSettings.load()
-    try:
-        service = TwilioService(settings_obj)
-    except TwilioConfigurationError:
-        return 0
-
     first_names = ", ".join(c.person.first_name for c in checkins)
     body = (
-        f"{settings_obj.name}: {first_names} checked in. "
+        f"{OrganizationSettings.load().name}: {first_names} checked in. "
         f"Pickup code: {security_code}"
     )
-
-    sent = 0
-    for adult in adults:
-        try:
-            sid = service.send_sms(adult.phone, body)
-        except (TwilioConfigurationError, TwilioRequestError) as exc:
-            logger.warning(
-                "Check-in code SMS to %s failed: %s", adult.phone, exc
-            )
-            continue
-        sent += 1
-        CommunicationLog.objects.create(
-            person=adult,
-            communication_type=CommunicationLog.CommunicationType.SMS,
-            summary="Check-in pickup code",
-            detail=body,
+    try:
+        comm = outbound.send_transactional(
+            Communication.Channel.SMS,
+            people=adults,
+            body=body,
+            title="Check-in pickup code",
             metadata={
-                "phone_number": adult.phone,
-                "twilio_sid": sid,
                 "security_code": security_code,
                 "checkin_session_id": session.pk if session else None,
             },
-            recorded_by=None,
         )
-    return sent
+    except Exception:
+        logger.exception("Check-in code SMS failed")
+        return 0
+    if comm is None:
+        return 0
+    return comm.deliveries.filter(status=Delivery.Status.SENT).count()

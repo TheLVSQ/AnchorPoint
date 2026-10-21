@@ -216,6 +216,15 @@ if TESTING:
     import tempfile
     MEDIA_ROOT = tempfile.mkdtemp(prefix="anchorpoint-test-media-")
 
+# Outbound communications: which adapter sends each channel (see messaging/adapters.py).
+# Tests use the in-memory fake so nothing can reach Twilio by accident.
+OUTBOUND_ADAPTERS = {
+    "sms": "messaging.adapters.TwilioSms",
+    "voice": "messaging.adapters.TwilioVoice",
+}
+if TESTING:
+    OUTBOUND_ADAPTERS = {channel: "messaging.adapters.FakeAdapter" for channel in OUTBOUND_ADAPTERS}
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 

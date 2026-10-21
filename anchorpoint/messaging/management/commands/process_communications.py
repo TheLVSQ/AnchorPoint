@@ -1,48 +1,16 @@
 from django.core.management.base import BaseCommand
-from django.utils import timezone
 
-from core.models import OrganizationSettings
-from messaging.models import PhoneBlast, SmsMessage
-from messaging.services import (
-    TwilioConfigurationError,
-    TwilioRequestError,
-    deliver_phone_blast,
-    deliver_sms_message,
-    get_site_base_url,
-)
+from messaging import outbound
 
 
 class Command(BaseCommand):
-    help = "Deliver any scheduled SMS messages or phone blasts that are due."
+    help = "Send every broadcast (SMS / phone blast) that is due. Run each minute by cron."
 
     def handle(self, *args, **options):
-        settings_obj = OrganizationSettings.load()
-        # Headless context: no request to build an absolute URL from. Without
-        # this, deliver_phone_blast() can't register a Twilio status callback,
-        # so scheduled calls would never settle out of PENDING.
-        base_url = get_site_base_url(settings_obj)
-        now = timezone.now()
-        sms_queryset = SmsMessage.objects.filter(
-            status=SmsMessage.Status.SCHEDULED,
-            scheduled_for__lte=now,
-        )
-        phone_queryset = PhoneBlast.objects.filter(
-            status=PhoneBlast.Status.SCHEDULED,
-            scheduled_for__lte=now,
-        )
-
-        for sms in sms_queryset:
-            try:
-                deliver_sms_message(sms, settings_obj=settings_obj)
-            except (TwilioConfigurationError, TwilioRequestError) as exc:
-                self.stderr.write(f"Failed to deliver SMS #{sms.pk}: {exc}")
-            else:
-                self.stdout.write(f"Delivered SMS #{sms.pk}")
-
-        for blast in phone_queryset:
-            try:
-                deliver_phone_blast(blast, settings_obj=settings_obj, base_url=base_url)
-            except (TwilioConfigurationError, TwilioRequestError) as exc:
-                self.stderr.write(f"Failed to deliver PhoneBlast #{blast.pk}: {exc}")
-            else:
-                self.stdout.write(f"Delivered PhoneBlast #{blast.pk}")
+        report = outbound.dispatch_due()
+        if report.deferred:
+            self.stdout.write(f"Inside blackout window; holding {report.deferred} broadcast(s).")
+        for comm in report.sent:
+            self.stdout.write(f"Delivered {comm.get_channel_display()} #{comm.pk}")
+        for comm in report.failed:
+            self.stderr.write(f"Failed to deliver {comm.get_channel_display()} #{comm.pk}")

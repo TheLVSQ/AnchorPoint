@@ -3,204 +3,106 @@ import hashlib
 import hmac as _hmac
 
 from django.contrib import messages
-from django.db.models import Count
 from django.http import Http404, HttpResponse, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
-from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 
 from core.models import OrganizationSettings
 from core.permissions import communications_required
 
-from .forms import PhoneBlastForm, SmsMessageForm
-from .models import PhoneBlast, PhoneCall, SmsMessage, SmsRecipient
-from .services import (
-    AudioProcessingError,
-    TwilioConfigurationError,
-    TwilioRequestError,
-    deliver_phone_blast,
-    deliver_sms_message,
-    transcode_to_mp3,
-)
+from . import outbound
+from .forms import PhoneBlastForm, SmsBroadcastForm
+from .models import Communication, Delivery
+from .services import AudioProcessingError, transcode_to_mp3
+
+Channel = Communication.Channel
 
 
-def _twilio_ready(settings_obj: OrganizationSettings) -> bool:
-    return all(
-        [
-            settings_obj.twilio_account_sid,
-            settings_obj.twilio_auth_token,
-            settings_obj.twilio_phone_number,
-        ]
-    )
+def _queued_message(comm, noun):
+    if comm.scheduled_for:
+        return f"{noun} scheduled for {comm.scheduled_for:%b %d, %Y %I:%M %p}."
+    return f"{noun} queued. It goes out within a minute."
 
 
 @communications_required
 def communications_home(request):
-    sms_messages = SmsMessage.objects.select_related("created_by").order_by("-created_at")[:5]
-    phone_blasts = PhoneBlast.objects.select_related("created_by").order_by("-created_at")[:5]
-    settings_obj = OrganizationSettings.load()
-
-    # Annotate blasts with call outcome counts for the summary line
-    blast_stats_map = {}
-    for blast in phone_blasts:
-        counts = {
-            row["status"]: row["count"]
-            for row in blast.calls.values("status").annotate(count=Count("id"))
-        }
-        blast_stats_map[blast.pk] = {
-            "answered": counts.get(PhoneCall.Status.COMPLETED, 0),
-            "no_answer": counts.get(PhoneCall.Status.NO_ANSWER, 0),
-            "failed": counts.get(PhoneCall.Status.FAILED, 0),
-            "pending": counts.get(PhoneCall.Status.PENDING, 0),
-        }
-
-    phone_blasts_with_stats = [(b, blast_stats_map[b.pk]) for b in phone_blasts]
-
+    broadcasts = Communication.objects.filter(kind=Communication.Kind.BROADCAST).select_related(
+        "created_by"
+    )
+    sms_messages = broadcasts.filter(channel=Channel.SMS)[:5]
+    phone_blasts = broadcasts.filter(channel=Channel.VOICE)[:5]
     context = {
         "sms_messages": sms_messages,
-        "phone_blasts_with_stats": phone_blasts_with_stats,
-        "twilio_ready": _twilio_ready(settings_obj),
+        "phone_blasts_with_stats": [(b, _blast_stats(b)) for b in phone_blasts],
+        "twilio_ready": outbound.channel_ready(Channel.SMS),
     }
     return render(request, "messaging/home.html", context)
 
 
 @communications_required
 def sms_compose(request):
-
-    settings_obj = OrganizationSettings.load()
-    twilio_ready = _twilio_ready(settings_obj)
-
+    twilio_ready = outbound.channel_ready(Channel.SMS)
     if request.method == "POST":
         if not twilio_ready:
-            messages.error(
-                request, "Configure your Twilio credentials before sending messages."
-            )
+            messages.error(request, "Configure your Twilio credentials before sending messages.")
             return redirect("organization_settings")
-        form = SmsMessageForm(
-            request.POST,
-            organization_settings=settings_obj,
-        )
+        form = SmsBroadcastForm(request.POST)
         if form.is_valid():
-            sms_message = form.save(commit=False)
-            sms_message.created_by = request.user
-            sms_message.status = (
-                SmsMessage.Status.SCHEDULED
-                if sms_message.scheduled_for
-                else SmsMessage.Status.PROCESSING
-            )
-            sms_message.save()
-            recipients = [
-                SmsRecipient(
-                    message=sms_message,
+            person, group = form.target()
+            try:
+                comm = outbound.broadcast(
+                    Channel.SMS,
+                    created_by=request.user,
                     person=person,
-                    phone_number=person.phone or "",
+                    group=group,
+                    scheduled_for=form.cleaned_data.get("scheduled_for"),
+                    body=form.cleaned_data["body"],
                 )
-                for person in form.get_recipients()
-            ]
-            SmsRecipient.objects.bulk_create(recipients)
-
-            if sms_message.scheduled_for:
-                messages.success(
-                    request,
-                    f"Message scheduled for {sms_message.scheduled_for:%b %d, %Y %I:%M %p}.",
-                )
+            except outbound.BroadcastRejected as exc:
+                messages.error(request, str(exc))
             else:
-                try:
-                    deliver_sms_message(sms_message, settings_obj=settings_obj)
-                except (TwilioConfigurationError, TwilioRequestError) as exc:
-                    messages.error(request, f"Unable to send via Twilio: {exc}")
-                else:
-                    messages.success(request, "SMS sent successfully.")
-            return redirect("messaging:home")
+                messages.success(request, _queued_message(comm, "Message"))
+                return redirect("messaging:home")
     else:
-        form = SmsMessageForm(organization_settings=settings_obj)
-
-    return render(
-        request,
-        "messaging/sms_form.html",
-        {
-            "form": form,
-            "twilio_ready": twilio_ready,
-        },
-    )
+        form = SmsBroadcastForm()
+    return render(request, "messaging/sms_form.html", {"form": form, "twilio_ready": twilio_ready})
 
 
 @communications_required
 def phone_blast_create(request):
-
-    settings_obj = OrganizationSettings.load()
-    twilio_ready = _twilio_ready(settings_obj)
-
+    twilio_ready = outbound.channel_ready(Channel.VOICE)
     if request.method == "POST":
         if not twilio_ready:
-            messages.error(
-                request, "Configure your Twilio credentials before sending phone blasts."
-            )
+            messages.error(request, "Configure your Twilio credentials before sending phone blasts.")
             return redirect("organization_settings")
-        form = PhoneBlastForm(
-            request.POST,
-            request.FILES,
-            organization_settings=settings_obj,
-        )
+        form = PhoneBlastForm(request.POST, request.FILES)
         if form.is_valid():
-            blast = form.save(commit=False)
-            blast.created_by = request.user
-            blast.status = (
-                PhoneBlast.Status.SCHEDULED
-                if blast.scheduled_for
-                else PhoneBlast.Status.PROCESSING
-            )
-            # Normalise the uploaded/recorded audio to MP3 so Twilio's <Play>
-            # can fetch it (browser recordings are WebM/MP4, which Twilio can't play).
             try:
-                blast.audio_file = transcode_to_mp3(blast.audio_file)
+                # Normalise the uploaded/recorded audio to MP3 so Twilio's <Play> can fetch
+                # it (browser recordings are WebM/MP4, which Twilio can't play).
+                audio = transcode_to_mp3(form.cleaned_data["audio_file"])
             except AudioProcessingError as exc:
                 form.add_error("audio_file", str(exc))
-                return render(
-                    request,
-                    "messaging/phone_blast_form.html",
-                    {"form": form, "twilio_ready": twilio_ready},
-                )
-            blast.save()
-            calls = [
-                PhoneCall(
-                    blast=blast,
-                    person=person,
-                    phone_number=person.phone or "",
-                )
-                for person in form.get_recipients()
-            ]
-            PhoneCall.objects.bulk_create(calls)
-
-            if blast.scheduled_for:
-                messages.success(
-                    request,
-                    f"Phone blast scheduled for {blast.scheduled_for:%b %d, %Y %I:%M %p}.",
-                )
             else:
                 try:
-                    # Build base URL for audio file access
-                    base_url = request.build_absolute_uri("/").rstrip("/")
-                    deliver_phone_blast(
-                        blast,
-                        settings_obj=settings_obj,
-                        base_url=base_url,
+                    comm = outbound.broadcast(
+                        Channel.VOICE,
+                        created_by=request.user,
+                        group=form.cleaned_data["group"],
+                        scheduled_for=form.cleaned_data.get("scheduled_for"),
+                        title=form.cleaned_data["title"],
+                        audio_file=audio,
+                        notes=form.cleaned_data.get("notes", ""),
                     )
-                except (TwilioConfigurationError, TwilioRequestError) as exc:
-                    messages.error(request, f"Unable to start calls: {exc}")
+                except outbound.BroadcastRejected as exc:
+                    messages.error(request, str(exc))
                 else:
-                    messages.success(request, "Phone blast started.")
-            return redirect("messaging:home")
+                    messages.success(request, _queued_message(comm, "Phone blast"))
+                    return redirect("messaging:home")
     else:
-        form = PhoneBlastForm(organization_settings=settings_obj)
-
+        form = PhoneBlastForm()
     return render(
-        request,
-        "messaging/phone_blast_form.html",
-        {
-            "form": form,
-            "twilio_ready": twilio_ready,
-        },
+        request, "messaging/phone_blast_form.html", {"form": form, "twilio_ready": twilio_ready}
     )
 
 
@@ -208,40 +110,42 @@ def phone_blast_create(request):
 # Phone blast detail + HTMX stats partial
 # ---------------------------------------------------------------------------
 
+def _get_blast(pk):
+    return get_object_or_404(
+        Communication.objects.select_related("created_by", "group"),
+        pk=pk, channel=Channel.VOICE, kind=Communication.Kind.BROADCAST,
+    )
+
+
 @communications_required
 def phone_blast_detail(request, pk):
     """Detail page for a phone blast with call stats and live HTMX polling."""
-    blast = get_object_or_404(PhoneBlast, pk=pk)
-    calls = blast.calls.select_related("person").order_by("-completed_at", "phone_number")
-    stats = _blast_stats(blast)
+    blast = _get_blast(pk)
+    calls = blast.deliveries.select_related("person").order_by("-completed_at", "address")
     return render(request, "messaging/phone_blast_detail.html", {
         "blast": blast,
         "calls": calls,
-        "stats": stats,
+        "stats": _blast_stats(blast),
     })
 
 
 @communications_required
 def phone_blast_stats(request, pk):
-    """HTMX partial: stats block for a phone blast. Includes polling trigger while PROCESSING."""
-    blast = get_object_or_404(PhoneBlast, pk=pk)
-    stats = _blast_stats(blast)
+    """HTMX partial: stats block for a phone blast. Includes polling trigger while sending."""
+    blast = _get_blast(pk)
     return render(request, "messaging/phone_blast_stats.html", {
         "blast": blast,
-        "stats": stats,
+        "stats": _blast_stats(blast),
     })
 
 
 def _blast_stats(blast):
-    """Return a dict of call outcome counts for a blast."""
-    counts = {
-        row["status"]: row["count"]
-        for row in blast.calls.values("status").annotate(count=Count("id"))
-    }
-    answered = counts.get(PhoneCall.Status.COMPLETED, 0)
-    no_answer = counts.get(PhoneCall.Status.NO_ANSWER, 0)
-    failed = counts.get(PhoneCall.Status.FAILED, 0)
-    pending = counts.get(PhoneCall.Status.PENDING, 0)
+    """Call outcome counts for a phone blast. Skipped calls (opted out) aren't counted."""
+    counts = blast.delivery_counts()
+    answered = counts.get(Delivery.Status.ANSWERED, 0)
+    no_answer = counts.get(Delivery.Status.NO_ANSWER, 0)
+    failed = counts.get(Delivery.Status.FAILED, 0)
+    pending = counts.get(Delivery.Status.PENDING, 0) + counts.get(Delivery.Status.SENT, 0)
     total = answered + no_answer + failed + pending
     settled = answered + no_answer + failed
     return {
@@ -249,6 +153,7 @@ def _blast_stats(blast):
         "no_answer": no_answer,
         "failed": failed,
         "pending": pending,
+        "skipped": counts.get(Delivery.Status.SKIPPED, 0),
         "total": total,
         "settled": settled,
         "percent": round(settled / total * 100) if total else 0,
@@ -258,15 +163,6 @@ def _blast_stats(blast):
 # ---------------------------------------------------------------------------
 # Twilio StatusCallback webhook
 # ---------------------------------------------------------------------------
-
-TWILIO_STATUS_MAP = {
-    "completed": PhoneCall.Status.COMPLETED,
-    "no-answer": PhoneCall.Status.NO_ANSWER,
-    "busy": PhoneCall.Status.FAILED,
-    "failed": PhoneCall.Status.FAILED,
-    "canceled": PhoneCall.Status.FAILED,
-}
-
 
 def _validate_twilio_signature(auth_token: str, signature: str, url: str, params: dict) -> bool:
     """Validate Twilio's HMAC-SHA1 request signature."""
@@ -279,16 +175,11 @@ def _validate_twilio_signature(auth_token: str, signature: str, url: str, params
 
 @csrf_exempt
 def phone_call_status_webhook(request):
-    """
-    Twilio StatusCallback endpoint. Called by Twilio when a phone call ends.
-    Updates PhoneCall.status and marks the blast complete when all calls settle.
-    """
+    """Twilio StatusCallback endpoint, called when a phone-blast call ends."""
     if request.method != "POST":
         return HttpResponse(status=405)
 
-    settings_obj = OrganizationSettings.load()
-    auth_token = settings_obj.twilio_auth_token or ""
-
+    auth_token = OrganizationSettings.load().twilio_auth_token or ""
     # Fail closed: without a token we can't tell Twilio from a forger.
     if not auth_token:
         return HttpResponseForbidden("Twilio is not configured")
@@ -298,24 +189,7 @@ def phone_call_status_webhook(request):
         return HttpResponseForbidden("Invalid signature")
 
     call_sid = request.POST.get("CallSid", "")
-    twilio_status = request.POST.get("CallStatus", "")
-
-    try:
-        call = PhoneCall.objects.select_related("blast").get(call_sid=call_sid)
-    except PhoneCall.DoesNotExist:
-        raise Http404(f"No PhoneCall with call_sid={call_sid!r}")
-
-    new_status = TWILIO_STATUS_MAP.get(twilio_status)
-    if new_status:
-        call.status = new_status
-        call.completed_at = timezone.now()
-        call.save(update_fields=["status", "completed_at"])
-
-        # Mark blast complete if no more pending calls
-        blast = call.blast
-        if not blast.calls.filter(status=PhoneCall.Status.PENDING).exists():
-            blast.status = PhoneBlast.Status.COMPLETED
-            blast.completed_at = timezone.now()
-            blast.save(update_fields=["status", "completed_at"])
-
+    delivery = outbound.record_call_status(call_sid, request.POST.get("CallStatus", ""))
+    if delivery is None:
+        raise Http404(f"No call with CallSid={call_sid!r}")
     return HttpResponse(status=200)

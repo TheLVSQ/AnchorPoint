@@ -6,7 +6,7 @@ from django.db.models import Count, Q
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
-from messaging.models import CommunicationLog
+from messaging.models import Delivery
 
 from core.permissions import staff_or_admin_required, staff_required
 from households.forms import (
@@ -335,9 +335,9 @@ def people_detail(request, pk):
         person.event_registrations.select_related("event", "registration")
         .order_by("-registration__created_at")
     )
-    communication_logs = (
-        CommunicationLog.objects.filter(person=person)
-        .select_related("recorded_by")
+    deliveries = (
+        Delivery.objects.filter(person=person)
+        .select_related("communication", "communication__created_by")
         .order_by("-created_at")[:10]
     )
     existing_household_form = HouseholdMembershipForm(person=person)
@@ -396,7 +396,7 @@ def people_detail(request, pk):
         "missing_fields": missing,
         "households": households,
         "registrations": registrations,
-        "communication_logs": communication_logs,
+        "deliveries": deliveries,
         "existing_household_form": existing_household_form,
         "new_household_form": new_household_form,
         "guardians": guardians,

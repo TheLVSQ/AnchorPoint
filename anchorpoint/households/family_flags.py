@@ -168,7 +168,7 @@ def _email_recipients(subject, body):
 
 def _sms_recipients(text):
     from core.models import OrganizationSettings
-    from messaging.services import TwilioService, TwilioConfigurationError
+    from messaging.twilio_client import TwilioClient, TwilioConfigurationError
     phones = []
     for user in _recipients():
         profile = getattr(user, "profile", None)
@@ -180,7 +180,7 @@ def _sms_recipients(text):
     if not phones:
         return
     try:
-        service = TwilioService(OrganizationSettings.load())
+        service = TwilioClient(OrganizationSettings.load())
     except TwilioConfigurationError:
         logger.warning("Family alert SMS skipped: Twilio not configured")
         return
