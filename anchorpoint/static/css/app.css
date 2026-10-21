@@ -1074,3 +1074,28 @@ label + .help-text, label + small.help-text { display: block; margin: -0.15rem 0
 .cleanup-side .kv > div { grid-template-columns: 6rem minmax(0, 1fr); }
 .cleanup-item .action-row { margin-top: 1rem; }
 .cleanup-item .action-row form { margin: 0; }
+
+/* ---- Sign-up form embedded on the church website (events/public/embed_base.html) ----
+   Re-skins the form with the website's palette so it reads as part of that page. */
+body.embed {
+    --bg: #ffffff;
+    --surface: #ffffff;
+    --surface-2: #f4fafd;
+    --surface-sunken: #eaf8fe;
+    --border: #e4edf2;
+    --border-strong: #d5e3ea;
+    --text: #0a2432;
+    --muted: #5a7484;
+    --primary: #0273a3;
+    --primary-hover: #01536f;
+    --primary-soft: #eaf8fe;
+    --primary-text: #01536f;
+    background: transparent;
+    margin: 0;
+    /* The frame is sized to the content; a viewport-based min-height would make
+       the content grow with the frame forever. */
+    min-height: 0;
+}
+html.embed-html { overflow-y: auto; background: transparent; }
+.embed-main { padding: 0; }
+.embed-main > .container { padding: 0; max-width: none; }

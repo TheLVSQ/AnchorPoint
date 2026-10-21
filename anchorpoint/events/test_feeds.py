@@ -76,8 +76,37 @@ class EventsFeedJsonTests(TestCase):
         ]:
             self.assertNotIn(key, item)
         body = response.content.decode()
-        for secret in ["pat@example.com", "555-0100", "Pat Organizer", str(event.registration_token), "a@example.com"]:
+        for secret in ["pat@example.com", "555-0100", "Pat Organizer", "a@example.com"]:
             self.assertNotIn(secret, body)
+
+    def test_signup_link_only_while_registration_is_open(self):
+        event = make_event()
+        item = self.get_feed().json()["events"][0]
+        self.assertEqual(
+            item["registration_url"], f"http://testserver/register/{event.registration_token}/?embed=1"
+        )
+
+        event.registration_open = False
+        event.save()
+        response = self.get_feed()
+        self.assertIsNone(response.json()["events"][0]["registration_url"])
+        self.assertNotIn(str(event.registration_token), response.content.decode())
+
+    def test_carries_what_the_public_page_shows(self):
+        make_event(description="Bring a chair.", location_address_line1="241 Pine St NW", location_notes="Back lot")
+        item = self.get_feed().json()["events"][0]
+        self.assertEqual(item["description"], "Bring a chair.")
+        self.assertEqual(item["location_address_line1"], "241 Pine St NW")
+        self.assertEqual(item["location_notes"], "Back lot")
+        self.assertEqual(item["photos"], [])
+
+    @override_settings(WEBSITE_URL="https://church.example")
+    def test_event_links_point_to_the_website_when_configured(self):
+        event = make_event()
+        item = self.get_feed().json()["events"][0]
+        self.assertEqual(item["url"], f"https://church.example/events/{event.slug}/")
+        # The sign-up form itself still lives in Anchorpoint (embedded by the website).
+        self.assertTrue(item["registration_url"].startswith("http://testserver/register/"))
 
     def test_is_public_and_cacheable(self):
         make_event()
@@ -87,6 +116,60 @@ class EventsFeedJsonTests(TestCase):
 
     def test_rejects_writes(self):
         self.assertEqual(self.client.post(reverse("events:feed_json")).status_code, 405)
+
+
+class PublicPagesRedirectTests(TestCase):
+    @override_settings(WEBSITE_URL="https://church.example")
+    def test_public_event_pages_redirect_to_the_website(self):
+        event = make_event()
+        response = self.client.get(reverse("events:public_list"))
+        self.assertRedirects(response, "https://church.example/events/", fetch_redirect_response=False)
+        response = self.client.get(reverse("events:public_detail", args=[event.slug]))
+        self.assertRedirects(
+            response, f"https://church.example/events/{event.slug}/", fetch_redirect_response=False
+        )
+
+    @override_settings(WEBSITE_URL="")
+    def test_without_a_website_anchorpoint_serves_its_own_pages(self):
+        event = make_event()
+        self.assertEqual(self.client.get(reverse("events:public_detail", args=[event.slug])).status_code, 200)
+
+
+class RegistrationEmbedTests(TestCase):
+    def url(self, event, embed=True):
+        return reverse("event_register", args=[event.registration_token]) + ("?embed=1" if embed else "")
+
+    @override_settings(WEBSITE_URL="https://church.example/")
+    def test_embed_is_frameable_only_by_the_website(self):
+        event = make_event()
+        response = self.client.get(self.url(event))
+        self.assertEqual(response.status_code, 200)
+        self.assertNotIn("X-Frame-Options", response)
+        self.assertEqual(response["Content-Security-Policy"], "frame-ancestors https://church.example")
+        self.assertTemplateUsed(response, "events/public/embed_base.html")
+        self.assertNotContains(response, "Register for")  # the website shows the heading
+        self.assertContains(response, 'name="website"')  # honeypot still there
+        self.assertContains(response, "csrfmiddlewaretoken")
+
+    @override_settings(WEBSITE_URL="https://church.example")
+    def test_normal_registration_page_still_refuses_framing(self):
+        event = make_event()
+        response = self.client.get(self.url(event, embed=False))
+        self.assertEqual(response["X-Frame-Options"], "DENY")
+        self.assertTemplateNotUsed(response, "events/public/embed_base.html")
+
+    @override_settings(WEBSITE_URL="")
+    def test_embed_without_a_website_stays_unframeable(self):
+        event = make_event()
+        response = self.client.get(self.url(event))
+        self.assertEqual(response["X-Frame-Options"], "DENY")
+
+    @override_settings(WEBSITE_URL="https://church.example")
+    def test_closed_registration_embed(self):
+        event = make_event(registration_open=False)
+        response = self.client.get(self.url(event))
+        self.assertContains(response, "Registration is closed")
+        self.assertTemplateUsed(response, "events/public/embed_base.html")
 
 
 class EventsFeedIcsTests(TestCase):

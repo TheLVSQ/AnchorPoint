@@ -142,12 +142,22 @@ can fetch it.
 
 ## Church website feed (`events/feeds.py`)
 
-The public website (separate repo `bolivar-community-church-site`, Astro on Cloudflare) reads
-events at build time from **`/events/feed.json`**; **`/events/feed.ics`** is the subscribable
-calendar. Both are public, read-only, cached 5 min, and carry only what the public event pages
-show (published events with an upcoming occurrence). Never add contact, capacity, registration or
-release fields; `events/test_feeds.py` asserts they stay out. Registration stays on Anchorpoint's
-own `/events/<slug>/` pages (the site links there).
+The public website (separate repo `bolivar-community-church-site`, Astro on Cloudflare) renders
+its own event list and detail pages from **`/events/feed.json`** at build time;
+**`/events/feed.ics`** is the subscribable calendar (the site re-serves it from its own domain).
+Both are public, read-only, cached 5 min, and carry what a public event page shows (published events
+with an upcoming occurrence: description, location, dates, photos, cost). Never add contact,
+capacity, registration counts or release documents; `events/test_feeds.py` asserts they stay out.
+`registration_url` (contains the registration token) is present only while registration is open,
+same as the public page's Register link.
+
+**`WEBSITE_URL`** (e.g. `https://bolivar.church`) makes the website the public face: feed/ICS event
+links point there, `/events/` and `/events/<slug>/` redirect there, and the sign-up form at
+`/register/<token>/?embed=1` renders frameless (`events/public/embed_base.html`, website palette in
+`app.css` under `body.embed`) with `frame-ancestors <WEBSITE_URL origin>` instead of
+`X-Frame-Options: DENY`. The embed posts its height to the parent (`anchorpoint:height` /
+`anchorpoint:loaded` postMessages). Embedding needs the website on a `*.bolivar.church` host:
+the CSRF cookie is `SameSite=Lax`, so a cross-site frame (e.g. `workers.dev`) can't submit.
 
 `trigger_site_rebuild` (cron sidecar, every minute) hashes the feed payload and POSTs
 `WEBSITE_DEPLOY_HOOK_URL` (a Cloudflare Workers Builds deploy hook; secret) when it changes,

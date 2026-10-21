@@ -61,6 +61,11 @@ SITE_BASE_URL = os.getenv("SITE_BASE_URL", "")
 # event edits reach the website within minutes. Treat it as a secret.
 WEBSITE_DEPLOY_HOOK_URL = os.getenv("WEBSITE_DEPLOY_HOOK_URL", "")
 
+# The church's public website (e.g. https://bolivar.church). When set, public
+# event links in the feeds point there, Anchorpoint's own public event pages
+# redirect there, and only that origin may frame the embedded sign-up form.
+WEBSITE_URL = os.getenv("WEBSITE_URL", "").rstrip("/")
+
 
 # Application definition
 
