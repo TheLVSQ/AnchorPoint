@@ -182,6 +182,9 @@ input[type="checkbox"], input[type="radio"] {
     flex: 0 0 auto;
 }
 input[type="file"] { font: inherit; color: var(--muted); }
+/* Same bottom spacing as text inputs, so a following .help-text (negative top margin) doesn't overlap. */
+.form-field > input[type="file"] { display: block; width: 100%; margin-bottom: 1rem; }
+.recorder__controls { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin-bottom: 1rem; }
 .help-text { color: var(--muted); font-size: 0.83rem; margin: -0.6rem 0 0.9rem; }
 .form-field .help-text, small.help-text { margin-top: -0.6rem; }
 .error-text { color: var(--danger); font-size: 0.83rem; margin: -0.6rem 0 0.9rem; font-weight: 500; }
