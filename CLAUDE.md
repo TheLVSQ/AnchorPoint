@@ -75,7 +75,9 @@ Every text / phone blast to people in the directory goes through this one module
 - Staff operational alerts (family flags, health email, welcome/registration emails) are
   *not* Communications; they use `messaging/twilio_client.py` / `send_mail` directly.
 - Phone blasts need absolute audio + status-callback URLs (`SITE_BASE_URL`); the webhook
-  calls `record_call_status()`.
+  verifies Twilio's signature against that registered public URL (behind Cloudflare Tunnel
+  the request arrives on an internal http host) and calls `record_call_status()`. A call with
+  no callback after 2h is settled as failed "No status received" by `dispatch_due()`.
 
 ## Environment Configuration
 

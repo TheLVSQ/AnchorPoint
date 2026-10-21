@@ -13,7 +13,8 @@ from core.permissions import communications_required
 from . import outbound
 from .forms import PhoneBlastForm, SmsBroadcastForm
 from .models import Communication, Delivery
-from .services import AudioProcessingError, transcode_to_mp3
+from .adapters import CALL_STATUS_WEBHOOK_PATH
+from .services import AudioProcessingError, get_site_base_url, transcode_to_mp3
 
 Channel = Communication.Channel
 
@@ -184,8 +185,15 @@ def phone_call_status_webhook(request):
     if not auth_token:
         return HttpResponseForbidden("Twilio is not configured")
     signature = request.META.get("HTTP_X_TWILIO_SIGNATURE", "")
-    full_url = request.build_absolute_uri()
-    if not _validate_twilio_signature(auth_token, signature, full_url, request.POST.dict()):
+    # Twilio signs the exact callback URL we registered (public https, from
+    # SITE_BASE_URL). Behind Cloudflare Tunnel the request reaches Django on an
+    # internal http host, so the rebuilt URL alone never matches.
+    candidates = [request.build_absolute_uri()]
+    base_url = get_site_base_url()
+    if base_url:
+        candidates.insert(0, f"{base_url}{CALL_STATUS_WEBHOOK_PATH}")
+    params = request.POST.dict()
+    if not any(_validate_twilio_signature(auth_token, signature, url, params) for url in candidates):
         return HttpResponseForbidden("Invalid signature")
 
     call_sid = request.POST.get("CallSid", "")

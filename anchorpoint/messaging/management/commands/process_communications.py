@@ -8,6 +8,8 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         report = outbound.dispatch_due()
+        if report.stale_calls:
+            self.stdout.write(f"Settled {report.stale_calls} call(s) with no status callback.")
         if report.deferred:
             self.stdout.write(f"Inside blackout window; holding {report.deferred} broadcast(s).")
         for comm in report.sent:
