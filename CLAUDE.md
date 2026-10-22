@@ -101,15 +101,22 @@ Key environment variables (see `.env.production.example`):
 1. **No SMS delivery webhooks** - Phone calls update status via Twilio StatusCallback, but SMS delivery status is not tracked after the initial send
 2. **Media files served by Django** - OK for small scale, use nginx/CDN for larger deployments
 
-## Check-in states (`CheckIn.arrived_at`)
+## Check-in states (`checkin/models.py`)
 
-A `CheckIn` has three states: **expected** (pre-staged via the session Pre-print page —
-label printed ahead, `arrived_at IS NULL`), **present** (`arrived_at` set, not checked out),
-**checked out**. "Currently here" / room-occupancy / checkout all mean *present*
-(`arrived_at__isnull=False, checked_out_at__isnull=True`). Normal kiosk check-ins set
-`arrived_at` at creation; pre-staged ones get it on the one-tap kiosk arrival (no reprint —
-the label/code were printed ahead). Pre-print pre-assigns rooms and shares one pickup code
-per household.
+A `CheckIn` is always in one of four states (terms in `GLOSSARY.md`): **Expected** (pre-staged via
+the session Pre-print page, label printed ahead), **No-show** (expected, confirmed absent;
+reversible), **Present** (arrived, not checked out), **Checked out**. **Active** = not checked out
+(holds the live pickup code); **Attended** = arrived at some point. The state is derived from
+`arrived_at` / `checked_out_at` / `no_show`, never stored.
+
+**Never write those filters by hand.** Ask the model: `session.checkins.present()` (and
+`.expected()`, `.no_show()`, `.checked_out()`, `.active()`, `.attended()`, `.state_counts()`),
+`CheckIn.state_q(state)` / `CheckIn.attended_q()` for annotations, `checkin.state` for one row.
+Change state only through the transitions (`arrive(user)`, `mark_no_show()`, `check_out(user)`,
+on a row or a queryset): each only touches rows in a valid starting state and returns what
+changed. `checked_in_by` is the staff member who confirmed arrival (blank for kiosk self
+check-in). Normal kiosk check-ins are created Present; pre-staged ones arrive with one tap (no
+reprint). Pre-print pre-assigns rooms and shares one pickup code per household.
 
 ## Scheduled communications & phone-blast audio
 

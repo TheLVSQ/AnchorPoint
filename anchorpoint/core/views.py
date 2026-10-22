@@ -141,7 +141,7 @@ def dashboard(request):
 def _dashboard_context(request):
     """Live overview, scoped to what this user's role may see."""
     from django.db.models import Count, Min, Q
-    from checkin.models import CheckInSession, PrintAgent
+    from checkin.models import CheckIn, CheckInSession, PrintAgent
     from core.permissions import is_checkin_admin, is_checkin_team
     from events.models import Event, EventRegistration, EventRegistrationAttendee
     from groups.models import Group
@@ -165,12 +165,9 @@ def _dashboard_context(request):
             CheckInSession.objects.filter(date=now.date(), is_active=True)
             .select_related("configuration")
             .annotate(
-                present=Count("checkins", filter=Q(checkins__arrived_at__isnull=False,
-                                                   checkins__checked_out_at__isnull=True)),
-                checked_out=Count("checkins", filter=Q(checkins__checked_out_at__isnull=False)),
-                expected=Count("checkins", filter=Q(checkins__arrived_at__isnull=True,
-                                                    checkins__checked_out_at__isnull=True,
-                                                    checkins__no_show=False)),
+                present=Count("checkins", filter=CheckIn.state_q(CheckIn.State.PRESENT)),
+                checked_out=Count("checkins", filter=CheckIn.state_q(CheckIn.State.CHECKED_OUT)),
+                expected=Count("checkins", filter=CheckIn.state_q(CheckIn.State.EXPECTED)),
             )
             .order_by("checkin_opens")
         )

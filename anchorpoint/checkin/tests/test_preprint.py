@@ -125,7 +125,7 @@ class PreprintRosterTests(PreprintFixture):
         self.assertEqual(checkins.count(), 2)
         for c in checkins:
             self.assertIsNone(c.arrived_at)          # pre-staged, not arrived
-            self.assertTrue(c.is_expected)
+            self.assertEqual(c.state, CheckIn.State.EXPECTED)
             self.assertIsNotNone(c.room)
         codes = {c.security_code for c in checkins}
         self.assertEqual(len(codes), 1)              # one shared family code
@@ -154,10 +154,9 @@ class PreprintRosterTests(PreprintFixture):
     def test_prestaged_not_counted_present(self, _m):
         self._preprint({self.kids[0]: self.room_a, self.kids[1]: self.room_b})
         self.assertEqual(self.session.total_checked_in(), 0)  # none present yet
-        from checkin.views import _session_stats
-        stats = _session_stats(self.session)
-        self.assertEqual(stats["checked_in"], 0)
-        self.assertEqual(stats["expected"], 2)
+        counts = self.session.checkins.state_counts()
+        self.assertEqual(counts[CheckIn.State.PRESENT], 0)
+        self.assertEqual(counts[CheckIn.State.EXPECTED], 2)
 
 
 class PreprintArrivalTests(PreprintFixture):

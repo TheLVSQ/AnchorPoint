@@ -41,11 +41,7 @@
                                 <p class="stat-hint text-warning">⚠️ {{ checkin.person.allergies }}</p>
                             {% endif %}
                         </div>
-                        {% if checkin.is_checked_out %}
-                            <span class="chip">Checked Out</span>
-                        {% else %}
-                            <span class="chip chip--success">Here</span>
-                        {% endif %}
+                        {% include "checkin/_state_chip.html" with state=checkin.state %}
                     </div>
                 {% empty %}
                     <p class="empty-state">No one checked in to this room</p>

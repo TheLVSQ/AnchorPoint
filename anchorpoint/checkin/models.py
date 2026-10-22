@@ -39,9 +39,7 @@ def generate_unique_security_code(session, max_attempts=100):
     """
     for _ in range(max_attempts):
         code = generate_security_code()
-        if not session.checkins.filter(
-            security_code=code, checked_out_at__isnull=True
-        ).exists():
+        if not session.checkins.active().filter(security_code=code).exists():
             return code
     # Practically unreachable (28**4 ≈ 614k codes vs. a few hundred active
     # check-ins). Fall back to the last code rather than failing the check-in.
@@ -327,14 +325,89 @@ class CheckInSession(models.Model):
         return False
 
     def total_checked_in(self):
-        """People physically present right now (arrived and not checked out)."""
-        return self.checkins.filter(
-            arrived_at__isnull=False, checked_out_at__isnull=True
-        ).count()
+        """People physically present right now (for the admin list / dashboard)."""
+        return self.checkins.present().count()
+
+
+def _state_filters(state, prefix=""):
+    """Field lookups for one CheckIn state (see CheckIn.State)."""
+    p = prefix
+    return {
+        CheckInState.EXPECTED: {f"{p}arrived_at__isnull": True,
+                                f"{p}checked_out_at__isnull": True, f"{p}no_show": False},
+        CheckInState.NO_SHOW: {f"{p}arrived_at__isnull": True,
+                               f"{p}checked_out_at__isnull": True, f"{p}no_show": True},
+        CheckInState.PRESENT: {f"{p}arrived_at__isnull": False,
+                               f"{p}checked_out_at__isnull": True},
+        CheckInState.CHECKED_OUT: {f"{p}checked_out_at__isnull": False},
+    }[state]
+
+
+class CheckInState(models.TextChoices):
+    """The four states a CheckIn can be in (GLOSSARY.md). Derived from arrived_at,
+    checked_out_at and no_show; never stored."""
+
+    EXPECTED = "expected", "Expected"  # label printed ahead, not here yet
+    NO_SHOW = "no_show", "No-show"  # was expected, confirmed absent (reversible)
+    PRESENT = "present", "Present"  # arrived, not checked out
+    CHECKED_OUT = "checked_out", "Checked out"
+
+
+class CheckInQuerySet(models.QuerySet):
+    """Every "which check-ins are in state X" question and every state change goes
+    through here, so the rules live in one place. Works on ``session.checkins`` too."""
+
+    def expected(self):
+        return self.filter(**_state_filters(CheckInState.EXPECTED))
+
+    def no_show(self):
+        return self.filter(**_state_filters(CheckInState.NO_SHOW))
+
+    def present(self):
+        return self.filter(**_state_filters(CheckInState.PRESENT))
+
+    def checked_out(self):
+        return self.filter(**_state_filters(CheckInState.CHECKED_OUT))
+
+    def active(self):
+        """Not checked out (expected, no-show or present): the rows that hold a live
+        pickup code and count toward one-check-in-per-person."""
+        return self.filter(checked_out_at__isnull=True)
+
+    def attended(self):
+        """Arrived at some point (present or checked out): what attendance counts."""
+        return self.filter(arrived_at__isnull=False)
+
+    def state_counts(self):
+        """{CheckInState: count} in one query."""
+        row = self.aggregate(**{
+            state.value: models.Count("pk", filter=CheckIn.state_q(state, prefix=""))
+            for state in CheckInState
+        })
+        return {state: row[state.value] for state in CheckInState}
+
+    # Transitions. Each touches only rows in a valid starting state (so a stale
+    # roster can't, say, un-arrive someone) and returns how many rows changed.
+
+    def arrive(self, user=None):
+        """Expected or no-show -> present. A no-show who turns up is here after all."""
+        return self.filter(arrived_at__isnull=True, checked_out_at__isnull=True).update(
+            arrived_at=timezone.now(), no_show=False, checked_in_by=user
+        )
+
+    def mark_no_show(self):
+        """Expected -> no-show. Never applies to someone who actually arrived."""
+        return self.expected().update(no_show=True)
+
+    def check_out(self, user=None):
+        """Present -> checked out. Expected/no-show rows can't be checked out."""
+        return self.present().update(checked_out_at=timezone.now(), checked_out_by=user)
 
 
 class CheckIn(models.Model):
     """Individual check-in record for one person at one session."""
+
+    State = CheckInState
 
     session = models.ForeignKey(
         CheckInSession, on_delete=models.CASCADE, related_name="checkins"
@@ -366,6 +439,8 @@ class CheckIn(models.Model):
     no_show = models.BooleanField(default=False)
     notes = models.TextField(blank=True)
 
+    objects = CheckInQuerySet.as_manager()
+
     class Meta:
         ordering = ["-checked_in_at"]
         indexes = [
@@ -392,38 +467,46 @@ class CheckIn(models.Model):
     def __str__(self):
         return f"{self.person} at {self.session}"
 
-    @property
-    def is_checked_out(self):
-        return self.checked_out_at is not None
+    @staticmethod
+    def state_q(state, prefix="checkins__"):
+        """Q for one state, e.g. Count("checkins", filter=CheckIn.state_q(PRESENT))."""
+        return models.Q(**_state_filters(state, prefix))
+
+    @staticmethod
+    def attended_q(prefix="checkins__"):
+        """Q for attended (arrived at some point), for annotations."""
+        return models.Q(**{f"{prefix}arrived_at__isnull": False})
 
     @property
-    def is_expected(self):
-        """Pre-staged: label printed ahead of time, not yet arrived (and not
-        resolved as a no-show)."""
-        return (
-            self.arrived_at is None
-            and self.checked_out_at is None
-            and not self.no_show
-        )
+    def state(self):
+        if self.checked_out_at is not None:
+            return CheckInState.CHECKED_OUT
+        if self.arrived_at is not None:
+            return CheckInState.PRESENT
+        return CheckInState.NO_SHOW if self.no_show else CheckInState.EXPECTED
 
-    @property
-    def is_present(self):
-        """Arrived and not checked out."""
-        return self.arrived_at is not None and self.checked_out_at is None
+    def get_state_display(self):
+        return self.state.label
+
+    def _transition(self, method, *args):
+        changed = getattr(CheckIn.objects.filter(pk=self.pk), method)(*args)
+        if changed:
+            self.refresh_from_db(fields=[
+                "arrived_at", "no_show", "checked_in_by", "checked_out_at", "checked_out_by",
+            ])
+        return bool(changed)
 
     def arrive(self, user=None):
-        """Mark a pre-staged check-in as physically arrived (idempotent)."""
-        if self.arrived_at is None:
-            self.arrived_at = timezone.now()
-            if user is not None:
-                self.checked_in_by = user
-            self.save(update_fields=["arrived_at", "checked_in_by"])
+        """Expected/no-show -> present. Returns False if it wasn't in either state."""
+        return self._transition("arrive", user)
 
-    def checkout(self, user=None):
-        """Mark this check-in as checked out."""
-        self.checked_out_at = timezone.now()
-        self.checked_out_by = user
-        self.save(update_fields=["checked_out_at", "checked_out_by"])
+    def mark_no_show(self):
+        """Expected -> no-show. Returns False if it wasn't expected."""
+        return self._transition("mark_no_show")
+
+    def check_out(self, user=None):
+        """Present -> checked out. Returns False if it wasn't present."""
+        return self._transition("check_out", user)
 
 
 class PrinterConfiguration(models.Model):

@@ -210,7 +210,7 @@ class KioskFlowTests(TestCase):
             reverse("checkin:kiosk_family_select", args=[self.household.pk]), post_data
         )
         first = CheckIn.objects.get(person=self.child)
-        first.checkout()
+        first.check_out()
 
         # Re-running the flow for a checked-out child must produce a fresh
         # active check-in (not silently no-op), and surface it on confirmation.
@@ -398,8 +398,9 @@ class SecurityCodeUniquenessTests(TestCase):
     def test_reuses_code_freed_by_checkout(self):
         ci = CheckIn.objects.create(
             session=self.session, person=self.person, security_code="ABCD",
+            arrived_at=timezone.now(),
         )
-        ci.checkout()  # now checked out — code is free to reuse
+        self.assertTrue(ci.check_out())  # now checked out — code is free to reuse
         with mock.patch(
             "checkin.models.generate_security_code", side_effect=["ABCD"],
         ):
