@@ -1,0 +1,2 @@
+{# One chip per CheckIn state, same name + colour everywhere. Pass state=<CheckIn.State>. #}
+<span class="chip {% if state == 'present' %}chip--success{% elif state == 'expected' %}chip--warning{% elif state == 'no_show' %}chip--danger{% else %}chip--neutral{% endif %}">{{ state.label }}</span>

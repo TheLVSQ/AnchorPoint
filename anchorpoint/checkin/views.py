@@ -345,24 +345,21 @@ def kiosk_family_select(request, household_id):
     rooms = list(session.rooms.all())
 
     # Pre-staged check-ins for this family (label printed ahead, not yet here).
+    # Expected or no-show: a no-show who turns up after all can still arrive.
     prestaged = {
         c.person_id: c
-        for c in session.checkins.filter(
-            person__households=household,
-            arrived_at__isnull=True,
-            checked_out_at__isnull=True,
-        ).select_related("room")
+        for c in (session.checkins.expected() | session.checkins.no_show())
+        .filter(person__households=household)
+        .select_related("room")
     }
     prestaged_ids = set(prestaged.keys())
     # Already here (arrived, not checked out). The kiosk can't re-check them in
     # or reprint for them: that would print/show the family's live pickup code
     # to whoever is at the kiosk. Lost labels are reprinted by a volunteer.
     present_ids = set(
-        session.checkins.filter(
-            person__households=household,
-            arrived_at__isnull=False,
-            checked_out_at__isnull=True,
-        ).values_list("person_id", flat=True)
+        session.checkins.present()
+        .filter(person__households=household)
+        .values_list("person_id", flat=True)
     )
 
     if request.method == "POST":
@@ -391,11 +388,7 @@ def kiosk_family_select(request, household_id):
                     prestaged_checkin = prestaged.get(person_id)
                     if prestaged_checkin is not None:
                         checkin = prestaged_checkin
-                        checkin.arrived_at = timezone.now()
-                        # A pre-staged no-show who actually shows up is here now —
-                        # clear no_show so they count as present, not absent.
-                        checkin.no_show = False
-                        checkin.save(update_fields=["arrived_at", "no_show"])
+                        checkin.arrive()  # self check-in: no staff user to record
                     else:
                         if walkin_code is None:
                             walkin_code = generate_unique_security_code(session)
@@ -412,9 +405,8 @@ def kiosk_family_select(request, household_id):
                         except IntegrityError:
                             # Raced a concurrent check-in for the same person — use
                             # the row that won, don't double-create or double-print.
-                            checkin = CheckIn.objects.filter(
+                            checkin = CheckIn.objects.active().filter(
                                 session=session, person=person,
-                                checked_out_at__isnull=True,
                             ).first()
                             if checkin is None:
                                 raise
@@ -779,11 +771,8 @@ def checkout_lookup(request, session_id):
             code = form.cleaned_data["security_code"]
             # Only people who actually arrived can be checked out — a pre-staged
             # (printed-but-not-arrived) record must not be checkout-able.
-            checkins = CheckIn.objects.filter(
-                session=session,
-                security_code=code,
-                arrived_at__isnull=False,
-                checked_out_at__isnull=True,
+            checkins = CheckIn.objects.present().filter(
+                session=session, security_code=code,
             ).select_related("person", "room")
 
             if not checkins.exists():
@@ -841,17 +830,9 @@ def checkout_confirm(request, session_id):
         int(i) for i in request.POST.getlist("checkin_ids")
         if str(i).isdigit() and int(i) in allowed_ids
     ]
-    checkins = CheckIn.objects.filter(
-        id__in=checkin_ids,
-        session=session,
-        arrived_at__isnull=False,
-        checked_out_at__isnull=True,
+    count = CheckIn.objects.filter(id__in=checkin_ids, session=session).check_out(
+        user=request.user
     )
-
-    count = 0
-    for checkin in checkins:
-        checkin.checkout(user=request.user)
-        count += 1
 
     messages.success(request, f"Successfully checked out {count} {'person' if count == 1 else 'people'}.")
     return redirect("checkin:checkout_lookup", session_id=session_id)
@@ -944,13 +925,14 @@ def session_detail(request, session_id):
         "room__sort_order", "person__last_name"
     )
 
-    # Group by room
+    # Group by room; "here" = Present only (not expected, no-show or checked out).
     rooms_data = {}
     for checkin in checkins:
         room_name = checkin.room.name if checkin.room else "Unassigned"
-        if room_name not in rooms_data:
-            rooms_data[room_name] = []
-        rooms_data[room_name].append(checkin)
+        room = rooms_data.setdefault(room_name, {"checkins": [], "here": 0})
+        room["checkins"].append(checkin)
+        if checkin.state == CheckIn.State.PRESENT:
+            room["here"] += 1
 
     return render(
         request,
@@ -970,13 +952,8 @@ def session_list(request):
     """List all check-in sessions."""
     sessions = (
         CheckInSession.objects
-        # "Check-ins" = people who actually arrived. Excludes no-shows and
-        # pre-staged "expected" rows that never arrived (both have arrived_at NULL).
-        .annotate(
-            attended_count=Count(
-                "checkins", filter=Q(checkins__arrived_at__isnull=False)
-            )
-        )
+        # "Check-ins" = people who attended (arrived at some point).
+        .annotate(attended_count=Count("checkins", filter=CheckIn.attended_q()))
         .order_by("-date", "-checkin_opens")
     )
 
@@ -999,9 +976,8 @@ def _family_code(session, household):
     session, so a family keeps ONE pickup code; else mint a fresh unique one."""
     if household is not None:
         existing = (
-            session.checkins.filter(
-                person__households=household, checked_out_at__isnull=True
-            )
+            session.checkins.active()
+            .filter(person__households=household)
             .exclude(security_code="")
             .first()
         )
@@ -1071,13 +1047,8 @@ def session_preprint(request, session_id):
             "has_staged": False,
         })
         c = existing.get(person.pk)
-        if c and c.checked_out_at is None:
-            status = "expected" if c.arrived_at is None else "present"
-        elif c:
-            status = "checked_out"
-        else:
-            status = None
-        if status in ("expected", "present"):
+        status = c.state if c else None
+        if status and status != CheckIn.State.CHECKED_OUT:
             groups[key]["has_staged"] = True
         routed = match_room(person, rooms) if status is None else None
         groups[key]["rows"].append({
@@ -1113,8 +1084,8 @@ def _preprint_generate(request, session, candidates, existing, rooms=None):
         household = _person_household(person)
         key = household.pk if household else f"solo-{person.pk}"
         current = existing.get(person.pk)
-        if current and current.checked_out_at is None:
-            buckets[key]["reprint"].append(current)  # already staged → reprint
+        if current and current.state != CheckIn.State.CHECKED_OUT:
+            buckets[key]["reprint"].append(current)  # already staged → reprint (keeps its code)
         else:
             room_id = request.POST.get(f"room_{person.pk}") or None
             buckets[key]["new"].append((person, household, room_id))
@@ -1155,9 +1126,8 @@ def session_preprint_reprint(request, session_id, household_id):
     """Re-queue labels for one household's pre-staged (still-here) check-ins."""
     session = get_object_or_404(CheckInSession, pk=session_id)
     checkins = list(
-        session.checkins.filter(
-            person__households__pk=household_id, checked_out_at__isnull=True
-        )
+        session.checkins.active()
+        .filter(person__households__pk=household_id)
         .select_related("person", "room")
         .distinct()
     )
@@ -1404,17 +1374,12 @@ def _session_stats(session):
     "Present" = arrived and not checked out. "Expected" = pre-staged (label
     printed ahead, not arrived yet). Room occupancy counts present people only.
     """
-    present_q = session.checkins.filter(
-        arrived_at__isnull=False, checked_out_at__isnull=True
-    )
-    checked_in = present_q.count()
-    checked_out = session.checkins.filter(checked_out_at__isnull=False).count()
-    expected = session.checkins.filter(
-        arrived_at__isnull=True, checked_out_at__isnull=True, no_show=False
-    ).count()
-    no_show = session.checkins.filter(
-        arrived_at__isnull=True, checked_out_at__isnull=True, no_show=True
-    ).count()
+    counts = session.checkins.state_counts()
+    checked_in = counts[CheckIn.State.PRESENT]
+    checked_out = counts[CheckIn.State.CHECKED_OUT]
+    expected = counts[CheckIn.State.EXPECTED]
+    no_show = counts[CheckIn.State.NO_SHOW]
+    present_q = session.checkins.present()
 
     room_counts = {
         row["room"]: row["count"]
@@ -1480,7 +1445,7 @@ def _present_checkins(session):
     """Children currently present (arrived, not checked out), room then name."""
     return (
         session.checkins
-        .filter(arrived_at__isnull=False, checked_out_at__isnull=True)
+        .present()
         .select_related("person", "room")
         # room name/id break sort_order ties: the roster {% regroup %}s by room,
         # so rooms sharing a sort_order must still be contiguous.
@@ -1493,7 +1458,7 @@ def _expected_checkins(session):
     """Pre-staged kids who haven't arrived and aren't yet marked no-show."""
     return (
         session.checkins
-        .filter(arrived_at__isnull=True, checked_out_at__isnull=True, no_show=False)
+        .expected()
         .select_related("person")
         .order_by("person__last_name", "person__first_name")
     )
@@ -1531,10 +1496,11 @@ def checkin_mark_noshow(request, session_id, checkin_id):
     session = get_object_or_404(CheckInSession, pk=session_id)
     checkin = get_object_or_404(
         session.checkins.select_related("person"),
-        pk=checkin_id, arrived_at__isnull=True, checked_out_at__isnull=True,
+        pk=checkin_id,
     )
-    checkin.no_show = True
-    checkin.save(update_fields=["no_show"])
+    if not checkin.mark_no_show():
+        messages.error(request, f"{checkin.person.first_name} isn't expected, so can't be a no-show.")
+        return redirect("checkin:checkin_manager", session_id=session_id)
     messages.success(request, f"{checkin.person.first_name} marked as a no-show.")
     return redirect("checkin:checkin_manager", session_id=session_id)
 
@@ -1544,9 +1510,7 @@ def checkin_mark_noshow(request, session_id, checkin_id):
 def checkin_clear_expected(request, session_id):
     """End-of-session cleanup: mark every still-expected child as a no-show."""
     session = get_object_or_404(CheckInSession, pk=session_id)
-    n = session.checkins.filter(
-        arrived_at__isnull=True, checked_out_at__isnull=True, no_show=False
-    ).update(no_show=True)
+    n = session.checkins.mark_no_show()
     messages.success(request, f"Marked {n} remaining expected child{'ren' if n != 1 else ''} as no-shows.")
     return redirect("checkin:checkin_manager", session_id=session_id)
 
@@ -1564,18 +1528,13 @@ def checkin_bulk_action(request, session_id):
         messages.info(request, "No children selected.")
         return redirect("checkin:checkin_manager", session_id=session_id)
 
-    selected = session.checkins.filter(pk__in=ids, checked_out_at__isnull=True)
+    selected = session.checkins.filter(pk__in=ids)
     if action == "arrive":
-        # Confirm attendance: stamp arrival on those not yet arrived and clear any
-        # no-show flag (also flips a mistaken no-show back to present).
-        n = selected.filter(arrived_at__isnull=True).update(
-            arrived_at=timezone.now(), no_show=False
-        )
-        selected.filter(arrived_at__isnull=False, no_show=True).update(no_show=False)
+        # Confirm attendance (also flips a mistaken no-show back to present).
+        n = selected.arrive(user=request.user)
         messages.success(request, f"Marked {n} child{'ren' if n != 1 else ''} as arrived.")
     elif action == "noshow":
-        # Only not-yet-arrived kids can be no-shows (never undo a real arrival).
-        n = selected.filter(arrived_at__isnull=True).update(no_show=True)
+        n = selected.mark_no_show()  # never undoes a real arrival
         messages.success(request, f"Marked {n} child{'ren' if n != 1 else ''} as a no-show.")
     else:
         messages.error(request, "Unknown action.")

@@ -225,14 +225,7 @@ class SessionAttendanceReport(Report):
         for c in checkins:
             p = c.person
             g = _guardian(p)
-            if c.checked_out_at:
-                status = "Checked out"
-            elif c.arrived_at:
-                status = "Present"
-            elif c.no_show:
-                status = "No-show"
-            else:
-                status = "Expected"
+            status = c.get_state_display()
             yield {
                 "first_name": p.first_name,
                 "last_name": p.last_name,

@@ -94,7 +94,7 @@ class NoShowTests(TestCase):
         self.client.post(reverse("checkin:checkin_mark_noshow", args=[self.session.id, self.ci.id]))
         self.ci.refresh_from_db()
         self.assertTrue(self.ci.no_show)
-        self.assertFalse(self.ci.is_expected)
+        self.assertEqual(self.ci.state, CheckIn.State.NO_SHOW)
         resp = self.client.get(reverse("checkin:checkin_manager", args=[self.session.id]))
         self.assertEqual(resp.context["stats"]["expected"], 0)
         self.assertEqual(resp.context["stats"]["no_show"], 1)

@@ -56,11 +56,7 @@
                                        id="sel_{{ row.person.pk }}" class="preprint-select check-lg" data-group="{{ forloop.parentloop.counter }}"
                                       >
                             {% endif %}
-                            {% if row.status %}
-                                <span class="chip {% if row.status == 'expected' %}chip--warning{% elif row.status == 'present' %}chip--success{% else %}chip--neutral{% endif %}">
-                                    {{ row.status|title }}
-                                </span>
-                            {% endif %}
+                            {% if row.status %}{% include "checkin/_state_chip.html" with state=row.status %}{% endif %}
                             <label for="sel_{{ row.person.pk }}">
                                 <strong>{{ row.person.first_name }} {{ row.person.last_name }}</strong>
                                 <span class="muted-text">{% if row.person.age is not None %}Age {{ row.person.age }}{% endif %}</span>

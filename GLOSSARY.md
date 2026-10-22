@@ -25,3 +25,23 @@ that come due inside it wait until it ends.
 
 **Outbound communications module**: `messaging/outbound.py`, the one place that decides who may be
 contacted, when, over which channel, and records what happened.
+
+## Check-in (`checkin/`)
+
+**Check-in**: one person's record at one check-in session (`CheckIn`). It is always in exactly one
+**state**, derived from `arrived_at` / `checked_out_at` / `no_show` (never stored):
+
+- **Expected**: pre-staged on the Pre-print page; label printed ahead, not here yet.
+- **No-show**: was expected, confirmed absent. Reversible: if they turn up, they become Present.
+- **Present**: arrived and not checked out. "Here now", room occupancy, and who can be checked out.
+- **Checked out**: picked up.
+
+**Active**: not checked out (Expected, No-show or Present). Holds a live pickup code; a person has
+at most one active check-in per session. _Avoid_: "open", "current".
+
+**Attended**: arrived at some point (Present or Checked out). What attendance counts.
+_Avoid_: "checked in" for this (it's ambiguous with the act of checking in).
+
+Every state question and state change goes through `CheckIn` (`checkin/models.py`):
+`session.checkins.expected()/no_show()/present()/checked_out()/active()/attended()`,
+`.state_counts()`, and the transitions `arrive()`, `mark_no_show()`, `check_out()`.
