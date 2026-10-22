@@ -193,3 +193,14 @@ class ManagerRecordsStaffTests(LifecycleFixture):
             args=[self.session.pk, self.rows[State.PRESENT].pk],
         ))
         self.assertEqual(self.reload(State.PRESENT).state, State.PRESENT)
+
+
+class SessionDetailRoomCountTests(LifecycleFixture):
+    def test_room_count_separates_here_from_total(self):
+        admin = get_user_model().objects.create_user(username="admin", password="pw")
+        admin.profile.role = UserProfile.Role.ADMIN
+        admin.profile.save()
+        self.client.force_login(admin)
+        resp = self.client.get(reverse("checkin:session_detail", args=[self.session.pk]))
+        self.assertContains(resp, "1 here now · 4 total")  # only the Present child is here
+        self.assertNotContains(resp, "4 checked in")

@@ -925,13 +925,14 @@ def session_detail(request, session_id):
         "room__sort_order", "person__last_name"
     )
 
-    # Group by room
+    # Group by room; "here" = Present only (not expected, no-show or checked out).
     rooms_data = {}
     for checkin in checkins:
         room_name = checkin.room.name if checkin.room else "Unassigned"
-        if room_name not in rooms_data:
-            rooms_data[room_name] = []
-        rooms_data[room_name].append(checkin)
+        room = rooms_data.setdefault(room_name, {"checkins": [], "here": 0})
+        room["checkins"].append(checkin)
+        if checkin.state == CheckIn.State.PRESENT:
+            room["here"] += 1
 
     return render(
         request,

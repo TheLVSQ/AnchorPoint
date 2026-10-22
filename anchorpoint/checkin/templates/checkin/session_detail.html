@@ -27,12 +27,12 @@
 {% include "checkin/session_stats.html" %}
 
 <div class="detail-grid mt-3">
-    {% for room_name, room_checkins in rooms_data.items %}
+    {% for room_name, room in rooms_data.items %}
         <section class="detail-card">
             <h2>{{ room_name }}</h2>
-            <p class="stat-hint">{{ room_checkins|length }} checked in</p>
+            <p class="stat-hint">{{ room.here }} here now · {{ room.checkins|length }} total</p>
             <div class="list-card__body mt-3">
-                {% for checkin in room_checkins %}
+                {% for checkin in room.checkins %}
                     <div class="list-item">
                         <div>
                             <strong>{{ checkin.person.first_name }} {{ checkin.person.last_name }}</strong>
