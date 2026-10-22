@@ -59,6 +59,32 @@ class OrganizationSettingsFormTests(TestCase):
         self.assertIn("twilio_auth_token", form.fields)
         self.assertIn("sms_blackout_start", form.fields)
 
+    def _sid_errors(self, sid):
+        # Only the SID field matters here; other required-field errors are ignored.
+        form = OrganizationSettingsForm(data={"twilio_account_sid": sid})
+        form.is_valid()
+        return form.errors.get("twilio_account_sid")
+
+    def test_api_key_sid_rejected_with_explanation(self):
+        errors = self._sid_errors("SK" + "0" * 32)
+        self.assertIsNotNone(errors)
+        self.assertIn("API Key", errors[0])
+        self.assertIn("Auth Token", errors[0])
+
+    def test_other_non_account_sid_rejected(self):
+        self.assertIsNotNone(self._sid_errors("PN" + "0" * 32))
+
+    def test_account_sid_accepted(self):
+        self.assertIsNone(self._sid_errors("AC" + "0" * 32))
+
+    def test_account_sid_whitespace_stripped(self):
+        form = OrganizationSettingsForm(data={"twilio_account_sid": "  AC" + "0" * 32 + " "})
+        form.is_valid()
+        self.assertEqual(form.cleaned_data["twilio_account_sid"], "AC" + "0" * 32)
+
+    def test_blank_sid_allowed(self):
+        self.assertIsNone(self._sid_errors(""))
+
 
 class ManageRolesViewTests(TestCase):
     def setUp(self):
