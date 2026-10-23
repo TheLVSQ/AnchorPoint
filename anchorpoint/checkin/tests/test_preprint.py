@@ -118,7 +118,7 @@ class PreprintRosterTests(PreprintFixture):
         resp = self.client.get(reverse("checkin:session_preprint", args=[self.session.pk]))
         self.assertNotEqual(resp.status_code, 200)
 
-    @mock.patch("checkin.views.enqueue_checkin_labels", return_value=3)
+    @mock.patch("checkin.services.family_checkin.enqueue_checkin_labels", return_value=3)
     def test_generate_creates_prestaged_checkins_with_shared_code(self, mock_enqueue):
         self._preprint({self.kids[0]: self.room_a, self.kids[1]: self.room_b})
         checkins = CheckIn.objects.filter(session=self.session)
@@ -131,7 +131,7 @@ class PreprintRosterTests(PreprintFixture):
         self.assertEqual(len(codes), 1)              # one shared family code
         mock_enqueue.assert_called_once()            # labels queued once for the family
 
-    @mock.patch("checkin.views.enqueue_checkin_labels", return_value=2)
+    @mock.patch("checkin.services.family_checkin.enqueue_checkin_labels", return_value=2)
     def test_reselecting_staged_reprints_without_creating(self, mock_enqueue):
         self._preprint({self.kids[0]: self.room_a, self.kids[1]: self.room_b})
         mock_enqueue.reset_mock()
@@ -141,7 +141,7 @@ class PreprintRosterTests(PreprintFixture):
         self.assertEqual(CheckIn.objects.filter(session=self.session).count(), 2)
         mock_enqueue.assert_called_once()
 
-    @mock.patch("checkin.views.enqueue_checkin_labels", return_value=1)
+    @mock.patch("checkin.services.family_checkin.enqueue_checkin_labels", return_value=1)
     def test_print_selected_mixes_new_and_reprint(self, mock_enqueue):
         self._preprint({self.kids[0]: self.room_a})  # stage one kid
         mock_enqueue.reset_mock()
@@ -150,7 +150,7 @@ class PreprintRosterTests(PreprintFixture):
         self.assertEqual(CheckIn.objects.filter(session=self.session).count(), 2)
         mock_enqueue.assert_called_once()  # one batch for the family
 
-    @mock.patch("checkin.views.enqueue_checkin_labels", return_value=2)
+    @mock.patch("checkin.services.family_checkin.enqueue_checkin_labels", return_value=2)
     def test_prestaged_not_counted_present(self, _m):
         self._preprint({self.kids[0]: self.room_a, self.kids[1]: self.room_b})
         self.assertEqual(self.session.total_checked_in(), 0)  # none present yet
@@ -177,8 +177,8 @@ class PreprintArrivalTests(PreprintFixture):
         s["kiosk_session_id"] = self.session.pk
         s.save()
 
-    @mock.patch("checkin.views.send_security_code_sms", return_value=0)
-    @mock.patch("checkin.views.enqueue_checkin_labels")
+    @mock.patch("checkin.services.family_checkin.send_security_code_sms", return_value=0)
+    @mock.patch("checkin.services.family_checkin.enqueue_checkin_labels")
     def test_arrival_sets_arrived_without_reprint(self, mock_enqueue, _sms):
         resp = self.client.post(
             reverse("checkin:kiosk_family_select", args=[self.family.pk]),
@@ -193,8 +193,8 @@ class PreprintArrivalTests(PreprintFixture):
         mock_enqueue.assert_not_called()
         self.assertEqual(self.session.total_checked_in(), 2)
 
-    @mock.patch("checkin.views.send_security_code_sms", return_value=0)
-    @mock.patch("checkin.views.enqueue_checkin_labels")
+    @mock.patch("checkin.services.family_checkin.send_security_code_sms", return_value=0)
+    @mock.patch("checkin.services.family_checkin.enqueue_checkin_labels")
     def test_arrival_clears_prior_no_show(self, _enqueue, _sms):
         # A kid marked no-show who then actually arrives must count as present.
         ci = CheckIn.objects.get(session=self.session, person=self.kids[0])
@@ -208,8 +208,8 @@ class PreprintArrivalTests(PreprintFixture):
         self.assertFalse(ci.no_show)
         self.assertIsNotNone(ci.arrived_at)
 
-    @mock.patch("checkin.views.send_security_code_sms", return_value=0)
-    @mock.patch("checkin.views.enqueue_checkin_labels", return_value=1)
+    @mock.patch("checkin.services.family_checkin.send_security_code_sms", return_value=0)
+    @mock.patch("checkin.services.family_checkin.enqueue_checkin_labels", return_value=1)
     def test_walkin_sibling_gets_fresh_code_and_prints(self, mock_enqueue, _sms):
         # A third, not-pre-staged sibling joins at the door.
         walkin = Person.objects.create(first_name="Cy", last_name="Walker",

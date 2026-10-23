@@ -115,8 +115,15 @@ reversible), **Present** (arrived, not checked out), **Checked out**. **Active**
 Change state only through the transitions (`arrive(user)`, `mark_no_show()`, `check_out(user)`,
 on a row or a queryset): each only touches rows in a valid starting state and returns what
 changed. `checked_in_by` is the staff member who confirmed arrival (blank for kiosk self
-check-in). Normal kiosk check-ins are created Present; pre-staged ones arrive with one tap (no
-reprint). Pre-print pre-assigns rooms and shares one pickup code per household.
+check-in).
+
+**Checking a family in** goes through `checkin/services/family_checkin.py`, never the views:
+`check_in_family()` (kiosk: pre-staged arrive with their printed code and no reprint; walk-ins get
+ONE fresh code per submission, never the family's live code; room = chosen or age/grade-matched;
+then labels, one pickup-code text per code, auto-enroll, family-safety alert), `stage_families()`
+(Pre-print: Expected rows with the family's code), `confirm_arrivals()` (manager "mark arrived":
+records staff + safety alert), `print_labels()` (the only way to print; one pickup tag per code).
+Side effects never block check-in. Terms (pickup code, walk-in, pre-staged) are in `GLOSSARY.md`.
 
 ## Scheduled communications & phone-blast audio
 

@@ -68,28 +68,20 @@ def enqueue_checkin_labels(checkins, session, agent=None) -> int:
     if agent is None:
         return 0
 
-    checkins = list(checkins)
-    images = LabelGenerator.build_label_set(checkins, session)
-    if not images:
+    labels = LabelGenerator.build_labels(list(checkins), session)
+    if not labels:
         return 0
 
-    # build_label_set returns one child label per check-in (in order), then a
-    # single pickup tag as the final image.
-    jobs = []
-    for idx, image in enumerate(images):
-        if idx == len(images) - 1:
-            kind, description = "pickup", "Pickup tag"
-        else:
-            person = checkins[idx].person
-            kind, description = "child", f"{person.first_name} {person.last_name}"
-        jobs.append(
-            PrintJob(
-                agent=agent,
-                image_data=_png_bytes(image, agent.label_rotation),
-                kind=kind,
-                description=description,
-            )
+    # Child labels then one pickup tag per pickup code (see build_labels).
+    jobs = [
+        PrintJob(
+            agent=agent,
+            image_data=_png_bytes(image, agent.label_rotation),
+            kind=kind,
+            description=description,
         )
+        for kind, description, image in labels
+    ]
     PrintJob.objects.bulk_create(jobs)
     logger.info("Queued %d label(s) for print agent '%s'", len(jobs), agent.name)
     return len(jobs)
