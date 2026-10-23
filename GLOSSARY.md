@@ -45,3 +45,18 @@ _Avoid_: "checked in" for this (it's ambiguous with the act of checking in).
 Every state question and state change goes through `CheckIn` (`checkin/models.py`):
 `session.checkins.expected()/no_show()/present()/checked_out()/active()/attended()`,
 `.state_counts()`, and the transitions `arrive()`, `mark_no_show()`, `check_out()`.
+
+**Pickup code**: the 4-character code on a check-in's label and on the family's pickup tag; checkout
+matches on it. Unique among active check-ins in a session. A family usually holds one, but can hold
+two (see Walk-in), and then gets one pickup tag per code. _Avoid_: security code (the field name).
+
+**Pre-staged**: a check-in created ahead of time on the Pre-print page (starts Expected). Pre-print is
+staff-only, so it reuses the family's active pickup code to keep one code per family.
+
+**Walk-in**: a check-in made at the kiosk without pre-staging (created Present). Each kiosk submission
+mints a FRESH pickup code shared by the walk-in siblings in it, never the family's existing code: the
+kiosk is self-service, so it must not print or show a live code to whoever is standing there.
+
+Checking a family in, staging families and printing labels all go through
+`checkin/services/family_checkin.py`: `check_in_family()`, `stage_families()`,
+`confirm_arrivals()`, `print_labels()`.

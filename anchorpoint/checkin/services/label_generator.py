@@ -297,20 +297,30 @@ def _make_pickup_tag(checkins, security_code: str, session) -> Image.Image:
 
 class LabelGenerator:
     @staticmethod
-    def build_label_set(checkins, session) -> list:
-        """
-        Returns a list of PIL Images:
-          - One child label per check-in (in order)
-          - One pickup tag (shared security code from the first check-in)
-        Returns [] if checkins is empty.
-        """
-        checkins = list(checkins)
-        if not checkins:
-            return []
+    def build_labels(checkins, session) -> list:
+        """Labels for a check-in batch as (kind, description, image) tuples.
 
-        security_code = checkins[0].security_code
-        images = []
+        Grouped by pickup code: each code's child labels, then that code's pickup
+        tag listing only its children. A batch normally shares one code, but a
+        family can hold two (a pre-printed sibling keeps code A while a kiosk
+        walk-in sibling gets code B); one tag per code keeps every tag honest.
+        """
+        groups = {}
         for checkin in checkins:
-            images.append(_make_child_label(checkin, session))
-        images.append(_make_pickup_tag(checkins, security_code, session))
-        return images
+            groups.setdefault(checkin.security_code, []).append(checkin)
+        labels = []
+        for code, group in groups.items():
+            for checkin in group:
+                person = checkin.person
+                labels.append(("child", f"{person.first_name} {person.last_name}",
+                               _make_child_label(checkin, session)))
+            # Description names the children, never the code: it's sent to (and logged
+            # by) the print agent, and a live pickup code must not surface there.
+            names = ", ".join(c.person.first_name for c in group)
+            labels.append(("pickup", f"Pickup tag: {names}", _make_pickup_tag(group, code, session)))
+        return labels
+
+    @staticmethod
+    def build_label_set(checkins, session) -> list:
+        """Just the images of build_labels(), in print order. Returns [] if empty."""
+        return [image for _kind, _desc, image in LabelGenerator.build_labels(list(checkins), session)]

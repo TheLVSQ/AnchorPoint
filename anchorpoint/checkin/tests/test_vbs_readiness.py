@@ -225,7 +225,7 @@ class PrintPathTests(KioskFixtureMixin, TestCase):
 
     def test_direct_print_skipped_when_agent_queued(self):
         with mock.patch(
-            "checkin.views.enqueue_checkin_labels", return_value=2
+            "checkin.services.family_checkin.enqueue_checkin_labels", return_value=2
         ), mock.patch(
             "checkin.views.PrintService"
         ) as mock_service:
@@ -236,7 +236,7 @@ class PrintPathTests(KioskFixtureMixin, TestCase):
 
     def test_direct_print_attempted_when_no_agent(self):
         with mock.patch(
-            "checkin.views.enqueue_checkin_labels", return_value=0
+            "checkin.services.family_checkin.enqueue_checkin_labels", return_value=0
         ), mock.patch("checkin.views.PrintService") as mock_service:
             mock_service.return_value.print_checkins.return_value = False
             self._check_in_kid()

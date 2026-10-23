@@ -10,7 +10,6 @@ from django.contrib import messages
 from django.core.cache import cache
 from django.utils import timezone
 from django.utils.dateparse import parse_date
-from django.db import IntegrityError, transaction
 from django.db.models import Count, Q
 
 from django.core import signing
@@ -22,7 +21,6 @@ from core.permissions import (
     checkin_admin_required, checkin_team_required, is_checkin_admin,
 )
 from groups.models import GroupMembership
-from households.family_flags import alert_flagged_checkins
 from households.models import Household, HouseholdMember
 from people.models import Person, normalize_phone
 
@@ -34,14 +32,14 @@ from .forms import (
 )
 from .models import (
     CheckIn, CheckInConfiguration, CheckInSession, CheckInWindow,
-    Room, PrinterConfiguration, PrintAgent, generate_unique_security_code,
+    Room, PrinterConfiguration, PrintAgent,
 )
 from .services import PrintService
-from .services.checkin_sms import send_security_code_sms
 from .services.eligibility import get_eligible_members, is_person_eligible, match_room
 from .services.session_manager import get_or_create_session
 from .services.quick_registration import register_new_family
-from .services.print_queue import enqueue_checkin_labels, enqueue_test_label, get_active_agent
+from .services import family_checkin
+from .services.print_queue import enqueue_test_label, get_active_agent
 
 logger = logging.getLogger(__name__)
 
@@ -375,105 +373,21 @@ def kiosk_family_select(request, household_id):
             if not selected:
                 form.add_error(None, "Please select at least one person.")
             else:
-                # Walk-ins get a FRESH code (one per submission, shared by the
-                # siblings checked in together). Reusing the household's active
-                # code would print it on a label for whoever is at the kiosk.
-                # Pre-staged arrivals keep the code already printed on their tag.
-                walkin_code = None
-                checkin_ids = []
-                to_print_ids = []  # walk-ins only; pre-staged were printed ahead
-                for person_id, room_id in selected:
-                    person = Person.objects.get(pk=person_id)
-                    room = Room.objects.get(pk=room_id) if room_id else None
-                    prestaged_checkin = prestaged.get(person_id)
-                    if prestaged_checkin is not None:
-                        checkin = prestaged_checkin
-                        checkin.arrive()  # self check-in: no staff user to record
-                    else:
-                        if walkin_code is None:
-                            walkin_code = generate_unique_security_code(session)
-                        try:
-                            with transaction.atomic():
-                                checkin = CheckIn.objects.create(
-                                    session=session,
-                                    person=person,
-                                    room=room,
-                                    security_code=walkin_code,
-                                    arrived_at=timezone.now(),
-                                )
-                            to_print_ids.append(checkin.pk)
-                        except IntegrityError:
-                            # Raced a concurrent check-in for the same person — use
-                            # the row that won, don't double-create or double-print.
-                            checkin = CheckIn.objects.active().filter(
-                                session=session, person=person,
-                            ).first()
-                            if checkin is None:
-                                raise
-                    checkin_ids.append(checkin.pk)
-
-                # Auto-enroll: add everyone who checked in to the config's group
-                # (e.g. VBS walk-ins land on the next day's pre-print roster).
-                enroll_group = (
-                    session.configuration.auto_enroll_group
-                    if session.configuration else None
+                people = Person.objects.in_bulk([pid for pid, _ in selected])
+                room_by_id = {r.pk: r for r in rooms}
+                result = family_checkin.check_in_family(
+                    session, household,
+                    [(people[pid], room_by_id.get(rid)) for pid, rid in selected],
+                    agent=_kiosk_agent(request),
                 )
-                if enroll_group:
-                    for person_id, _room_id in selected:
-                        GroupMembership.objects.get_or_create(
-                            group=enroll_group, person_id=person_id
-                        )
-
-                request.session["kiosk_checkin_ids"] = checkin_ids
-                request.session["kiosk_print_ids"] = to_print_ids
+                request.session["kiosk_checkin_ids"] = [c.pk for c in result.checkins]
+                request.session["kiosk_print_ids"] = [c.pk for c in result.printed]
                 # Only a code minted by this submission is ever shown on screen.
-                request.session["kiosk_security_code"] = walkin_code or ""
-                # Queue labels only for walk-ins / re-prints. No-op if no agent
-                # is paired; never block check-in on a printing problem.
-                queued = 0
-                try:
-                    ordered = sorted(
-                        CheckIn.objects.filter(pk__in=to_print_ids)
-                        .select_related("person", "room"),
-                        key=lambda c: to_print_ids.index(c.pk),
-                    )
-                    if ordered:
-                        queued = enqueue_checkin_labels(
-                            ordered, session, agent=_kiosk_agent(request)
-                        )
-                except Exception:
-                    logger.exception("Failed to queue print jobs for check-in")
-                # Suppress the confirmation page's browser-print fallback when
-                # labels were queued to the agent OR were already pre-printed
-                # (pure arrival: nothing new to print).
-                prestaged_arrivals = len(checkin_ids) - len(to_print_ids)
-                request.session["kiosk_labels_queued"] = queued > 0 or prestaged_arrivals > 0
-
-                # Text the pickup code to opted-in household adults. Best-effort:
-                # a Twilio problem must never block the check-in line.
-                # One text per code: walk-ins share the fresh code, pre-staged
-                # arrivals keep theirs.
-                sms_sent = 0
-                try:
-                    by_code = {}
-                    for c in CheckIn.objects.filter(pk__in=checkin_ids).select_related("person"):
-                        by_code.setdefault(c.security_code, []).append(c)
-                    for code, group in by_code.items():
-                        sms_sent += send_security_code_sms(household, group, code, session)
-                except Exception:
-                    logger.exception("Failed to send check-in code SMS")
-                request.session["kiosk_sms_sent"] = sms_sent > 0
-
-                # Family-safety: a child with an open "linked to another family"
-                # flag was just checked in — alert designated staff (email + SMS).
-                # Never blocks the check-in.
-                try:
-                    alert_flagged_checkins(
-                        CheckIn.objects.filter(pk__in=checkin_ids).select_related("room"),
-                        session,
-                    )
-                except Exception:
-                    logger.exception("Family-safety kiosk alert failed")
+                request.session["kiosk_security_code"] = result.new_code
+                # Skip the confirmation page's browser-print fallback unless walk-in
+                # labels exist that no print agent took.
+                request.session["kiosk_labels_queued"] = not result.needs_browser_print
+                request.session["kiosk_sms_sent"] = result.texted
                 return redirect("checkin:kiosk_confirmation")
     else:
         form = FamilyMemberSelectForm(
@@ -971,21 +885,6 @@ def _person_household(person):
     return person.primary_household
 
 
-def _family_code(session, household):
-    """Reuse an active code already assigned to this household's members in the
-    session, so a family keeps ONE pickup code; else mint a fresh unique one."""
-    if household is not None:
-        existing = (
-            session.checkins.active()
-            .filter(person__households=household)
-            .exclude(security_code="")
-            .first()
-        )
-        if existing:
-            return existing.security_code
-    return generate_unique_security_code(session)
-
-
 @checkin_admin_required
 def session_preprint(request, session_id):
     """Pre-print labels and pre-assign rooms before an event.
@@ -1019,9 +918,14 @@ def session_preprint(request, session_id):
     existing = {c.person_id: c for c in session.checkins.select_related("room").all()}
 
     if request.method == "POST":
-        created, reprinted, fam_count = _preprint_generate(
-            request, session, candidates, existing, rooms
-        )
+        room_by_id = {str(r.pk): r for r in rooms}
+        selections = [
+            (person, room_by_id.get(request.POST.get(f"room_{person.pk}") or ""))
+            for person in candidates
+            if request.POST.get(f"select_{person.pk}")
+        ]
+        staging = family_checkin.stage_families(session, selections)
+        created, reprinted, fam_count = staging.created, staging.reprinted, staging.families
         total = created + reprinted
         if total:
             messages.success(
@@ -1067,59 +971,6 @@ def session_preprint(request, session_id):
     })
 
 
-def _preprint_generate(request, session, candidates, existing, rooms=None):
-    """Queue labels for the selected people: pre-stage + print those not yet
-    staged, and re-queue (reprint) the label for any selected person who is
-    already staged/present. Grouped by household so a family keeps one pickup
-    code. Returns (created, reprinted, households_touched). Rooms not chosen in
-    the form fall back to the child's age/grade-matched room."""
-    from collections import defaultdict
-
-    rooms = rooms if rooms is not None else list(session.rooms.all())
-
-    buckets = defaultdict(lambda: {"new": [], "reprint": []})
-    for person in candidates:
-        if not request.POST.get(f"select_{person.pk}"):
-            continue
-        household = _person_household(person)
-        key = household.pk if household else f"solo-{person.pk}"
-        current = existing.get(person.pk)
-        if current and current.state != CheckIn.State.CHECKED_OUT:
-            buckets[key]["reprint"].append(current)  # already staged → reprint (keeps its code)
-        else:
-            room_id = request.POST.get(f"room_{person.pk}") or None
-            buckets[key]["new"].append((person, household, room_id))
-
-    created = reprinted = fam_count = 0
-    for _, bucket in buckets.items():
-        if bucket["new"]:
-            household = bucket["new"][0][1]
-        else:
-            household = _person_household(bucket["reprint"][0].person)
-        code = _family_code(session, household)
-        labels = []
-        for person, _hh, room_id in bucket["new"]:
-            room = Room.objects.filter(pk=room_id).first() if room_id else None
-            if room is None:
-                room = match_room(person, rooms)  # auto-route by age/grade
-            checkin = CheckIn.objects.create(
-                session=session, person=person, room=room,
-                security_code=code, arrived_at=None,
-            )
-            labels.append(checkin)
-            created += 1
-        for checkin in bucket["reprint"]:
-            labels.append(checkin)
-            reprinted += 1
-        if labels:
-            fam_count += 1
-            try:
-                enqueue_checkin_labels(labels, session)
-            except Exception:
-                logger.exception("Failed to queue pre-print labels")
-    return created, reprinted, fam_count
-
-
 @checkin_admin_required
 @require_POST
 def session_preprint_reprint(request, session_id, household_id):
@@ -1132,11 +983,9 @@ def session_preprint_reprint(request, session_id, household_id):
         .distinct()
     )
     if checkins:
-        try:
-            enqueue_checkin_labels(checkins, session)
+        if family_checkin.print_labels(checkins, session):
             messages.success(request, f"Re-queued {len(checkins)} label(s).")
-        except Exception:
-            logger.exception("Failed to re-queue pre-print labels")
+        else:
             messages.error(request, "Could not queue labels — check the print agent.")
     else:
         messages.info(request, "No active pre-staged check-ins for that family.")
@@ -1531,7 +1380,7 @@ def checkin_bulk_action(request, session_id):
     selected = session.checkins.filter(pk__in=ids)
     if action == "arrive":
         # Confirm attendance (also flips a mistaken no-show back to present).
-        n = selected.arrive(user=request.user)
+        n = family_checkin.confirm_arrivals(session, selected, request.user)
         messages.success(request, f"Marked {n} child{'ren' if n != 1 else ''} as arrived.")
     elif action == "noshow":
         n = selected.mark_no_show()  # never undoes a real arrival
@@ -1549,7 +1398,7 @@ def checkin_reprint(request, session_id, checkin_id):
     checkin = get_object_or_404(
         session.checkins.select_related("person"), pk=checkin_id
     )
-    if enqueue_checkin_labels([checkin], session):
+    if family_checkin.print_labels([checkin], session):
         messages.success(request, f"Reprinting {checkin.person.first_name}'s label.")
     else:
         messages.error(request, "No print agent is online — can't reprint right now.")

@@ -58,8 +58,8 @@ class KioskFixture(PreprintFixture):
         )
 
 
-@mock.patch("checkin.views.send_security_code_sms", return_value=0)
-@mock.patch("checkin.views.enqueue_checkin_labels", return_value=0)
+@mock.patch("checkin.services.family_checkin.send_security_code_sms", return_value=0)
+@mock.patch("checkin.services.family_checkin.enqueue_checkin_labels", return_value=0)
 class KioskCodeLeakTests(KioskFixture):
     def test_present_child_cannot_be_rechecked_in(self, mock_enqueue, _sms):
         # Forged POST for a child who is already here: no reprint, no reveal.
@@ -272,8 +272,8 @@ class CheckoutToggleTests(KioskFixture):
         self.assertEqual(self.client.get(self.lookup_url).status_code, 200)
 
     def test_pickup_code_still_issued_when_checkout_off(self):
-        with mock.patch("checkin.views.enqueue_checkin_labels", return_value=1), \
-                mock.patch("checkin.views.send_security_code_sms", return_value=0):
+        with mock.patch("checkin.services.family_checkin.enqueue_checkin_labels", return_value=1), \
+                mock.patch("checkin.services.family_checkin.send_security_code_sms", return_value=0):
             self._select(self.ben)
         ben_ci = CheckIn.objects.get(session=self.session, person=self.ben)
         self.assertTrue(ben_ci.security_code)
