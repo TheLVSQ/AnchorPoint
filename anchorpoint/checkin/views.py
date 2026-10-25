@@ -30,13 +30,12 @@ from .forms import (
     CheckInConfigurationForm, CheckInWindowFormSet, CheckInSessionForm,
     FamilyMemberSelectForm, KioskLookupForm, KioskPinForm,
     QuickRegistrationForm, QuickRegistrationChildForm,
-    RoomForm, PrinterConfigForm, SecurityCodeLookupForm,
+    RoomForm, SecurityCodeLookupForm,
 )
 from .models import (
     CheckIn, CheckInConfiguration, CheckInSession, CheckInWindow,
-    Room, PrinterConfiguration, PrintAgent,
+    Room, PrintAgent,
 )
-from .services import PrintService
 from .services.eligibility import get_eligible_members, is_person_eligible, match_room
 from .services.session_manager import get_or_create_session
 from .services.quick_registration import register_new_family
@@ -492,12 +491,9 @@ def kiosk_confirmation(request):
     org = OrganizationSettings.load()
     session = _get_active_session(request)
 
-    if labels_queued:
-        # The print agent already has these labels — direct-printing too would
-        # produce duplicates when both an agent and a printer are configured.
-        printer_ok = True
-    else:
-        printer_ok = PrintService().print_checkins(print_checkins, session) if print_checkins else True
+    # Labels went to a print agent, or there's nothing new to print; otherwise the
+    # page falls back to browser printing.
+    printer_ok = labels_queued or not print_checkins
 
     return render(request, "checkin/kiosk/confirmation.html", {
         "checkins": checkins,
@@ -1106,85 +1102,6 @@ def room_edit(request, room_id):
             "title": "Edit Room",
         },
     )
-
-
-@checkin_admin_required
-def printer_list(request):
-    """List configured printers."""
-    printers = PrinterConfiguration.objects.all()
-
-    return render(
-        request,
-        "checkin/printer_list.html",
-        {
-            "printers": printers,
-        },
-    )
-
-
-@checkin_admin_required
-def printer_create(request):
-    """Configure a new printer."""
-    if request.method == "POST":
-        form = PrinterConfigForm(request.POST)
-        if form.is_valid():
-            form.save()
-            messages.success(request, "Printer configured.")
-            return redirect("checkin:printer_list")
-    else:
-        form = PrinterConfigForm()
-
-    return render(
-        request,
-        "checkin/printer_form.html",
-        {
-            "form": form,
-            "title": "Configure Printer",
-        },
-    )
-
-
-@checkin_admin_required
-def printer_edit(request, printer_id):
-    """Edit printer configuration."""
-    printer = get_object_or_404(PrinterConfiguration, pk=printer_id)
-
-    if request.method == "POST":
-        form = PrinterConfigForm(request.POST, instance=printer)
-        if form.is_valid():
-            form.save()
-            messages.success(request, "Printer configuration updated.")
-            return redirect("checkin:printer_list")
-    else:
-        form = PrinterConfigForm(instance=printer)
-
-    return render(
-        request,
-        "checkin/printer_form.html",
-        {
-            "form": form,
-            "printer": printer,
-            "title": "Edit Printer",
-        },
-    )
-
-
-@checkin_admin_required
-@require_POST
-def printer_test(request, printer_id):
-    """Test print to a configured printer."""
-    printer = get_object_or_404(PrinterConfiguration, pk=printer_id)
-
-    try:
-        service = PrintService(printer)
-        if service.test_printer():
-            messages.success(request, f"Test print sent to {printer.name}.")
-        else:
-            messages.error(request, f"Failed to print to {printer.name}.")
-    except Exception as e:
-        messages.error(request, f"Printer error: {e}")
-
-    return redirect("checkin:printer_list")
 
 
 # =============================================================================

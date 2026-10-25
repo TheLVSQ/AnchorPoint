@@ -4,7 +4,7 @@ from django.forms import inlineformset_factory
 
 from people.models import Person
 
-from .models import CheckInConfiguration, CheckInSession, CheckInWindow, Room, PrinterConfiguration
+from .models import CheckInConfiguration, CheckInSession, CheckInWindow, Room
 
 
 class CheckInConfigurationForm(forms.ModelForm):
@@ -193,12 +193,6 @@ class RoomForm(forms.ModelForm):
             "min_grade": "Auto-routing: a child whose age OR grade fits this room "
                          "is sent here at check-in. Leave all blank for no auto-routing.",
         }
-
-
-class PrinterConfigForm(forms.ModelForm):
-    class Meta:
-        model = PrinterConfiguration
-        fields = "__all__"
 
 
 class SecurityCodeLookupForm(forms.Form):
