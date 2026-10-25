@@ -98,7 +98,7 @@ Key environment variables (see `.env.production.example`):
 - `python manage.py rotate_passwords <username...>` (or `--all-staff`) - Reset the given users' passwords to fresh random values and print them once. Use after a credential exposure or lockout.
 - `python manage.py setup_beta_users` - (Legacy) Creates admin + 2 staff testers with random passwords. Superseded by `create_admin` for new deployments.
 - `python manage.py trigger_site_rebuild` - Rebuild the church website if the public events feed changed (run by the cron sidecar; no-op without `WEBSITE_DEPLOY_HOOK_URL`). See *Church website feed* below.
-- `python manage.py import_signups <csv|-> [--commit] [--group "VBS 2026"]` - Bulk-import families (one CSV row per child; see `docs/signup-import-template.csv`). Dry-run by default; matches existing people via the events-app matching service so re-imports never duplicate. `--group` enrolls imported children for check-in eligibility filtering.
+- `python manage.py import_signups <csv|-> [--commit] [--group "VBS 2026"]` - Bulk-import families (one CSV row per child; see `docs/signup-import-template.csv`). Dry-run by default; matches existing people via `people/services/identity.py` (parents by name + email/phone, kids by name within the parent's family) so re-imports never duplicate. `--group` enrolls imported children for check-in eligibility filtering.
 
 ## Known Limitations
 

@@ -91,6 +91,17 @@ def _mark_attendee_matched(
     attendee.save(update_fields=update_fields)
 
 
+def _looks_minor(attendee):
+    """The is_minor box is self-reported, so also trust a birthdate under 18 or a grade."""
+    if attendee.is_minor or attendee.grade:
+        return True
+    bd = attendee.birthdate
+    if bd:
+        today = timezone.localdate()
+        return (today.year - bd.year - ((today.month, today.day) < (bd.month, bd.day))) < 18
+    return False
+
+
 @transaction.atomic
 def match_registration_attendees(registration: EventRegistration):
     contact_person = _ensure_person(
@@ -114,6 +125,10 @@ def match_registration_attendees(registration: EventRegistration):
             ),
             family=family,
         )
+        if match and match.person == contact_person and _looks_minor(attendee):
+            # A child is never the adult who registered them, even with the same name
+            # (John Smith registering John Smith Jr. with the family email): staff decide.
+            match = None
         if not match:
             attendee.match_status = EventRegistrationAttendee.MATCH_STATUS_PENDING
             attendee.save(update_fields=["match_status", "updated_at"])

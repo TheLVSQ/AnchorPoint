@@ -186,6 +186,45 @@ class RegistrationMatchingTests(TestCase):
         self.assertEqual(a.person, self.mom)
         self.assertEqual(a.match_notes, "Auto-matched by email")
 
+    def _john_and_family(self):
+        john = _person("John", "Smith", email="smith@example.com", phone="+15550109999",
+                       allergies="Penicillin")  # no birthdate on record
+        family = Household.objects.create(name="Smith Family")
+        HouseholdMember.objects.create(household=family, person=john)
+        return john
+
+    def _register_as_john(self, **attendee):
+        reg = EventRegistration.objects.create(
+            event=self.event, first_name="John", last_name="Smith",
+            email="smith@example.com", phone="555-010-9999",
+        )
+        a = EventRegistrationAttendee.objects.create(registration=reg, event=self.event, **attendee)
+        with mock.patch("events.services.record_registration_conflict"):
+            match_registration_attendees(reg)
+        a.refresh_from_db()
+        return a
+
+    def test_same_name_son_with_family_email_is_not_the_father(self):
+        john = self._john_and_family()
+        a = self._register_as_john(first_name="John", last_name="Smith", is_minor=True,
+                                   email="smith@example.com", birthdate=date(2016, 3, 3),
+                                   allergies="Peanuts")
+        self.assertEqual(a.match_status, EventRegistrationAttendee.MATCH_STATUS_PENDING)
+        john.refresh_from_db()
+        self.assertEqual((john.birthdate, john.allergies), (None, "Penicillin"))
+
+    def test_same_name_son_by_name_only_is_not_the_father(self):
+        john = self._john_and_family()
+        a = self._register_as_john(first_name="John", last_name="Smith", grade="3")
+        self.assertEqual(a.match_status, EventRegistrationAttendee.MATCH_STATUS_PENDING)
+        john.refresh_from_db()
+        self.assertEqual(john.grade, None)
+
+    def test_adult_registrant_listed_as_attendee_still_matches_himself(self):
+        john = self._john_and_family()
+        a = self._register_as_john(first_name="John", last_name="Smith", email="smith@example.com")
+        self.assertEqual(a.person, john)
+
     def test_known_child_matched_inside_registrants_family(self):
         family = Household.objects.create(name="Walker Family")
         ava = _person("Ava")
