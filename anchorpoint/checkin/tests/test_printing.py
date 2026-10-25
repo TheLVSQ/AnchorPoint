@@ -84,7 +84,3 @@ class LabelGeneratorTests(DjangoSimpleTestCase):
     def test_no_session_does_not_raise(self):
         images = LabelGenerator.build_label_set([_make_checkin_mock()], None)
         self.assertEqual(len(images), 2)
-
-
-# =============================================================================
-# =============================================================================
