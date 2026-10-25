@@ -31,6 +31,7 @@ from .models import Event, EventRegistration, EventRegistrationAttendee
 from .services import (
     create_person_from_attendee,
     ensure_event_group,
+    find_guardian,
     link_guardian_household,
     manually_assign_attendee,
     match_registration_attendees,
@@ -311,19 +312,6 @@ def public_event_detail(request, slug):
     )
 
 
-def _find_guardian_person(attendee):
-    potential_emails = [
-        attendee.parent_guardian_email,
-        getattr(attendee.registration, "email", None),
-    ]
-    for email in potential_emails:
-        if email:
-            guardian = Person.objects.filter(email__iexact=email).first()
-            if guardian:
-                return guardian
-    return None
-
-
 @staff_required
 def event_registration_queue(request):
     attendees = (
@@ -348,7 +336,7 @@ def event_registration_queue(request):
                     notes=notes,
                 )
                 if attendee.is_minor:
-                    guardian = _find_guardian_person(attendee)
+                    guardian = find_guardian(attendee)
                     if guardian:
                         link_guardian_household(guardian, person)
                 messages.success(
@@ -364,7 +352,7 @@ def event_registration_queue(request):
                     notes=notes,
                 )
                 if attendee.is_minor:
-                    guardian = _find_guardian_person(attendee)
+                    guardian = find_guardian(attendee)
                     if guardian:
                         link_guardian_household(guardian, person)
                 messages.success(

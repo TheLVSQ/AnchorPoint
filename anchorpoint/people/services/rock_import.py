@@ -16,9 +16,9 @@ from datetime import datetime
 
 from django.db import transaction
 
-from events.services import _match_person
 from households.models import Household, HouseholdMember
 from people.models import Person
+from people.services import identity
 
 REQUIRED_HEADERS = {"Id", "Last Name", "Nick Name", "Primary Family Id", "Record Type"}
 DATE_FORMATS = ("%m/%d/%Y", "%Y-%m-%d", "%m/%d/%y")
@@ -38,14 +38,6 @@ STATUS_MAP = {
 SKIP_RECORD_TYPES = {"restuser", "business"}
 # Rock ships these stock records; never import them.
 STOCK_KEYS = {("admin", "admin"), ("giver", "anonymous"), ("presence", "presence")}
-
-# Person fields we update on an existing match only when they're currently blank.
-_FILLABLE = [
-    "email", "phone", "gender", "birthdate", "marital_status", "allergies",
-    "custody_notes", "security_notes", "notes", "address_line1", "address_line2",
-    "city", "state", "postal_code",
-]
-
 
 class RockImportError(Exception):
     """Aborts the whole import (bad/missing headers, empty file)."""
@@ -222,23 +214,22 @@ def run_rock_import(rows, *, commit=False) -> RockResult:
             for row in members:
                 ext = f"rock:{_g(row, 'Id')}" if _g(row, "Id") else ""
                 fields = _person_fields(row)
-                person = Person.objects.filter(external_id=ext).first() if ext else None
-                if person is None:
-                    # Merge with an existing record (beta / earlier VBS import)
-                    # by email, name+birthdate, or phone — don't duplicate it.
-                    person = _match_person(
-                        fields["email"], fields["first_name"],
-                        fields["last_name"], fields["birthdate"], fields["phone"],
-                    )
+                # Rock id first, then merge with an existing record (beta / earlier
+                # VBS import) by the identity rules; Rock families share phones and
+                # emails, so those only count alongside a matching first name.
+                match = identity.find_person(identity.Incoming(
+                    fields["first_name"], fields["last_name"], email=fields["email"] or "",
+                    phone=fields["phone"] or "", birthdate=fields["birthdate"], external_id=ext,
+                ))
+                person = match.person if match else None
                 if person:
                     if ext and not person.external_id:
                         person.external_id = ext  # claim it for future re-runs
-                    for f in _FILLABLE:
-                        if fields.get(f) and not getattr(person, f):
-                            setattr(person, f, fields[f])
-                    if fields["custody_flag"] and not person.custody_flag:
-                        person.custody_flag = True
-                    person.save()
+                        person.save(update_fields=["external_id"])
+                    identity.absorb(person, {
+                        f: v for f, v in fields.items()
+                        if f in identity.FILL_FIELDS + identity.APPEND_FIELDS + ["custody_flag"]
+                    })
                     stats["people_matched"] += 1
                 else:
                     person = Person.objects.create(external_id=ext, **fields)

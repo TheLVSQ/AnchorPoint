@@ -43,14 +43,18 @@ Centralized decorators for consistent authorization:
 
 Role hierarchy: Admin > Staff > Volunteer Admin > Volunteer
 
-### Person Matching (`events/services.py`)
+### Person identity (`people/services/identity.py`)
 
-When registrations come in, the system attempts to match attendees to existing Person records:
-1. Email match (case-insensitive)
-2. Name + birthdate match
-3. Normalized phone match (uses indexed `normalized_phone` field)
-
-Unmatched attendees go to a queue for manual review.
+Every intake path (public registration, staff match queue, signup + Rock imports, kiosk
+add-child) asks `identity.find_person(Incoming(...), family=...)` "is this someone we have?".
+Order: external id → email → name + birthdate → phone → same name inside `family`. Every step
+after external id **requires the first name to agree** (families share emails and phones); a
+different birthdate rules a candidate out; two or more candidates = no match (staff queue).
+Phones compare on the last 10 digits (`identity.same_phone`). Matched data goes in through
+`identity.absorb()`: blank fields filled, safety text (allergies, custody, pickup, notes)
+added to, never dropped. Merge uses the same rule. Unmatched attendees go to the manual queue;
+auto-matches record why in `match_notes`. Kiosk quick-register never matches (self-service).
+People → Duplicates shows the nightly cleanup's duplicate pairs (read-only; admins merge).
 
 ### Phone Number Normalization (`people/models.py`)
 

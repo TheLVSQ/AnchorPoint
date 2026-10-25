@@ -23,6 +23,7 @@ from core.permissions import (
 from groups.models import GroupMembership
 from households.models import Household, HouseholdMember
 from people.models import Person, normalize_phone
+from people.services import identity
 
 from .forms import (
     CheckInConfigurationForm, CheckInWindowFormSet, CheckInSessionForm,
@@ -466,10 +467,10 @@ def kiosk_family_add_child(request, household_id):
     # Birthdate is optional; <input type="date"> posts ISO (YYYY-MM-DD).
     birthdate = parse_date((request.POST.get("birthdate") or "").strip())
 
-    # Reuse an existing same-name member instead of duplicating; else create.
-    child = household.members.filter(
-        first_name__iexact=first, last_name__iexact=last
-    ).first()
+    # Reuse an existing same-name member of this family instead of duplicating;
+    # else create. (Kiosk: only ever matches within the family being viewed.)
+    match = identity.find_person(identity.Incoming(first, last), family=household)
+    child = match.person if match and match.matched_by == "family" else None
     if child is None:
         child = Person.objects.create(
             first_name=first, last_name=last, grade=grade or None,

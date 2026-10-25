@@ -109,14 +109,15 @@ class ImportSignupsTests(TestCase):
         existing.refresh_from_db()
         self.assertEqual(existing.allergies, "Peanuts")  # filled (was empty)
 
-    def test_existing_child_data_never_overwritten(self):
+    def test_existing_child_allergies_kept_and_new_ones_added(self):
+        # Never overwritten, never dropped: a second allergy is added to the first.
         existing = Person.objects.create(
             first_name="Emma", last_name="Smith",
             birthdate=date(2019, 4, 12), allergies="Bees",
         )
         _run(self._csv(_family_rows()), "--commit")
         existing.refresh_from_db()
-        self.assertEqual(existing.allergies, "Bees")
+        self.assertEqual(existing.allergies, "Bees\nPeanuts")
 
     def test_dry_run_writes_nothing(self):
         out = _run(self._csv(_family_rows()))
