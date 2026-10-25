@@ -860,11 +860,6 @@ def session_list(request):
     )
 
 
-def _person_household(person):
-    """The household to group a person under for pre-print (deterministic)."""
-    return person.primary_household
-
-
 @checkin_admin_required
 def session_preprint(request, session_id):
     """Pre-print labels and pre-assign rooms before an event.
@@ -921,7 +916,7 @@ def session_preprint(request, session_id):
     # Build household-grouped rows for display.
     groups = {}
     for person in candidates:
-        household = _person_household(person)
+        household = person.primary_household
         key = household.pk if household else f"solo-{person.pk}"
         label = household.name if household else f"{person.first_name} {person.last_name} (no family)"
         groups.setdefault(key, {

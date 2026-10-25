@@ -40,7 +40,8 @@ def _nav(request):
     if path == "/":
         active = "dashboard"
     else:
-        active = next((key for prefix, key in _NAV_SECTIONS if path.startswith(prefix)), "")
+        matches = [(len(prefix), key) for prefix, key in _NAV_SECTIONS if path.startswith(prefix)]
+        active = max(matches)[1] if matches else ""  # longest prefix, whatever the list order
     if not user or not user.is_authenticated:
         return {"active": active}
     return {

@@ -8,7 +8,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 from messaging.models import Delivery
 
-from core.permissions import staff_or_admin_required, staff_required
+from core.permissions import staff_required
 from households.forms import (
     HouseholdMembershipForm,
     HouseholdQuickCreateForm,
@@ -246,7 +246,7 @@ def signup_import(request):
     })
 
 
-@staff_or_admin_required
+@staff_required
 def rock_import_view(request):
     """Migrate another CMS's person-export CSV: upload → dry-run preview → commit.
 
