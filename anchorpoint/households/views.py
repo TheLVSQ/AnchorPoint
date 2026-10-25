@@ -13,7 +13,7 @@ from people.services.merge import MergeBlocked, merge_households, merge_persons
 
 from .forms import HouseholdForm, HouseholdNewPersonForm
 from . import family_flags as flags_service
-from . import hygiene
+from . import hygiene, membership
 from .models import CleanupFinding, FamilyConflictFlag, Household, HouseholdMember
 
 logger = logging.getLogger(__name__)
@@ -67,7 +67,7 @@ def _family_detail_context(request, household, new_person_form=None):
         "candidates": candidates,
         "relationship_choices": HouseholdMember.RelationshipType.choices,
         "new_person_form": new_person_form or HouseholdNewPersonForm(),
-        "family_surname": _household_surname(household),
+        "family_surname": membership.family_surname(household),
     }
 
 
@@ -117,7 +117,7 @@ def family_delete(request, pk):
         action = request.POST.get("action", "")
 
         if action == "move":
-            membership = get_object_or_404(
+            member = get_object_or_404(
                 HouseholdMember, pk=request.POST.get("member_pk", ""), household=household
             )
             target_id = request.POST.get("target_household", "")
@@ -129,24 +129,16 @@ def family_delete(request, pk):
             if target is None:
                 messages.error(request, "Choose a family to move them to.")
             else:
-                person = membership.person
-                HouseholdMember.objects.get_or_create(
-                    household=target,
-                    person=person,
-                    defaults={"relationship_type": membership.relationship_type},
-                )
-                membership.delete()
-                if household.primary_adult_id == person.pk:
-                    household.primary_adult = None
-                    household.save(update_fields=["primary_adult"])
+                person = member.person
+                membership.move_member(person, household, target)
                 messages.success(request, f"{person} moved to {target.name}.")
             return redirect("households:family_delete", pk=pk)
 
         if action == "delete_person":
-            membership = get_object_or_404(
+            member = get_object_or_404(
                 HouseholdMember, pk=request.POST.get("member_pk", ""), household=household
             )
-            person = membership.person
+            person = member.person
             name = str(person)
             # Person.delete() cascades to their household memberships, check-ins,
             # group memberships and comms logs; primary_adult FK is SET_NULL.
@@ -181,24 +173,11 @@ def family_delete(request, pk):
 
 
 def _limit_primary_adult_choices(form, household):
-    """Primary adult must be one of the family's current members."""
+    """Primary adult must be an adult member of the family (households.membership)."""
     form.fields["primary_adult"].queryset = Person.objects.filter(
-        household_memberships__household=household
+        household_memberships__household=household,
+        household_memberships__relationship_type=HouseholdMember.RelationshipType.ADULT,
     )
-
-
-def _household_surname(household):
-    """Best-guess family surname, for defaulting a new member's last name."""
-    if household.primary_adult and household.primary_adult.last_name:
-        return household.primary_adult.last_name
-    member = household.memberships.select_related("person").first()
-    if member and member.person.last_name:
-        return member.person.last_name
-    name = household.name or ""
-    for suffix in (" Family", " Household"):
-        if name.endswith(suffix):
-            return name[: -len(suffix)].strip()
-    return name.strip()
 
 
 @staff_required
@@ -217,12 +196,9 @@ def family_member_create(request, pk):
         )
     person = form.save(commit=False)
     if not person.last_name:
-        person.last_name = _household_surname(household)
+        person.last_name = membership.family_surname(household)
     person.save()
-    HouseholdMember.objects.create(
-        household=household, person=person,
-        relationship_type=form.cleaned_data["relationship_type"],
-    )
+    membership.add_member(household, person, form.cleaned_data["relationship_type"])
     messages.success(request, f"{person} created and added to {household.name}.")
     return redirect("households:family_detail", pk=pk)
 
@@ -241,12 +217,7 @@ def family_member_add(request, pk):
         messages.error(request, "Pick a person to add.")
         return redirect("households:family_detail", pk=pk)
 
-    _, created = HouseholdMember.objects.get_or_create(
-        household=household,
-        person=person,
-        defaults={"relationship_type": relationship},
-    )
-    if created:
+    if membership.add_member(household, person, relationship):
         messages.success(request, f"{person} added to {household.name}.")
     else:
         messages.info(request, f"{person} is already in {household.name}.")
@@ -256,13 +227,9 @@ def family_member_add(request, pk):
 @staff_required
 @require_POST
 def family_member_remove(request, pk, member_pk):
-    membership = get_object_or_404(HouseholdMember, pk=member_pk, household_id=pk)
-    person = membership.person
-    household = membership.household
-    membership.delete()
-    if household.primary_adult_id == person.pk:
-        household.primary_adult = None
-        household.save(update_fields=["primary_adult"])
+    member = get_object_or_404(HouseholdMember, pk=member_pk, household_id=pk)
+    person, household = member.person, member.household
+    membership.remove_member(household, person)
     messages.success(request, f"{person} removed from {household.name}.")
     return redirect("households:family_detail", pk=pk)
 
@@ -270,14 +237,14 @@ def family_member_remove(request, pk, member_pk):
 @staff_required
 @require_POST
 def family_member_role(request, pk, member_pk):
-    membership = get_object_or_404(HouseholdMember, pk=member_pk, household_id=pk)
+    member = get_object_or_404(HouseholdMember, pk=member_pk, household_id=pk)
     relationship = request.POST.get("relationship_type", "")
     if relationship in HouseholdMember.RelationshipType.values:
-        membership.relationship_type = relationship
-        membership.save(update_fields=["relationship_type"])
+        membership.set_role(member.household, member.person, relationship)
+        member.refresh_from_db()
         messages.success(
             request,
-            f"{membership.person} is now {membership.get_relationship_type_display()}.",
+            f"{member.person} is now {member.get_relationship_type_display()}.",
         )
     else:
         messages.error(request, "Pick a valid relationship.")
@@ -296,11 +263,11 @@ def family_set_primary(request, pk):
         if person_id.isdigit()
         else None
     )
-    if member is None:
-        messages.error(request, "Primary adult must be a member of the family.")
+    try:
+        membership.set_primary(household, member.person if member else None)
+    except membership.MembershipError as exc:
+        messages.error(request, str(exc))
     else:
-        household.primary_adult = member.person
-        household.save(update_fields=["primary_adult"])
         messages.success(request, f"{member.person} is now the primary adult.")
     return redirect("households:family_detail", pk=pk)
 

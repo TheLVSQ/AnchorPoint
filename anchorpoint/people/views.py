@@ -1,7 +1,7 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
-from django.db import IntegrityError, transaction
+from django.db import transaction
 from django.db.models import Count, Q
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -13,7 +13,7 @@ from households.forms import (
     HouseholdMembershipForm,
     HouseholdQuickCreateForm,
 )
-from households import hygiene
+from households import hygiene, membership
 from households.models import CleanupFinding, Household, HouseholdMember
 from .models import Person
 from .forms import PersonForm, RockImportForm, SignupImportForm
@@ -160,26 +160,17 @@ def people_add(request):
                 person = form.save()
 
                 if household_action == "existing":
-                    HouseholdMember.objects.create(
-                        household=household,
-                        person=person,
-                        relationship_type=relationship_type,
-                    )
+                    membership.add_member(household, person, relationship_type)
                     messages.success(
                         request, f"Person added and linked to {household.name}."
                     )
                 elif household_action == "new":
-                    household_name = request.POST.get("new_household_name", "").strip()
-                    if not household_name:
-                        household_name = f"{person.last_name} Family"
-                    household = Household.objects.create(
-                        name=household_name, primary_adult=person
+                    household = membership.create_family(
+                        name=request.POST.get("new_household_name", "")
+                        or f"{person.last_name} Family",
                     )
-                    HouseholdMember.objects.create(
-                        household=household,
-                        person=person,
-                        relationship_type=relationship_type,
-                    )
+                    # Primary adult only if they joined as an adult (membership rule).
+                    membership.add_member(household, person, relationship_type)
                     messages.success(
                         request,
                         f"Person added and {household.name} household created.",
@@ -452,16 +443,11 @@ def people_household_add(request, pk):
         if form.is_valid():
             household = form.cleaned_data["household"]
             relationship_type = form.cleaned_data["relationship_type"]
-            try:
-                HouseholdMember.objects.create(
-                    household=household,
-                    person=person,
-                    relationship_type=relationship_type,
-                )
+            if membership.add_member(household, person, relationship_type):
                 messages.success(
                     request, f"{person} was linked to {household.name}."
                 )
-            except IntegrityError:
+            else:
                 messages.warning(
                     request,
                     f"{person} is already part of {household.name}.",
@@ -478,12 +464,10 @@ def people_household_create(request, pk):
         form = HouseholdQuickCreateForm(request.POST)
         if form.is_valid():
             relationship_type = form.cleaned_data["relationship_type"]
-            household = form.save()
-            HouseholdMember.objects.create(
-                household=household,
-                person=person,
-                relationship_type=relationship_type,
-            )
+            fields = {k: v for k, v in form.cleaned_data.items()
+                      if k not in ("relationship_type", "primary_adult", "name")}
+            household = membership.create_family(name=form.cleaned_data.get("name", ""), **fields)
+            membership.add_member(household, person, relationship_type)
             messages.success(request, f"Created {household.name} and linked {person}.")
         else:
             messages.error(request, "Could not create family. Please check the form.")
@@ -493,11 +477,11 @@ def people_household_create(request, pk):
 @staff_required
 def people_household_remove(request, pk, household_pk):
     person = get_object_or_404(Person, pk=pk)
-    membership = get_object_or_404(
+    household_membership = get_object_or_404(
         HouseholdMember, person=person, household_id=household_pk
     )
     if request.method == "POST":
-        membership.delete()
+        membership.remove_member(household_membership.household, person)
         messages.success(request, "Removed from family.")
     return redirect("people_detail", pk=pk)
 
@@ -527,23 +511,19 @@ def people_household_move(request, pk, household_pk):
             messages.error(request, "Target household not found.")
             return redirect("people_detail", pk=pk)
 
-        # Create membership in target household
-        try:
-            HouseholdMember.objects.create(
-                household=target_household,
-                person=person,
-                relationship_type=relationship_type,
-            )
-        except IntegrityError:
+        if relationship_type not in HouseholdMember.RelationshipType.values:
+            relationship_type = source_membership.relationship_type
+        if not membership.move_member(
+            person, source_membership.household, target_household,
+            role=relationship_type, keep_in_source=(action != "move"),
+        ):
             messages.warning(
                 request,
                 f"{person} is already in {target_household.name}.",
             )
             return redirect("people_detail", pk=pk)
 
-        # Remove from source if "move" (not "copy")
         if action == "move":
-            source_membership.delete()
             messages.success(
                 request,
                 f"Moved {person} from {source_membership.household.name} "

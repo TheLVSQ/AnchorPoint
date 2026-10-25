@@ -9,7 +9,7 @@ over, so a merged VBS child keeps their eligibility / roster spot.
 
 from django.db import IntegrityError, transaction
 
-from households.models import HouseholdMember
+from households import membership
 from people.services import identity
 
 
@@ -78,13 +78,15 @@ def merge_households(canonical, duplicate):
     if canonical.pk == duplicate.pk:
         return canonical
 
+    had_primary = bool(canonical.primary_adult_id)
     for m in list(duplicate.memberships.select_related("person").all()):
-        HouseholdMember.objects.get_or_create(
-            household=canonical, person=m.person,
-            defaults={"relationship_type": m.relationship_type},
-        )
-    if not canonical.primary_adult_id and duplicate.primary_adult_id:
-        canonical.primary_adult_id = duplicate.primary_adult_id
+        membership.add_member(canonical, m.person, m.relationship_type)
+    if not had_primary and duplicate.primary_adult_id:
+        try:  # adopt the duplicate's primary if they're an adult member now
+            membership.set_primary(canonical, duplicate.primary_adult)
+        except membership.MembershipError:
+            pass
+    canonical.refresh_from_db(fields=["primary_adult"])
     for f in ["phone", "address_line1", "address_line2", "city", "state", "postal_code"]:
         if not getattr(canonical, f, None) and getattr(duplicate, f, None):
             setattr(canonical, f, getattr(duplicate, f))

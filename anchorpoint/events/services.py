@@ -4,8 +4,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from groups.models import Group, GroupMembership
-from households.family_flags import conflicting_households, record_registration_conflict
-from households.models import Household, HouseholdMember
+from households import membership
 from people.models import Person
 from people.services import identity
 
@@ -35,32 +34,6 @@ def _ensure_person(first_name, last_name, email="", phone="", birthdate=None, **
         fields,
     )
     return person
-
-
-def _ensure_household(primary: Person, dependent: Person) -> Optional[Household]:
-    existing = Household.objects.filter(members=primary).first()
-    if not existing:
-        household_name = f"{primary.last_name or primary.first_name} Household".strip()
-        existing = Household.objects.create(
-            name=household_name or f"Household {primary.pk}",
-            primary_adult=primary,
-            address_line1=primary.address_line1,
-            address_line2=primary.address_line2,
-            city=primary.city,
-            state=primary.state,
-            postal_code=primary.postal_code,
-        )
-    HouseholdMember.objects.get_or_create(
-        household=existing,
-        person=primary,
-        defaults={"relationship_type": HouseholdMember.RelationshipType.ADULT},
-    )
-    HouseholdMember.objects.get_or_create(
-        household=existing,
-        person=dependent,
-        defaults={"relationship_type": HouseholdMember.RelationshipType.CHILD},
-    )
-    return existing
 
 
 def _mark_attendee_matched(
@@ -175,21 +148,11 @@ def match_registration_attendees(registration: EventRegistration):
             guardian = contact_person
 
         if guardian and guardian != person:
-            prior = conflicting_households(person, guardian)
-            prior_ids = set(Household.objects.filter(members=person).values_list("pk", flat=True))
-            household = _ensure_household(guardian, person)
-            if prior:
-                # Child already in a family the guardian isn't part of: keep the
-                # link (honest re-registrations shouldn't stall) but flag it.
-                record_registration_conflict(
-                    child=person,
-                    guardian=guardian,
-                    household=household,
-                    added_membership=household is not None and household.pk not in prior_ids,
-                    prior_households=prior,
-                    filled_fields=filled,
-                    registration=registration,
-                )
+            # Child already in a family the guardian isn't part of: the link is kept
+            # (honest re-registrations shouldn't stall) but flagged for staff review.
+            membership.link_guardian(
+                guardian, person, registration=registration, filled_fields=filled,
+            )
 
 
 def manually_assign_attendee(attendee, person, matched_by=None, notes=""):
@@ -227,11 +190,6 @@ def find_guardian(attendee):
         phone=attendee.parent_guardian_phone or registration.phone or "",
     ))
     return match.person if match else None
-
-
-def link_guardian_household(guardian: Person, dependent: Person):
-    if guardian and dependent and guardian != dependent:
-        _ensure_household(guardian, dependent)
 
 
 def ensure_event_group(event) -> Optional[Group]:

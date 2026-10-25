@@ -16,6 +16,7 @@ from datetime import datetime
 
 from django.db import transaction
 
+from households import membership
 from households.models import Household, HouseholdMember
 from people.models import Person
 from people.services import identity
@@ -239,10 +240,9 @@ def run_rock_import(rows, *, commit=False) -> RockResult:
                 is_child = age is not None and age < MINOR_AGE
                 rel = (HouseholdMember.RelationshipType.CHILD if is_child
                        else HouseholdMember.RelationshipType.ADULT)
-                HouseholdMember.objects.get_or_create(
-                    household=household, person=person,
-                    defaults={"relationship_type": rel},
-                )
+                # Rock's age-derived role is authoritative for imported families.
+                membership.add_member(household, person, rel)
+                membership.set_role(household, person, rel)
                 if is_child:
                     stats["children"] += 1
                 else:
@@ -250,10 +250,14 @@ def run_rock_import(rows, *, commit=False) -> RockResult:
                     if first_adult is None:
                         first_adult = person
 
-            # Set the primary adult, or clear it when the family has no adult.
-            if household.primary_adult_id != (first_adult.pk if first_adult else None):
-                household.primary_adult = first_adult
-                household.save(update_fields=["primary_adult"])
+            # Primary adult = this run's first actual adult (membership keeps it an adult
+            # member, and blanks it when the family has no adult).
+            if first_adult is not None:
+                try:
+                    membership.set_primary(household, first_adult)
+                except membership.MembershipError:
+                    pass  # e.g. already in the family under another role; keep the rule
+            household.refresh_from_db(fields=["primary_adult"])
 
         result.add("info", f"{len(families)} families, "
                    f"{stats['people_created']} created, {stats['people_matched']} matched, "

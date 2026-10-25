@@ -16,7 +16,7 @@ from datetime import datetime
 
 from django.db import transaction
 
-from events.services import _ensure_household
+from households import membership
 from groups.models import Group, GroupMembership
 from people.models import Person, normalize_phone
 from people.services import identity
@@ -259,7 +259,7 @@ def run_import(rows, *, commit=False, group_name="") -> ImportResult:
                     stats["children_matched"] += 1
                     result.add("match", f"MATCHED child → existing #{child.pk} ({child})")
 
-                _ensure_household(parent, child)
+                membership.link_guardian(parent, child, raise_flag=False)
                 if group:
                     GroupMembership.objects.get_or_create(group=group, person=child)
 

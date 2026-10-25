@@ -72,3 +72,15 @@ records).
 **Absorb**: applying a matched record's data to the existing Person: fill blank fields, add safety
 text (allergies, custody, pickup restrictions, notes), never overwrite or drop. Merging two people
 absorbs one into the other.
+
+## Families (`households/`)
+
+**Family**: a `Household`: people who live and check in together. New families are named
+"{Surname} Family". _Avoid_: "household" in UI text (it's the model name).
+
+**Role**: a member's relationship in a family: Adult, Child, Student or Other. Always given
+explicitly; adults get pickup-code texts and are listed as guardians.
+
+**Primary adult**: the family's main adult, always an Adult member, or blank. When the primary leaves
+or stops being an adult, the longest-standing other adult takes over; a family with no primary gets
+its first adult. Every membership change goes through `households/membership.py`.
