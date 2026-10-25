@@ -67,7 +67,9 @@ def undo_flag(flag, user):
     membership, and any blank fields it filled (only if still unchanged)."""
     child = flag.child
     if flag.added_membership and flag.household_id:
-        HouseholdMember.objects.filter(household_id=flag.household_id, person=child).delete()
+        from .membership import remove_member
+
+        remove_member(flag.household, child)
     reverted = []
     for field, value in (flag.filled_fields or {}).items():
         current = getattr(child, field, None)

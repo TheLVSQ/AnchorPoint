@@ -1,6 +1,7 @@
 from django.db import transaction
 
-from households.models import Household, HouseholdMember
+from households import membership
+from households.models import HouseholdMember
 from people.models import Person
 
 
@@ -28,17 +29,7 @@ def register_new_family(
         phone_opt_in=phone_opt_in,
     )
 
-    household = Household.objects.create(
-        name=f"{parent_last} Family",
-        phone=parent_phone,
-        primary_adult=parent,
-    )
-
-    HouseholdMember.objects.create(
-        household=household,
-        person=parent,
-        relationship_type=HouseholdMember.RelationshipType.ADULT,
-    )
+    household = membership.create_family(adult=parent, phone=parent_phone)
 
     child_records = []
     for child_data in children:
@@ -53,11 +44,7 @@ def register_new_family(
             unauthorized_pickup=child_data.get("unauthorized_pickup", ""),
             photo_consent=child_data.get("photo_consent", "unknown"),
         )
-        HouseholdMember.objects.create(
-            household=household,
-            person=child,
-            relationship_type=HouseholdMember.RelationshipType.CHILD,
-        )
+        membership.add_member(household, child, HouseholdMember.RelationshipType.CHILD)
         child_records.append(child)
 
     return {

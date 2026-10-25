@@ -16,6 +16,7 @@ from core.permissions import is_staff_or_above, staff_required
 from core.csv_safe import SafeCsvWriter
 from core.net import client_ip
 from core.ratelimit import too_many
+from households import membership
 from people.models import Person
 
 from .forms import (
@@ -32,7 +33,6 @@ from .services import (
     create_person_from_attendee,
     ensure_event_group,
     find_guardian,
-    link_guardian_household,
     manually_assign_attendee,
     match_registration_attendees,
 )
@@ -338,7 +338,9 @@ def event_registration_queue(request):
                 if attendee.is_minor:
                     guardian = find_guardian(attendee)
                     if guardian:
-                        link_guardian_household(guardian, person)
+                        membership.link_guardian(
+                            guardian, person, registration=attendee.registration
+                        )
                 messages.success(
                     request,
                     f"Linked {attendee.full_name} to {person}.",
@@ -354,7 +356,9 @@ def event_registration_queue(request):
                 if attendee.is_minor:
                     guardian = find_guardian(attendee)
                     if guardian:
-                        link_guardian_household(guardian, person)
+                        membership.link_guardian(
+                            guardian, person, registration=attendee.registration
+                        )
                 messages.success(
                     request,
                     f"Created new person for {attendee.full_name}.",

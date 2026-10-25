@@ -208,6 +208,18 @@ list/detail/CSV-export views at `/reports/` pick it up with no new URLs. Ships w
 image. Captured on the person form, kiosk quick-register, and `import_signups` (a `photo_consent`
 column, set on create only); shown on the profile and in reports.
 
+## Family membership (`households/membership.py`)
+
+Every in-app membership change goes through this module, never `HouseholdMember.objects` directly:
+`add_member(household, person, role)` (role required: no silent "adult"), `remove_member`,
+`move_member` (move or copy), `set_role`, `set_primary` (refuses non-adults), `create_family`
+("{Surname} Family"), `link_guardian` (registration + staff queue; raises a family-safety flag when
+the child is already in another family, `raise_flag=False` for bulk imports), `family_surname`.
+The **primary adult is always an adult member or blank**: it hands over to the longest-standing
+adult when the primary leaves or is demoted. Families with no adult are allowed (nightly cleanup
+flags them). Rock re-imports treat Rock's age-derived role as authoritative.
+`scripts/fix_primary_adults.py` reports/fixes old families that break the rule.
+
 ## Data cleanup (`households/hygiene.py`, `/families/cleanup/`)
 
 Nightly (cron sidecar, 07:00 UTC) `manage.py family_hygiene` finds likely duplicate people,

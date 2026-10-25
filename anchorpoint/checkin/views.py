@@ -21,6 +21,7 @@ from core.permissions import (
     checkin_admin_required, checkin_team_required, is_checkin_admin,
 )
 from groups.models import GroupMembership
+from households import membership
 from households.models import Household, HouseholdMember
 from people.models import Person, normalize_phone
 from people.services import identity
@@ -422,25 +423,6 @@ def kiosk_family_select(request, household_id):
     })
 
 
-def _household_surname(household):
-    """Best surname for a child being added to this family — the primary adult's,
-    else the first adult member's, else the household name minus Family/Household."""
-    adult = household.primary_adult
-    if not (adult and adult.last_name):
-        membership = (
-            household.memberships.filter(
-                relationship_type=HouseholdMember.RelationshipType.ADULT
-            )
-            .select_related("person")
-            .first()
-        )
-        adult = membership.person if membership else None
-    if adult and adult.last_name:
-        return adult.last_name
-    name = (household.name or "").replace("Family", "").replace("Household", "").strip()
-    return name or "Guest"
-
-
 @require_POST
 def kiosk_family_add_child(request, household_id):
     """Add a not-yet-registered child to an EXISTING family at the kiosk — a
@@ -460,7 +442,7 @@ def kiosk_family_add_child(request, household_id):
     first = (request.POST.get("first_name") or "").strip()
     if not first:
         return redirect("checkin:kiosk_family_select", household_id=household.pk)
-    last = (request.POST.get("last_name") or "").strip() or _household_surname(household)
+    last = (request.POST.get("last_name") or "").strip() or membership.family_surname(household)
     grade = (request.POST.get("grade") or "").strip()
     if grade not in {g for g, _ in Person.GRADE_CHOICES}:
         grade = ""
@@ -478,10 +460,7 @@ def kiosk_family_add_child(request, household_id):
             allergies=(request.POST.get("allergies") or "").strip(),
             photo_consent="granted" if request.POST.get("photo_consent") else "unknown",
         )
-        HouseholdMember.objects.get_or_create(
-            household=household, person=child,
-            defaults={"relationship_type": HouseholdMember.RelationshipType.CHILD},
-        )
+        membership.add_member(household, child, HouseholdMember.RelationshipType.CHILD)
 
     # Enroll so the child is eligible on the family screen (and on the roster).
     config = session.configuration

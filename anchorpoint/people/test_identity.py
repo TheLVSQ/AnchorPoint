@@ -169,7 +169,7 @@ class RegistrationMatchingTests(TestCase):
         a = EventRegistrationAttendee.objects.create(
             registration=reg, event=self.event, **attendee
         )
-        with mock.patch("events.services.record_registration_conflict"):
+        with mock.patch("households.family_flags.record_registration_conflict"):
             match_registration_attendees(reg)
         a.refresh_from_db()
         return a
@@ -199,7 +199,7 @@ class RegistrationMatchingTests(TestCase):
             email="smith@example.com", phone="555-010-9999",
         )
         a = EventRegistrationAttendee.objects.create(registration=reg, event=self.event, **attendee)
-        with mock.patch("events.services.record_registration_conflict"):
+        with mock.patch("households.family_flags.record_registration_conflict"):
             match_registration_attendees(reg)
         a.refresh_from_db()
         return a
