@@ -211,7 +211,7 @@ class QuickRegisterRemoveTests(KioskFixtureMixin, TestCase):
 
 
 class PrintPathTests(KioskFixtureMixin, TestCase):
-    """Bug 1c: agent-queued labels must suppress the direct-print fallback."""
+    """Agent-queued labels skip the browser-print fallback; no agent uses it."""
 
     def _check_in_kid(self):
         self._start_kiosk_session()
@@ -223,25 +223,23 @@ class PrintPathTests(KioskFixtureMixin, TestCase):
             },
         )
 
-    def test_direct_print_skipped_when_agent_queued(self):
+    def test_agent_queued_labels_skip_browser_print(self):
         with mock.patch(
             "checkin.services.family_checkin.enqueue_checkin_labels", return_value=2
-        ), mock.patch(
-            "checkin.views.PrintService"
-        ) as mock_service:
+        ):
             self._check_in_kid()
             response = self.client.get(reverse("checkin:kiosk_confirmation"))
-        mock_service.return_value.print_checkins.assert_not_called()
         self.assertContains(response, "Labels are printing now")
+        self.assertNotContains(response, "window.print()")
 
-    def test_direct_print_attempted_when_no_agent(self):
+    def test_no_agent_falls_back_to_browser_print(self):
         with mock.patch(
             "checkin.services.family_checkin.enqueue_checkin_labels", return_value=0
-        ), mock.patch("checkin.views.PrintService") as mock_service:
-            mock_service.return_value.print_checkins.return_value = False
+        ):
             self._check_in_kid()
-            self.client.get(reverse("checkin:kiosk_confirmation"))
-        mock_service.return_value.print_checkins.assert_called_once()
+            response = self.client.get(reverse("checkin:kiosk_confirmation"))
+        self.assertContains(response, "Print your labels below")
+        self.assertContains(response, "window.print()")
 
 
 class LookupGuardrailTests(KioskFixtureMixin, TestCase):

@@ -13,5 +13,3 @@ Markdown==3.11.1
 google-auth==2.62.0
 requests==2.34.2
 
-brother_ql==0.9.4
-python-escpos==3.1

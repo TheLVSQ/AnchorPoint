@@ -36,7 +36,7 @@ def _ensure_person(first_name, last_name, email="", phone="", birthdate=None, **
     return person
 
 
-def _mark_attendee_matched(
+def mark_attendee_matched(
     attendee,
     person: Person,
     matched_by=None,
@@ -125,7 +125,7 @@ def match_registration_attendees(registration: EventRegistration):
             f: str(getattr(person, f)) for f, kind in changes.items() if kind == identity.FILLED
         }
 
-        _mark_attendee_matched(attendee, person, notes=f"Auto-matched by {match.matched_by}")
+        mark_attendee_matched(attendee, person, notes=f"Auto-matched by {match.matched_by}")
 
         guardian = None
         if attendee.parent_guardian_email:
@@ -153,10 +153,6 @@ def match_registration_attendees(registration: EventRegistration):
             membership.link_guardian(
                 guardian, person, registration=registration, filled_fields=filled,
             )
-
-
-def manually_assign_attendee(attendee, person, matched_by=None, notes=""):
-    _mark_attendee_matched(attendee, person, matched_by=matched_by, notes=notes)
 
 
 def create_person_from_attendee(attendee):

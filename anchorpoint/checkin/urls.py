@@ -49,10 +49,6 @@ urlpatterns = [
     path("rooms/<int:room_id>/edit/", views.room_edit, name="room_edit"),
 
     # Printer management
-    path("printers/", views.printer_list, name="printer_list"),
-    path("printers/new/", views.printer_create, name="printer_create"),
-    path("printers/<int:printer_id>/edit/", views.printer_edit, name="printer_edit"),
-    path("printers/<int:printer_id>/test/", views.printer_test, name="printer_test"),
 
     # Print agents (pull-based local printing; surfaced in Settings)
     path("agents/", views.print_agent_list, name="print_agents"),

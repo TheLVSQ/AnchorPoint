@@ -204,9 +204,11 @@ A small report **registry**: subclass `reporting.reports.Report` (declare `slug`
 list/detail/CSV-export views at `/reports/` pick it up with no new URLs. Ships with
 `GroupRosterReport` (VBS-style roster by group) and `SessionAttendanceReport`. CSV only for now.
 
-`Person.photo_consent` (default False) = guardian opt-in to photographing a minor / using their
-image. Captured on the person form, kiosk quick-register, and `import_signups` (a `photo_consent`
-column, set on create only); shown on the profile and in reports.
+`Person.photo_consent` = guardian permission to photograph a minor / use their image: one of
+`unknown` (default), `granted`, `denied`. Captured on the person form, kiosk quick-register and
+add-child (ticked = granted, else unknown), and `import_signups` (a `photo_consent` column: set on
+new kids, and filled on matched kids only while still `unknown`; never overwrites an explicit
+choice). Shown on the profile and in reports.
 
 ## Family membership (`households/membership.py`)
 

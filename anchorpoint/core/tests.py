@@ -721,3 +721,16 @@ class UserEmailUniquenessTests(TestCase):
         get_user_model().objects.create_user(username="noemail1", email="", password="p")
         get_user_model().objects.create_user(username="noemail2", email="", password="p")
         self.assertEqual(get_user_model().objects.filter(email="").count(), 2)
+
+
+class NavActiveSectionTests(TestCase):
+    def test_longest_prefix_wins_regardless_of_list_order(self):
+        from unittest import mock
+        from django.test import RequestFactory
+        from core import context_processors as cp
+
+        req = RequestFactory().get("/families/cleanup/")
+        req.user = mock.Mock(is_authenticated=False)
+        reordered = [("/families/", "families"), ("/families/cleanup/", "cleanup")]
+        with mock.patch.object(cp, "_NAV_SECTIONS", reordered):
+            self.assertEqual(cp._nav(req)["active"], "cleanup")

@@ -33,7 +33,7 @@ from .services import (
     create_person_from_attendee,
     ensure_event_group,
     find_guardian,
-    manually_assign_attendee,
+    mark_attendee_matched,
     match_registration_attendees,
 )
 
@@ -329,7 +329,7 @@ def event_registration_queue(request):
             notes = form.cleaned_data.get("notes") or ""
             if action == RegistrationMatchForm.ACTION_ASSIGN:
                 person = form.cleaned_data["person"]
-                manually_assign_attendee(
+                mark_attendee_matched(
                     attendee,
                     person,
                     matched_by=request.user,
@@ -347,7 +347,7 @@ def event_registration_queue(request):
                 )
             elif action == RegistrationMatchForm.ACTION_CREATE:
                 person = create_person_from_attendee(attendee)
-                manually_assign_attendee(
+                mark_attendee_matched(
                     attendee,
                     person,
                     matched_by=request.user,

@@ -5,7 +5,6 @@ from .models import (
     CheckIn,
     CheckInConfiguration,
     CheckInWindow,
-    PrinterConfiguration,
     LabelTemplate,
 )
 
@@ -75,13 +74,6 @@ class CheckInAdmin(admin.ModelAdmin):
     ]
     raw_id_fields = ["person", "session"]
     readonly_fields = ["checked_in_at", "checked_in_by", "checked_out_at", "checked_out_by"]
-
-
-@admin.register(PrinterConfiguration)
-class PrinterConfigurationAdmin(admin.ModelAdmin):
-    list_display = ["name", "printer_type", "host", "is_default", "is_active"]
-    list_filter = ["printer_type", "is_active", "is_default"]
-    list_editable = ["is_active"]
 
 
 @admin.register(LabelTemplate)
