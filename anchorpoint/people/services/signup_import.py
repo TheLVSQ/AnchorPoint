@@ -16,14 +16,10 @@ from datetime import datetime
 
 from django.db import transaction
 
-from events.services import (
-    _apply_contact_data,
-    _ensure_household,
-    _ensure_person,
-    _match_person,
-)
+from events.services import _ensure_household
 from groups.models import Group, GroupMembership
 from people.models import Person, normalize_phone
+from people.services import identity
 
 # child_birthdate is optional: signup forms often collect grade instead of DOB,
 # and VBS eligibility runs off group/grade anyway.
@@ -85,39 +81,6 @@ def _parse_grade(raw):
             g = g[:-len(suffix)]
             break
     return g if g in VALID_GRADES else None
-
-
-def _match_parent(email, first, last, phone):
-    """Match like the events service, plus a last-10-digits phone fallback —
-    stored numbers often carry a +1 country code while form responses don't."""
-    person = _match_person(email, first, last, None, phone)
-    if person:
-        return person
-    digits = normalize_phone(phone)
-    if len(digits) >= 10:
-        return Person.objects.filter(normalized_phone__endswith=digits[-10:]).first()
-    return None
-
-
-def _child_in_household(parent, first_name, last_name):
-    """An existing person with this name already in one of the parent's
-    households. Lets us dedupe children that carry no birthdate (so
-    `_match_person` can't) — e.g. VBS rosters — by matching a kid by name within
-    the family rather than creating a duplicate."""
-    first_name = (first_name or "").strip()
-    last_name = (last_name or "").strip()
-    if not (getattr(parent, "pk", None) and first_name):
-        return None
-    return (
-        Person.objects.filter(
-            households__members=parent,
-            first_name__iexact=first_name,
-            last_name__iexact=last_name,
-        )
-        .exclude(pk=parent.pk)
-        .distinct()
-        .first()
-    )
 
 
 def parse_csv(text):
@@ -184,16 +147,14 @@ def run_import(rows, *, commit=False, group_name="") -> ImportResult:
 
             result.add("family", f"{p_first} {p_last} ({p_phone})")
 
-            parent = _match_parent(p_email, p_first, p_last, p_phone)
-            if parent:
-                matched_name = str(parent)
-                parent = _apply_contact_data(
-                    parent, {"email": p_email, "phone": parent.phone or p_phone}
-                )
+            parent, match = identity.find_or_create(
+                identity.Incoming(p_first, p_last, email=p_email, phone=p_phone)
+            )
+            if match:
                 stats["parents_matched"] += 1
-                result.add("match", f"MATCHED parent → existing #{parent.pk} ({matched_name})")
+                result.add("match", f"MATCHED parent → existing #{parent.pk} "
+                                    f"({parent}, by {match.matched_by})")
             else:
-                parent = _ensure_person(p_first, p_last, email=p_email, phone=p_phone)
                 stats["parents_created"] += 1
                 raw = (first_row.get("phone_opt_in") or "yes").strip().lower()
                 parent.phone_opt_in = raw in TRUTHY
@@ -220,13 +181,14 @@ def run_import(rows, *, commit=False, group_name="") -> ImportResult:
 
                 allergies = (row.get("child_allergies") or "").strip()
 
-                # Match by the usual keys (email/birthdate/phone); kids rarely
-                # carry any, so fall back to matching by name within the parent's
-                # family. Without this, birthdate-less rosters (VBS) duplicate
-                # every child on re-import.
-                child = _match_person("", c_first, c_last, birthdate, "")
-                if child is None:
-                    child = _child_in_household(parent, c_first, c_last)
+                # Kids rarely carry email/phone, so identity also matches by name
+                # within the parent's family. Without it, birthdate-less rosters
+                # (VBS) duplicate every child on re-import.
+                match = identity.find_person(
+                    identity.Incoming(c_first, c_last, birthdate=birthdate),
+                    family=parent.households.all(),
+                )
+                child = match.person if match and match.person != parent else None
                 is_new = child is None
 
                 if is_new:
@@ -235,7 +197,7 @@ def run_import(rows, *, commit=False, group_name="") -> ImportResult:
                         birthdate=birthdate, grade=grade, allergies=allergies,
                     )
                 else:
-                    _apply_contact_data(
+                    identity.absorb(
                         child,
                         {"birthdate": birthdate, "grade": grade, "allergies": allergies},
                     )

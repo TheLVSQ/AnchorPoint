@@ -379,33 +379,32 @@ class PeopleDuplicatesTests(TestCase):
         self.client.logout()
         self.assertNotEqual(self.client.get(reverse("people_duplicates")).status_code, 200)
 
-    def test_flags_same_name(self):
-        Person.objects.create(first_name="Jane", last_name="Doe")
-        Person.objects.create(first_name="Jane", last_name="Doe")
+    def _check(self):
+        from households import hygiene
+        hygiene.run()
+        return self.client.get(reverse("people_duplicates"))
+
+    def test_shows_cleanup_duplicate_pairs(self):
+        Person.objects.create(first_name="Jane", last_name="Doe", email="jane@e.com")
+        Person.objects.create(first_name="Jane", last_name="Doe", email="JANE@e.com")
         Person.objects.create(first_name="Unique", last_name="Person")
-        resp = self.client.get(reverse("people_duplicates"))
+        resp = self._check()
         self.assertContains(resp, "Jane Doe")
         self.assertNotContains(resp, "Unique Person")  # single record, not flagged
 
-    def test_flags_same_email_case_insensitive(self):
-        Person.objects.create(first_name="A", last_name="X", email="dup@e.com")
-        Person.objects.create(first_name="B", last_name="Y", email="DUP@e.com")
-        resp = self.client.get(reverse("people_duplicates"))
-        self.assertContains(resp, "dup@e.com")
-
-    def test_duplicates_page_has_bulk_controls(self):
-        Person.objects.create(first_name="Jane", last_name="Doe")
-        Person.objects.create(first_name="Jane", last_name="Doe")
-        resp = self.client.get(reverse("people_duplicates"))
-        self.assertContains(resp, "Delete selected")     # bulk button moved here
-        self.assertContains(resp, 'name="ids"')           # per-row checkboxes
+    def test_read_only_no_bulk_delete(self):
+        # Deleting a "duplicate" would drop its allergy/custody notes; admins merge instead.
+        Person.objects.create(first_name="Jane", last_name="Doe", email="jane@e.com")
+        Person.objects.create(first_name="Jane", last_name="Doe", email="jane@e.com")
+        resp = self._check()
+        self.assertNotContains(resp, "Delete selected")
+        self.assertNotContains(resp, 'name="ids"')
 
     def test_phone_sharing_family_not_flagged(self):
-        # Family members share a phone but have different names → not duplicates.
+        # Family members share a phone but have different first names → not duplicates.
         Person.objects.create(first_name="Mom", last_name="Reed", phone="+15551112222")
         Person.objects.create(first_name="Kid", last_name="Reed", phone="+15551112222")
-        resp = self.client.get(reverse("people_duplicates"))
-        self.assertContains(resp, "No potential duplicates")
+        self.assertContains(self._check(), "No potential duplicates")
 
 
 class PersonStatusDisplayTests(TestCase):

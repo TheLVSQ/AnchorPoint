@@ -10,25 +10,11 @@ over, so a merged VBS child keeps their eligibility / roster spot.
 from django.db import IntegrityError, transaction
 
 from households.models import HouseholdMember
+from people.services import identity
 
 
 class MergeBlocked(Exception):
     """The pair can't be merged safely (shown to the admin as-is)."""
-
-# Survivor's *blank* scalar fields get filled from the duplicate (we never
-# overwrite a value the survivor already has).
-_FILL_FIELDS = [
-    "email", "phone", "birthdate", "grade", "gender", "marital_status",
-    "address_line1", "address_line2", "city", "state", "postal_code",
-    "salvation_date", "baptism_date", "first_visit_date",
-    "emergency_contact_name", "emergency_contact_phone", "emergency_contact_relationship",
-]
-
-# Safety/notes text is *combined* when both records have different values —
-# dropping a duplicate's allergy or custody note would be a check-in safety gap.
-_APPEND_FIELDS = [
-    "allergies", "security_notes", "notes", "custody_notes", "unauthorized_pickup",
-]
 
 # Cleanup findings point at the records being merged; they're re-evaluated
 # after a merge rather than carried across (that could pair a record with itself).
@@ -67,25 +53,12 @@ def merge_persons(survivor, duplicate):
             "(Admin → Users) before merging."
         )
 
-    changed = []
-    for f in _FILL_FIELDS:
-        if not getattr(survivor, f, None) and getattr(duplicate, f, None):
-            setattr(survivor, f, getattr(duplicate, f))
-            changed.append(f)
-    for f in _APPEND_FIELDS:
-        mine = (getattr(survivor, f, None) or "").strip()
-        theirs = (getattr(duplicate, f, None) or "").strip()
-        if theirs and theirs.lower() not in mine.lower():
-            setattr(survivor, f, f"{mine}\n{theirs}" if mine else theirs)
-            changed.append(f)
-    if not survivor.custody_flag and duplicate.custody_flag:
-        survivor.custody_flag = True
-        changed.append("custody_flag")
-    if survivor.photo_consent == "unknown" and duplicate.photo_consent != "unknown":
-        survivor.photo_consent = duplicate.photo_consent
-        changed.append("photo_consent")
-    if changed:
-        survivor.save()
+    # Same rule as every intake path: fill blanks, ADD safety/notes text (dropping a
+    # duplicate's allergy or custody note would be a check-in safety gap).
+    identity.absorb(survivor, {
+        f: getattr(duplicate, f, None)
+        for f in identity.FILL_FIELDS + identity.APPEND_FIELDS + ["custody_flag", "photo_consent"]
+    })
 
     _repoint_relations(duplicate, survivor)
     duplicate.delete()

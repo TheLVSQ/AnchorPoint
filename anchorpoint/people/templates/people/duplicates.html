@@ -6,62 +6,24 @@
     <span class="chip">Review</span>
     <h1>Potential duplicates</h1>
     <p class="page-subtitle">
-        Records that share a <strong>name</strong> or an <strong>email</strong>. Phone isn't used
-        (families share one number). Some same-name groups may be different people — this is a
-        review aid, not an automatic merge. Tick the duplicate copy in each group and delete it.
+        People the nightly data cleanup thinks may be the same person: the first name must match,
+        plus another sign (email, phone, birthdate, family or address); a different birthdate rules
+        a pair out. Some pairs are still different people, so check before merging.
+        {% if nav.admin %}Merge or dismiss pairs on <a href="{% url 'households:cleanup_list' %}?kind=duplicate_person">Data cleanup</a> — merging keeps both records' allergy and custody notes.{% else %}An admin merges or dismisses them on the Data cleanup page.{% endif %}
     </p>
+    {% if last_run %}<p class="muted-text">Last checked {{ last_run|timesince }} ago.</p>{% endif %}
 </div>
 
-{% if groups %}
-    <form method="post" action="{% url 'people_bulk_delete' %}" hx-boost="false">
-        {% csrf_token %}
-        <div class="bulk-toolbar toolbar">
-            <button type="submit" class="btn ghost danger danger">Delete selected</button>
-            <span class="stat-hint">{{ groups|length }} group{{ groups|length|pluralize }} · {{ people_in_groups }} records. Tick the copy to remove (keep one per group).</span>
+{% for f in findings %}
+    <section class="card">
+        <div class="card__head"><h2>{{ f.label }}</h2><span class="chip">{{ f.reasons }}</span></div>
+        <div class="cleanup-compare cleanup-compare--pair">
+        {% for card in f.cards %}{% if card %}
+            <div class="cleanup-side">{% include "households/_person_card.html" %}</div>
+        {% endif %}{% endfor %}
         </div>
-
-        {% for group in groups %}
-            <section class="detail-card mb-3">
-                <h2 class="text-lg">
-                    <span class="chip">{{ group.reason }}</span> {{ group.label }}
-                    <span class="stat-hint">({{ group.people|length }})</span>
-                </h2>
-                <div class="table-wrap">
-                    <table class="data-table data-table">
-                        <thead>
-                            <tr>
-                                <th></th>
-                                <th>Name</th>
-                                <th>Age</th>
-                                <th>Email</th>
-                                <th>Phone</th>
-                                <th>Family</th>
-                                <th class="text-right"></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for p in group.people %}
-                                <tr>
-                                    <td><input type="checkbox" name="ids" value="{{ p.pk }}"></td>
-                                    <td><strong>{{ p.first_name }} {{ p.last_name }}</strong></td>
-                                    <td>{{ p.age|default:"—" }}</td>
-                                    <td class="wrap-anywhere">{{ p.email|default:"—" }}</td>
-                                    <td>{{ p.phone|default:"—" }}</td>
-                                    <td>
-                                        {% with hh=p.households.all|first %}{{ hh.name|default:"—" }}{% endwith %}
-                                    </td>
-                                    <td class="text-right">
-                                        <a class="btn ghost" href="{% url 'people_detail' p.pk %}">Open</a>
-                                    </td>
-                                </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </section>
-        {% endfor %}
-    </form>
-{% else %}
+    </section>
+{% empty %}
     <p class="empty-state">No potential duplicates found. 🎉</p>
-{% endif %}
+{% endfor %}
 {% endblock %}

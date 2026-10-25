@@ -13,7 +13,8 @@ from households.forms import (
     HouseholdMembershipForm,
     HouseholdQuickCreateForm,
 )
-from households.models import Household, HouseholdMember
+from households import hygiene
+from households.models import CleanupFinding, Household, HouseholdMember
 from .models import Person
 from .forms import PersonForm, RockImportForm, SignupImportForm
 from .services.signup_import import SignupImportError, parse_csv, run_import
@@ -117,39 +118,19 @@ def people_bulk_delete(request):
 
 @staff_required
 def people_duplicates(request):
-    """Review likely-duplicate people: records sharing a name or an email.
-
-    Phone is intentionally NOT a signal — families share one number. Same-name
-    groups may occasionally be distinct people, so this is a review aid, not an
-    auto-merge."""
-    people = list(
-        Person.objects.all().prefetch_related("households").order_by("last_name", "first_name")
+    """Likely-duplicate people, as found by the nightly data cleanup (one set of rules:
+    households/hygiene.py + people/services/identity.py). Read-only for staff; admins
+    merge on the Data cleanup page, which keeps both records' safety notes."""
+    findings = list(
+        CleanupFinding.objects.filter(
+            kind=CleanupFinding.KIND_DUPLICATE_PERSON, status=CleanupFinding.STATUS_OPEN,
+        ).select_related("person_a", "person_b")
     )
-    buckets = {}
-    for p in people:
-        buckets.setdefault(
-            ("name", p.first_name.strip().lower(), p.last_name.strip().lower()), []
-        ).append(p)
-        if p.email:
-            buckets.setdefault(("email", p.email.strip().lower()), []).append(p)
-
-    groups, seen = [], set()
-    for key, members in buckets.items():
-        if len(members) < 2:
-            continue
-        ids = frozenset(m.pk for m in members)
-        if ids in seen:
-            continue
-        seen.add(ids)
-        groups.append({
-            "reason": "Same name" if key[0] == "name" else "Same email",
-            "label": f"{members[0].first_name} {members[0].last_name}" if key[0] == "name" else key[1],
-            "people": members,
-        })
-    groups.sort(key=lambda g: -len(g["people"]))
+    for f in findings:
+        f.cards = [hygiene.person_card(f.person_a), hygiene.person_card(f.person_b)]
     return render(request, "people/duplicates.html", {
-        "groups": groups,
-        "people_in_groups": sum(len(g["people"]) for g in groups),
+        "findings": findings,
+        "last_run": hygiene.last_run(),
     })
 
 

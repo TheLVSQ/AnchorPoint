@@ -60,3 +60,15 @@ kiosk is self-service, so it must not print or show a live code to whoever is st
 Checking a family in, staging families and printing labels all go through
 `checkin/services/family_checkin.py`: `check_in_family()`, `stage_families()`,
 `confirm_arrivals()`, `print_labels()`.
+
+## People (`people/`)
+
+**Match**: deciding an incoming record (a registration attendee, an import row, a kiosk add-child)
+is a Person we already have. Automatic matches need the first name to agree plus one of: external
+id, email, birthdate, phone, or membership of the given family. Ambiguous = no match. Every intake
+path uses `people/services/identity.py`. _Avoid_: "dedupe" for this (that's merging two existing
+records).
+
+**Absorb**: applying a matched record's data to the existing Person: fill blank fields, add safety
+text (allergies, custody, pickup restrictions, notes), never overwrite or drop. Merging two people
+absorbs one into the other.

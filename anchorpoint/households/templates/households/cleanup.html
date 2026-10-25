@@ -37,19 +37,7 @@
     {% for card in f.cards %}{% if card %}
         <div class="cleanup-side">
         {% if f.kind == "duplicate_person" %}
-            {% with p=card.obj %}
-            <h3><a href="{% url 'people_detail' p.pk %}">{{ p.first_name }} {{ p.last_name }}</a> <span class="muted-text">#{{ p.pk }}</span></h3>
-            <dl class="kv">
-                <div><dt>Birthdate</dt><dd>{% if p.birthdate %}{{ p.birthdate|date:"M j, Y" }}{% if p.age is not None %} (age {{ p.age }}){% endif %}{% else %}—{% endif %}</dd></div>
-                <div><dt>Email</dt><dd>{{ p.email|default:"—" }}</dd></div>
-                <div><dt>Phone</dt><dd>{{ p.phone|default:"—" }}</dd></div>
-                <div><dt>Families</dt><dd>{% for h in card.families %}<a href="{% url 'households:family_detail' h.pk %}">{{ h.name }}</a>{% if not forloop.last %}, {% endif %}{% empty %}—{% endfor %}</dd></div>
-                <div><dt>History</dt><dd>{{ card.checkins }} check-in{{ card.checkins|pluralize }} · {{ card.registrations }} registration{{ card.registrations|pluralize }} · {{ card.groups }} group{{ card.groups|pluralize }}</dd></div>
-                {% if p.allergies %}<div><dt>Allergies</dt><dd>{{ p.allergies }}</dd></div>{% endif %}
-                {% if p.custody_flag %}<div><dt>Custody</dt><dd><span class="chip chip--danger">Custody note</span></dd></div>{% endif %}
-                {% if card.has_login %}<div><dt>Login</dt><dd><span class="chip chip--neutral">Has a login</span></dd></div>{% endif %}
-            </dl>
-            {% endwith %}
+            {% include "households/_person_card.html" %}
         {% else %}
             {% with h=card.obj %}
             <h3><a href="{% url 'households:family_detail' h.pk %}">{{ h.name }}</a> <span class="muted-text">#{{ h.pk }}</span></h3>

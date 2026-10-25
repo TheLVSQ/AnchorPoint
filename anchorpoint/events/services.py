@@ -6,7 +6,8 @@ from django.utils import timezone
 from groups.models import Group, GroupMembership
 from households.family_flags import conflicting_households, record_registration_conflict
 from households.models import Household, HouseholdMember
-from people.models import Person, normalize_phone
+from people.models import Person
+from people.services import identity
 
 from .models import EventRegistration, EventRegistrationAttendee
 
@@ -20,97 +21,20 @@ def _split_name(full_name: str) -> Tuple[str, str]:
     return parts[0], " ".join(parts[1:])
 
 
-def _match_person(email="", first_name="", last_name="", birthdate=None, phone=""):
-    email = (email or "").strip()
-    if email:
-        person = Person.objects.filter(email__iexact=email).first()
-        if person:
-            return person
-    if birthdate:
-        qs = Person.objects.filter(
-            first_name__iexact=first_name.strip(),
-            last_name__iexact=last_name.strip(),
-            birthdate=birthdate,
+def _ensure_person(first_name, last_name, email="", phone="", birthdate=None, **extra):
+    """Find this person (people.services.identity) and absorb what's new, else create."""
+    first_name, last_name = (first_name or "").strip(), (last_name or "").strip()
+    fields = {k: v for k, v in extra.items() if v not in (None, "")}
+    if not first_name:  # can't safely match a nameless record; create a placeholder
+        return Person.objects.create(
+            first_name="Friend", last_name=last_name or "of AnchorPoint",
+            email=email or None, phone=phone or None, birthdate=birthdate, **fields,
         )
-        person = qs.first()
-        if person:
-            return person
-    phone_normalized = normalize_phone(phone)
-    if phone_normalized:
-        person = Person.objects.filter(normalized_phone=phone_normalized).first()
-        if person:
-            return person
-    return None
-
-
-CONTACT_FIELDS = [
-    "email",
-    "phone",
-    "birthdate",
-    "address_line1",
-    "address_line2",
-    "city",
-    "state",
-    "postal_code",
-    "grade",
-    "allergies",
-]
-
-
-def _apply_contact_data(person: Person, data: dict) -> Person:
-    changed = False
-    for field in CONTACT_FIELDS:
-        value = data.get(field)
-        if value and not getattr(person, field):
-            setattr(person, field, value)
-            changed = True
-    if changed:
-        person.save()
-    return person
-
-
-def _ensure_person(
-    first_name,
-    last_name,
-    email="",
-    phone="",
-    birthdate=None,
-    create_if_missing=True,
-    **extra,
-):
-    person = _match_person(email, first_name, last_name, birthdate, phone)
-    if person:
-        return _apply_contact_data(
-            person,
-            {
-                "email": email,
-                "phone": phone,
-                "birthdate": birthdate,
-                "address_line1": extra.get("address_line1"),
-                "address_line2": extra.get("address_line2"),
-                "city": extra.get("city"),
-                "state": extra.get("state"),
-                "postal_code": extra.get("postal_code"),
-                "grade": extra.get("grade"),
-                "allergies": extra.get("allergies"),
-            },
-        )
-    if not create_if_missing:
-        return None
-    return Person.objects.create(
-        first_name=first_name or "Friend",
-        last_name=last_name or "of AnchorPoint",
-        email=email,
-        phone=phone,
-        birthdate=birthdate,
-        address_line1=extra.get("address_line1"),
-        address_line2=extra.get("address_line2"),
-        city=extra.get("city"),
-        state=extra.get("state"),
-        postal_code=extra.get("postal_code"),
-        grade=extra.get("grade"),
-        allergies=extra.get("allergies"),
+    person, _match = identity.find_or_create(
+        identity.Incoming(first_name, last_name or "of AnchorPoint", email or "", phone or "", birthdate),
+        fields,
     )
+    return person
 
 
 def _ensure_household(primary: Person, dependent: Person) -> Optional[Household]:
@@ -167,6 +91,17 @@ def _mark_attendee_matched(
     attendee.save(update_fields=update_fields)
 
 
+def _looks_minor(attendee):
+    """The is_minor box is self-reported, so also trust a birthdate under 18 or a grade."""
+    if attendee.is_minor or attendee.grade:
+        return True
+    bd = attendee.birthdate
+    if bd:
+        today = timezone.localdate()
+        return (today.year - bd.year - ((today.month, today.day) < (bd.month, bd.day))) < 18
+    return False
+
+
 @transaction.atomic
 def match_registration_attendees(registration: EventRegistration):
     contact_person = _ensure_person(
@@ -181,19 +116,25 @@ def match_registration_attendees(registration: EventRegistration):
         state=registration.state,
         postal_code=registration.postal_code,
     )
+    family = contact_person.households.all()
     for attendee in registration.attendees.all():
-        # Match first and snapshot, so a family-safety flag can record exactly
-        # which blank fields this registration filled (for a precise undo).
-        person = _match_person(
-            attendee.email, attendee.first_name, attendee.last_name,
-            attendee.birthdate, attendee.phone,
+        match = identity.find_person(
+            identity.Incoming(
+                attendee.first_name, attendee.last_name, attendee.email or "",
+                attendee.phone or "", attendee.birthdate,
+            ),
+            family=family,
         )
-        if not person:
+        if match and match.person == contact_person and _looks_minor(attendee):
+            # A child is never the adult who registered them, even with the same name
+            # (John Smith registering John Smith Jr. with the family email): staff decide.
+            match = None
+        if not match:
             attendee.match_status = EventRegistrationAttendee.MATCH_STATUS_PENDING
             attendee.save(update_fields=["match_status", "updated_at"])
             continue
-        before = {f: getattr(person, f) for f in CONTACT_FIELDS}
-        _apply_contact_data(person, {
+        person = match.person
+        changes = identity.absorb(person, {
             "email": attendee.email,
             "phone": attendee.phone,
             "birthdate": attendee.birthdate,
@@ -205,12 +146,13 @@ def match_registration_attendees(registration: EventRegistration):
             "grade": attendee.grade,
             "allergies": attendee.allergies,
         })
+        # Only fields that were blank go on a family-safety flag: undo blanks them, and
+        # it must never wipe text the person already had (e.g. an allergy note).
         filled = {
-            f: str(getattr(person, f)) for f in CONTACT_FIELDS
-            if not before[f] and getattr(person, f)
+            f: str(getattr(person, f)) for f, kind in changes.items() if kind == identity.FILLED
         }
 
-        _mark_attendee_matched(attendee, person)
+        _mark_attendee_matched(attendee, person, notes=f"Auto-matched by {match.matched_by}")
 
         guardian = None
         if attendee.parent_guardian_email:
@@ -269,6 +211,22 @@ def create_person_from_attendee(attendee):
         grade=attendee.grade,
         allergies=attendee.allergies,
     )
+
+
+def find_guardian(attendee):
+    """The existing guardian for a minor attendee (staff match queue), or None. Uses the
+    guardian's name if given, else the registrant's, with the guardian/registrant
+    email and phone; same identity rules as everything else."""
+    registration = attendee.registration
+    first, last = _split_name(attendee.parent_guardian_name)
+    if not first:
+        first, last = registration.first_name, registration.last_name
+    match = identity.find_person(identity.Incoming(
+        first, last,
+        email=attendee.parent_guardian_email or registration.email or "",
+        phone=attendee.parent_guardian_phone or registration.phone or "",
+    ))
+    return match.person if match else None
 
 
 def link_guardian_household(guardian: Person, dependent: Person):

@@ -43,14 +43,18 @@ Centralized decorators for consistent authorization:
 
 Role hierarchy: Admin > Staff > Volunteer Admin > Volunteer
 
-### Person Matching (`events/services.py`)
+### Person identity (`people/services/identity.py`)
 
-When registrations come in, the system attempts to match attendees to existing Person records:
-1. Email match (case-insensitive)
-2. Name + birthdate match
-3. Normalized phone match (uses indexed `normalized_phone` field)
-
-Unmatched attendees go to a queue for manual review.
+Every intake path (public registration, staff match queue, signup + Rock imports, kiosk
+add-child) asks `identity.find_person(Incoming(...), family=...)` "is this someone we have?".
+Order: external id → email → name + birthdate → phone → same name inside `family`. Every step
+after external id **requires the first name to agree** (families share emails and phones); a
+different birthdate rules a candidate out; two or more candidates = no match (staff queue).
+Phones compare on the last 10 digits (`identity.same_phone`). Matched data goes in through
+`identity.absorb()`: blank fields filled, safety text (allergies, custody, pickup, notes)
+added to, never dropped. Merge uses the same rule. Unmatched attendees go to the manual queue;
+auto-matches record why in `match_notes`. Kiosk quick-register never matches (self-service).
+People → Duplicates shows the nightly cleanup's duplicate pairs (read-only; admins merge).
 
 ### Phone Number Normalization (`people/models.py`)
 
@@ -94,7 +98,7 @@ Key environment variables (see `.env.production.example`):
 - `python manage.py rotate_passwords <username...>` (or `--all-staff`) - Reset the given users' passwords to fresh random values and print them once. Use after a credential exposure or lockout.
 - `python manage.py setup_beta_users` - (Legacy) Creates admin + 2 staff testers with random passwords. Superseded by `create_admin` for new deployments.
 - `python manage.py trigger_site_rebuild` - Rebuild the church website if the public events feed changed (run by the cron sidecar; no-op without `WEBSITE_DEPLOY_HOOK_URL`). See *Church website feed* below.
-- `python manage.py import_signups <csv|-> [--commit] [--group "VBS 2026"]` - Bulk-import families (one CSV row per child; see `docs/signup-import-template.csv`). Dry-run by default; matches existing people via the events-app matching service so re-imports never duplicate. `--group` enrolls imported children for check-in eligibility filtering.
+- `python manage.py import_signups <csv|-> [--commit] [--group "VBS 2026"]` - Bulk-import families (one CSV row per child; see `docs/signup-import-template.csv`). Dry-run by default; matches existing people via `people/services/identity.py` (parents by name + email/phone, kids by name within the parent's family) so re-imports never duplicate. `--group` enrolls imported children for check-in eligibility filtering.
 
 ## Known Limitations
 

@@ -30,6 +30,7 @@ from django.db.models import Count
 from django.utils import timezone
 
 from people.models import Person, normalize_phone
+from people.services.identity import same_phone
 
 from .models import CleanupFinding, Household, HouseholdMember
 
@@ -63,7 +64,7 @@ def _person_signals(a, b, fams):
         signals.append("birthdate")
     if a.email and b.email and _norm(a.email) == _norm(b.email):
         signals.append("email")
-    if a.normalized_phone and len(a.normalized_phone) >= 7 and a.normalized_phone == b.normalized_phone:
+    if same_phone(a.normalized_phone, b.normalized_phone):
         signals.append("phone")
     if fams.get(a.pk, set()) & fams.get(b.pk, set()):
         signals.append("family")
