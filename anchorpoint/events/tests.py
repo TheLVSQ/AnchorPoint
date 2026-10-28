@@ -372,6 +372,23 @@ class RegistrationQueueViewTests(TestCase):
         )
 
 
+    def test_queue_page_has_no_full_person_dropdown(self):
+        Person.objects.create(first_name="Unrelated", last_name="Zimmerman")
+        self.client.force_login(self.user)
+        resp = self.client.get(reverse("events:registration_queue"))
+        self.assertEqual(resp.status_code, 200)
+        self.assertNotContains(resp, "Zimmerman")
+        self.assertContains(resp, reverse("person_pick"))
+
+    def test_assign_without_person_shows_error(self):
+        self.client.force_login(self.user)
+        resp = self.client.post(
+            reverse("events:registration_queue"),
+            {"attendee_id": self.attendee.id, "action": "assign", "notes": ""},
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "Select a person to link this attendee.")
+
 class EventRosterViewTests(TestCase):
     def setUp(self):
         self.user = get_user_model().objects.create_user(

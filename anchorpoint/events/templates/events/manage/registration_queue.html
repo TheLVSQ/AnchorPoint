@@ -19,17 +19,21 @@
                     {% if attendee.parent_guardian_name %}<div><dt>Guardian</dt><dd>{{ attendee.parent_guardian_name }}{% if attendee.parent_guardian_phone %} · {{ attendee.parent_guardian_phone }}{% endif %}{% if attendee.parent_guardian_email %} · {{ attendee.parent_guardian_email }}{% endif %}</dd></div>{% endif %}
                     {% if attendee.emergency_contact_name %}<div><dt>Emergency</dt><dd>{{ attendee.emergency_contact_name }}</dd></div>{% endif %}
                 </dl>
-                <form method="post" class="form-field form-field--full">
+                {# Search box sits outside the form so Enter searches instead of submitting. #}
+                <label for="person-q-{{ attendee.id }}">Link to person</label>
+                <input id="person-q-{{ attendee.id }}" type="search" name="q" value="{{ attendee.last_name }}"
+                       placeholder="Search by name, email or phone…" autocomplete="off"
+                       hx-get="{% url 'person_pick' %}"
+                       hx-trigger="load, input changed delay:300ms, search"
+                       hx-target="#person-results-{{ attendee.id }}">
+                <form method="post">
                     {% csrf_token %}
                     <input type="hidden" name="attendee_id" value="{{ attendee.id }}">
+                    <div id="person-results-{{ attendee.id }}" class="search-results person-results"></div>
+                    {% for error in form.person.errors %}
+                        <p class="error-text">{{ error }}</p>
+                    {% endfor %}
                     <div class="form-grid">
-                        <div class="form-field form-field--full">
-                            <label for="{{ form.person.id_for_label }}">{{ form.person.label }}</label>
-                            {{ form.person }}
-                            {% for error in form.person.errors %}
-                                <p class="error-text">{{ error }}</p>
-                            {% endfor %}
-                        </div>
                         <div class="form-field">
                             <label for="{{ form.action.id_for_label }}">{{ form.action.label }}</label>
                             {{ form.action }}

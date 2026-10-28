@@ -68,8 +68,18 @@ class SmsBroadcastForm(_BroadcastForm):
         self.fields["body"].required = True
         self.fields["person"].required = False
         self.fields["group"].required = False
-        self.fields["person"].queryset = Person.objects.order_by("last_name", "first_name")
+        # Picked from a search (people.views.person_pick), never rendered as a <select>.
+        self.fields["person"].queryset = Person.objects.all()
+        self.fields["person"].widget = forms.HiddenInput()
         self.fields["group"].queryset = Group.objects.filter(is_active=True).order_by("name")
+
+    def picked_people(self):
+        """[the person already chosen] or [], so a form sent back with errors keeps it."""
+        try:
+            person = self.fields["person"].clean(self["person"].value())
+        except forms.ValidationError:
+            return []
+        return [person] if person else []
 
     def _target(self, cleaned):
         if cleaned.get("target_type") == Communication.TargetType.GROUP:

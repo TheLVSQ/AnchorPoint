@@ -75,6 +75,47 @@ class PeopleDetailCommunicationTests(TestCase):
         self.assertContains(response, "SMS sent")
 
 
+class PersonPickViewTests(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(username="picker", password="pw")
+        self.user.profile.role = UserProfile.Role.STAFF
+        self.user.profile.save()
+        self.url = reverse("person_pick")
+
+    def test_matches_every_word_of_a_full_name(self):
+        person = Person.objects.create(
+            first_name="Jordan", last_name="Reed", email="jordan@example.com"
+        )
+        Person.objects.create(first_name="Jordan", last_name="Smith")
+        self.client.force_login(self.user)
+        resp = self.client.get(self.url, {"q": "jor reed"})
+        self.assertContains(resp, f'value="{person.pk}"')
+        self.assertNotContains(resp, "Smith")
+        self.assertContains(self.client.get(self.url, {"q": "jordan@ex"}), "Reed")
+        self.assertEqual(self.client.get(self.url, {"q": "  "}).content, b"")
+
+    def test_matches_phone(self):
+        Person.objects.create(first_name="Casey", last_name="Lane", phone="(555) 123-4567")
+        self.client.force_login(self.user)
+        self.assertContains(self.client.get(self.url, {"q": "123-4567"}), "Casey")
+
+    def test_communications_volunteer_allowed(self):
+        vol = get_user_model().objects.create_user(username="texter", password="pw")
+        vol.profile.role = UserProfile.Role.VOLUNTEER
+        vol.profile.can_manage_communications = True
+        vol.profile.save()
+        Person.objects.create(first_name="Casey", last_name="Lane")
+        self.client.force_login(vol)
+        self.assertContains(self.client.get(self.url, {"q": "lane"}), "Casey")
+
+    def test_plain_volunteer_blocked(self):
+        vol = get_user_model().objects.create_user(username="pvol", password="pw")
+        vol.profile.role = UserProfile.Role.VOLUNTEER
+        vol.profile.save()
+        self.client.force_login(vol)
+        self.assertEqual(self.client.get(self.url, {"q": "lane"}).status_code, 403)
+
+
 class PeopleSearchViewTests(TestCase):
     def setUp(self):
         User = get_user_model()

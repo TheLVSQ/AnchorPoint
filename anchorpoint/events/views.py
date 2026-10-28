@@ -319,11 +319,15 @@ def event_registration_queue(request):
         .filter(match_status=EventRegistrationAttendee.MATCH_STATUS_PENDING)
         .order_by("registration__created_at")
     )
+    bound = None
     if request.method == "POST":
         attendee = get_object_or_404(
             EventRegistrationAttendee, pk=request.POST.get("attendee_id")
         )
-        form = RegistrationMatchForm(attendee, request.POST)
+        form = RegistrationMatchForm(
+            attendee, request.POST, auto_id=f"id_%s_{attendee.pk}"
+        )
+        bound = form
         if form.is_valid():
             action = form.cleaned_data["action"]
             notes = form.cleaned_data.get("notes") or ""
@@ -387,8 +391,14 @@ def event_registration_queue(request):
         else:
             messages.error(request, "Please fix the errors below.")
 
+    # Keep the submitted form (with its errors) for the attendee that failed validation.
     attendee_forms = [
-        (attendee, RegistrationMatchForm(attendee))
+        (
+            attendee,
+            bound
+            if bound and bound.attendee.pk == attendee.pk
+            else RegistrationMatchForm(attendee, auto_id=f"id_%s_{attendee.pk}"),
+        )
         for attendee in attendees
     ]
     return render(

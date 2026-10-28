@@ -1,0 +1,17 @@
+{% comment %}Radio list for a person picker (see people.views.person_pick). `selected` = the checked person's pk.{% endcomment %}
+{% if people %}
+<div class="household-choice person-pick">
+{% for person in people %}
+    <label class="radio-option">
+        <input type="radio" name="person" value="{{ person.pk }}"{% if person.pk == selected %} checked{% endif %}>
+        <span class="row-list__main">
+            <strong>{{ person.first_name }} {{ person.last_name }}</strong>
+            <span class="muted-text">{% if person.age is not None %}Age {{ person.age }}{% else %}No birthdate{% endif %}{% for household in person.households.all %} · {{ household.name }}{% endfor %}{% if person.email %} · {{ person.email }}{% endif %}{% if person.phone %} · {{ person.phone }}{% endif %}</span>
+        </span>
+    </label>
+{% endfor %}
+</div>
+{% if more %}<p class="muted-text">Showing the first {{ people|length }}. Type more of the name to narrow it down.</p>{% endif %}
+{% else %}
+    <p class="muted-text">No matching people. Try a different spelling, or search by email or phone.</p>
+{% endif %}

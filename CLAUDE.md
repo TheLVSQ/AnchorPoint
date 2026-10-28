@@ -152,6 +152,10 @@ can fetch it.
 - Patterns: `.page-header` (stacked) / `.page-header--split` (title left, actions right),
   `.btn` / `.btn.ghost` / `.btn.danger` / `.btn-sm`, `.card`, `.data-table` (wrap in `.table-wrap`),
   `.chip` (+ `--warning/--danger/--success/--neutral`), `.empty-state`, `.message.<tag>`.
+- **Picking a person:** never a `<select>` of the whole directory. Hide the form's `person` field and
+  add a search box that `hx-get`s `person_pick` (`people/views.py`) into a div inside the form; it
+  returns `name="person"` radios. Keep Enter in the search box from submitting the form. Examples:
+  `events/manage/registration_queue.html`, `messaging/sms_form.html`.
 - Static files use `STORAGES` (hashed + gzipped by whitenoise in prod; plain in tests/DEBUG).
   The kiosk (`checkin/kiosk/base.html`), labels, and emails have their own styling — out of scope.
 

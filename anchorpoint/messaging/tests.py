@@ -466,6 +466,20 @@ class ComposeViewTests(StaffViewTestCase):
         self.assertEqual(comm.created_by, self.user)
         self.assertEqual(FakeAdapter.sent, [])  # the scheduler sends it
 
+    def test_sms_compose_has_no_full_person_dropdown(self):
+        Person.objects.create(first_name="Unrelated", last_name="Zimmerman")
+        resp = self.client.get(reverse("messaging:sms_compose"))
+        self.assertNotContains(resp, "Zimmerman")
+        self.assertContains(resp, reverse("person_pick"))
+
+    def test_sms_compose_keeps_picked_person_on_error(self):
+        resp = self.client.post(reverse("messaging:sms_compose"), {
+            "target_type": "person", "person": self.person.pk, "body": "",
+        })
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, f'value="{self.person.pk}" checked')
+        self.assertFalse(Communication.objects.exists())
+
     def test_sms_compose_redirects_when_channel_not_ready(self):
         FakeAdapter.is_ready = False
         resp = self.client.post(reverse("messaging:sms_compose"), {
