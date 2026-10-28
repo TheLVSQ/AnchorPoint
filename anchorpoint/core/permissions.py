@@ -159,6 +159,21 @@ def communications_required(view_func):
     return wrapper
 
 
+def staff_or_communications_required(view_func):
+    """Staff, or anyone allowed to send communications (who may be a volunteer)."""
+    @wraps(view_func)
+    def wrapper(request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            from django.shortcuts import redirect
+            return redirect("login")
+        if not (is_staff_or_above(request.user) or has_communications_access(request.user)):
+            return HttpResponseForbidden(
+                "You do not have permission to access this page."
+            )
+        return view_func(request, *args, **kwargs)
+    return wrapper
+
+
 def checkin_admin_required(view_func):
     """
     Decorator that requires check-in admin access (admin, staff, or volunteer admin).

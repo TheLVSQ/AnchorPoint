@@ -3,19 +3,19 @@ from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Count, Q
-from django.http import JsonResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 from messaging.models import Delivery
 
-from core.permissions import staff_required
+from core.permissions import staff_or_communications_required, staff_required
 from households.forms import (
     HouseholdMembershipForm,
     HouseholdQuickCreateForm,
 )
 from households import hygiene, membership
 from households.models import CleanupFinding, Household, HouseholdMember
-from .models import Person
+from .models import Person, normalize_phone
 from .forms import PersonForm, RockImportForm, SignupImportForm
 from .services.signup_import import SignupImportError, parse_csv, run_import
 from .services import rock_import as rock
@@ -593,3 +593,43 @@ def people_search(request):
         "page_obj": page_obj,
         "query": query,
     })
+
+
+PERSON_PICK_LIMIT = 15
+
+
+@staff_or_communications_required
+def person_pick(request):
+    """HTMX: radio list (name="person") for a form's person picker, used instead of
+    a <select> of the whole directory (registration match queue, SMS compose).
+
+    Every word must match a first name, last name or email ("kyle alt" finds Kyle Alt);
+    a word with 4+ digits matches phone numbers.
+    """
+    words = request.GET.get("q", "").split()
+    if not words:
+        return HttpResponse("")
+    people = Person.objects.all()
+    for word in words:
+        match = (
+            Q(first_name__icontains=word)
+            | Q(last_name__icontains=word)
+            | Q(email__icontains=word)
+        )
+        digits = normalize_phone(word)
+        if len(digits) >= 4:
+            match |= Q(normalized_phone__contains=digits)
+        people = people.filter(match)
+    people = list(
+        people.prefetch_related("households").order_by("last_name", "first_name")[
+            : PERSON_PICK_LIMIT + 1
+        ]
+    )
+    return render(
+        request,
+        "people/partials/person_pick_results.html",
+        {
+            "people": people[:PERSON_PICK_LIMIT],
+            "more": len(people) > PERSON_PICK_LIMIT,
+        },
+    )

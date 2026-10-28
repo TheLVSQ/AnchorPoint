@@ -419,10 +419,13 @@ class RegistrationMatchForm(forms.Form):
         (ACTION_DISMISS, "Dismiss for now"),
     ]
 
+    # Picked from a search (people.views.person_pick), never rendered as a <select>:
+    # the directory is too big for one.
     person = forms.ModelChoiceField(
-        queryset=Person.objects.all().order_by("last_name", "first_name"),
+        queryset=Person.objects.all(),
         required=False,
-        label="Link to Person",
+        label="Link to person",
+        widget=forms.HiddenInput,
     )
     action = forms.ChoiceField(choices=ACTION_CHOICES, initial=ACTION_ASSIGN)
     notes = forms.CharField(

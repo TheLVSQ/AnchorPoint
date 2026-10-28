@@ -11,6 +11,7 @@ urlpatterns = [
     path("bulk-delete/", views.people_bulk_delete, name="people_bulk_delete"),
     path("lookup/", views.people_lookup, name="people_lookup"),
     path("search/", views.people_search, name="people_search"),
+    path("pick/", views.person_pick, name="person_pick"),
     path("<int:pk>/", views.people_detail, name="people_detail"),
     path("<int:pk>/edit/", views.people_edit, name="people_edit"),
     path("<int:pk>/delete/", views.people_delete, name="people_delete"),

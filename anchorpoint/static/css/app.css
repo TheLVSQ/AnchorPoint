@@ -924,6 +924,10 @@ label + .help-text, label + small.help-text { display: block; margin: -0.15rem 0
 .row-list__item form { margin: 0; }
 .add-members { margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border); }
 .add-members .search-results { margin: -0.5rem 0 0.75rem; }
+.person-results { margin: -0.5rem 0 1rem; max-height: 24rem; overflow-y: auto; }
+.person-pick { margin: 0; }
+.person-pick .radio-option:has(input:checked) { border-color: var(--primary); background: var(--primary-soft); }
+.person-pick .row-list__main .muted-text { white-space: normal; }
 .narrow { max-width: 520px; }
 .mt-2 { margin-top: 0.5rem; }
 .single { max-width: 860px; } .single .split__main { display: flex; flex-direction: column; gap: 1rem; }
