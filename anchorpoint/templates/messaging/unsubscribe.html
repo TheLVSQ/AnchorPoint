@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Unsubscribe{% endblock %}
+{% block content %}
+<div class="auth-card">
+    <div class="auth-card__brand">
+        <h1>{% if done %}You're unsubscribed{% else %}Unsubscribe from emails{% endif %}</h1>
+        <p class="muted-text">{{ org.name|default:"AnchorPoint" }}</p>
+    </div>
+    {% if done %}
+        <p>{{ person.first_name }}, you won't get any more emails from {{ org.name|default:"us" }}. Changed your mind? Let a staff member know and they can turn emails back on.</p>
+    {% else %}
+        <p>Stop church emails to {{ person.first_name }}?</p>
+        <form method="post">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-block">Unsubscribe</button>
+        </form>
+    {% endif %}
+</div>
+{% endblock %}

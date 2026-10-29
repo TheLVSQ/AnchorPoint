@@ -96,6 +96,14 @@
                     {% endif %}
                     {% for error in form.phone_opt_in.errors %}<span class="error-text">{{ error }}</span>{% endfor %}
                 </div>
+                <div class="form-field form-field--full checkbox-field">
+                    <label for="{{ form.email_opt_in.id_for_label }}">
+                        {{ form.email_opt_in }}
+                        <span>{{ form.email_opt_in.label }}</span>
+                    </label>
+                    <small class="help-text">{{ form.email_opt_in.help_text }}</small>
+                    {% for error in form.email_opt_in.errors %}<span class="error-text">{{ error }}</span>{% endfor %}
+                </div>
             </div>
         </div>
 

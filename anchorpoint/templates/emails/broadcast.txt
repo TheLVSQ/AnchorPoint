@@ -1,0 +1,6 @@
+{% autoescape off %}{{ comm.body }}
+
+--
+{{ org.name|default:"AnchorPoint" }}{% if unsubscribe_url %}
+Don't want these emails? Unsubscribe: {{ unsubscribe_url }}{% endif %}
+{% endautoescape %}

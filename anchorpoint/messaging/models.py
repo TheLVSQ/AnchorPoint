@@ -75,6 +75,8 @@ class Communication(models.Model):
             return self.title or "Automatic message"
         if self.channel == self.Channel.VOICE:
             return f"Phone blast '{self.title}'"
+        if self.channel == self.Channel.EMAIL and self.subject:
+            return f"'{self.subject}'"
         sender = self.created_by.get_full_name() or self.created_by.username if self.created_by else "staff"
         return f"{self.get_channel_display()} sent by {sender}"
 

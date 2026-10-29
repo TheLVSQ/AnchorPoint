@@ -215,6 +215,7 @@
                 {% if person.grade %}<div><dt>Grade</dt><dd>{{ person.get_grade_display }}</dd></div>{% endif %}
                 {% if person.marital_status %}<div><dt>Marital status</dt><dd>{{ person.get_marital_status_display }}</dd></div>{% endif %}
                 {% if person.phone %}<div><dt>Texts</dt><dd>{{ person.phone_opt_in|yesno:"Can receive texts,No texts" }}</dd></div>{% endif %}
+                {% if person.email %}<div><dt>Emails</dt><dd>{{ person.email_opt_in|yesno:"Can receive emails,Unsubscribed" }}</dd></div>{% endif %}
                 {% if person.formatted_address %}<div><dt>Address</dt><dd>{{ person.formatted_address|linebreaksbr }}</dd></div>{% endif %}
                 {% if person.first_visit_date %}<div><dt>First visit</dt><dd>{{ person.first_visit_date|date:"M j, Y" }}</dd></div>{% endif %}
                 {% if person.salvation_date %}<div><dt>Salvation</dt><dd>{{ person.salvation_date|date:"M j, Y" }}</dd></div>{% endif %}

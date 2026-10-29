@@ -46,6 +46,8 @@ KIOSK_PIN = "2580"  # fictional, only exists in the throwaway docs DB
 sys.path.insert(0, str(APP))
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "anchorpoint.settings")
 os.environ["DEBUG"] = "True"  # runserver serves static (incl. fresh screenshots)
+# Makes email count as set up in the shots; no form is ever submitted, so nothing is sent.
+os.environ.setdefault("DEFAULT_FROM_EMAIL", "office@example.org")
 SERVER_ENV = os.environ.copy()
 # Playwright's sync API runs an event loop; this script's own ORM calls are fine.
 os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = "true"
@@ -248,6 +250,8 @@ def seed_comms(user):
                                   ("Linh", "Nguyen", True), ("Grace", "Okafor", False)]:
         person = Person.objects.get(first_name=first, last_name=last)
         person.phone_opt_in = opted_in
+        person.email = f"{first.lower()}.{last.lower()}@example.org"
+        person.email_opt_in = True
         person.save()
         GroupMembership.objects.get_or_create(group=team, person=person)
         people[first] = person
@@ -273,6 +277,17 @@ def seed_comms(user):
         scheduled_for=(timezone.localtime(now) + timedelta(days=1)).replace(
             hour=10, minute=0, second=0, microsecond=0),
     )
+
+    email = Communication.objects.create(
+        channel=Communication.Channel.EMAIL, created_by=user, status=Communication.Status.COMPLETED,
+        target_type=Communication.TargetType.GROUP, group=team,
+        subject="Setlist and charts for Sunday",
+        body="Hi team,\n\nCharts for Sunday are attached in the shared folder.",
+        started_at=now - 5 * hour, completed_at=now - 5 * hour,
+    )
+    for person in people.values():
+        Delivery.objects.create(communication=email, person=person, address=person.email,
+                                status=Delivery.Status.SENT, sent_at=email.started_at)
 
     blast = Communication.objects.create(
         channel=Communication.Channel.VOICE, created_by=user, status=Communication.Status.COMPLETED,
@@ -321,6 +336,7 @@ def shoot_comms(browser, cookie, user):
     linh = people["Linh"]
     page.goto(f"{BASE}/people/{linh.pk}/edit/")
     shot(page, "02-opt-in", ".checkbox-field:has(input[name=phone_opt_in])")
+    shot(page, "03-email-opt-in", ".checkbox-field:has(input[name=email_opt_in])")
 
     page.goto(f"{BASE}/communications/sms/new/")
     page.fill("#person-q", "Linh")
@@ -350,6 +366,22 @@ def shoot_comms(browser, cookie, user):
     page.check(f"#person-results input[value='{linh.pk}']")
     page.fill("#id_title", "Thank you, Linh")
     shot(page, "22-blast-person")
+
+    page.goto(f"{BASE}/communications/email/new/")
+    page.select_option("#id_target_type", "group")
+    page.select_option("#id_group", str(team.pk))
+    page.fill("#id_subject", "Rehearsal moves to 6:30 this Thursday")
+    page.fill("#id_body", "Hi team,\n\nRehearsal moves to 6:30 this Thursday so we can set up the "
+                          "new monitors. Doors open at 6:15.\n\nThanks!\nPat")
+    shot(page, "30-email-group")
+
+    from messaging.services import unsubscribe_url
+    public = browser.new_context(viewport={"width": 1280, "height": 900},
+                                 device_scale_factor=2, color_scheme="light")
+    pp = public.new_page()
+    pp.goto(unsubscribe_url(linh, BASE))
+    shot(pp, "31-unsubscribe", ".auth-card")
+    public.close()
 
     page.goto(f"{BASE}/communications/phone-blast/{blast.pk}/")
     page.wait_for_load_state("networkidle")
