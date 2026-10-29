@@ -13,6 +13,9 @@ class UserProfile(models.Model):
         STAFF = "staff", "Staff"
         VOLUNTEER_ADMIN = "volunteer_admin", "Volunteer Admin"
         VOLUNTEER = "volunteer", "Volunteer"
+        # Scheduled volunteers (worship, greeters...): can log in for their own schedule,
+        # but are not on the check-in team, so they never see children's data.
+        TEAM_MEMBER = "team_member", "Team Member"
 
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
@@ -64,6 +67,9 @@ def ensure_user_profile(sender, instance, created, **kwargs):
     # Ensure every user has a profile so role checks never fail in templates.
     if created:
         UserProfile.objects.create(user=instance)
+        # Invited users get an invite email instead (core/invites.py sets this flag).
+        if getattr(instance, "_skip_welcome_email", False):
+            return
         # Send welcome email — import here to avoid circular imports
         from core.email_service import send_welcome_email
         send_welcome_email(instance)

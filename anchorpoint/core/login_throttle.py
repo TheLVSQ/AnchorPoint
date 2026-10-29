@@ -33,6 +33,27 @@ def record_login_failure(request, identifier):
                 cache.set(key, 1, LOGIN_FAIL_WINDOW)
 
 
+RESET_REQUEST_LIMIT = 5
+
+
+def reset_requests_exceeded(request):
+    """Too many "Forgot password?" emails asked for from this IP (stops email-bombing)."""
+    return cache.get(_reset_key(request), 0) >= RESET_REQUEST_LIMIT
+
+
+def record_reset_request(request):
+    key = _reset_key(request)
+    if not cache.add(key, 1, LOGIN_FAIL_WINDOW):
+        try:
+            cache.incr(key)
+        except ValueError:
+            cache.set(key, 1, LOGIN_FAIL_WINDOW)
+
+
+def _reset_key(request):
+    return f"pw-reset:ip:{client_ip(request) or 'unknown'}"
+
+
 def throttled_admin_login(request, extra_context=None):
     """Django admin's login view with the same lockout."""
     from django.contrib import admin

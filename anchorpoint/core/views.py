@@ -3,14 +3,17 @@ from django.contrib import messages
 from django.contrib.auth import authenticate, get_user_model, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import update_session_auth_hash
+from django.contrib.auth import views as auth_views
+from django.contrib.auth.forms import PasswordResetForm
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.http import HttpResponse, HttpResponseForbidden
 from django.utils.crypto import constant_time_compare
 from django.shortcuts import get_object_or_404, redirect, render
-from django.urls import reverse
+from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
+from urllib.parse import urlsplit
 from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
 from people.models import Person
@@ -28,8 +31,13 @@ from .forms import (
     UserProfileForm,
 )
 from .models import OrganizationSettings, UserProfile
-from .login_throttle import login_locked_out, record_login_failure
-from .permissions import admin_required, is_admin, is_staff_or_above
+from .login_throttle import (
+    login_locked_out,
+    record_login_failure,
+    record_reset_request,
+    reset_requests_exceeded,
+)
+from .permissions import admin_required, is_admin, is_staff_or_above, staff_required
 
 
 def login_view(request):
@@ -503,3 +511,89 @@ def user_set_password(request, user_id):
         "form": form,
         "target_user": target_user,
     })
+
+
+# ---------------------------------------------------------------------------
+# Invites + forgot password (links built from the public URL, never the Host header)
+# ---------------------------------------------------------------------------
+
+def _public_base_url(request):
+    from messaging.services import get_site_base_url
+
+    return get_site_base_url() or request.build_absolute_uri("/").rstrip("/")
+
+
+@staff_required
+def person_invite(request, person_id):
+    """Give a person a Team Member login (or reuse theirs) and email a set-password link."""
+    from . import invites
+
+    person = get_object_or_404(Person, pk=person_id)
+    if request.method == "POST":
+        try:
+            result = invites.invite(
+                person, invited_by=request.user, base_url=_public_base_url(request)
+            )
+        except invites.InviteError as exc:
+            messages.error(request, str(exc))
+        else:
+            if result.sent:
+                messages.success(request, f"Invite sent to {result.user.email}.")
+            else:
+                messages.error(
+                    request,
+                    f"{person.first_name}'s login is ready, but the invite email didn't send. "
+                    "Check the email settings, then click Resend invite.",
+                )
+    return redirect("people_detail", pk=person.pk)
+
+
+class _ResetForm(PasswordResetForm):
+    def get_users(self, email):
+        # Unlike Django's default, include people who were invited but never set a
+        # password, so an expired invite can be replaced from "Forgot password?".
+        return User.objects.filter(email__iexact=email, is_active=True)
+
+
+class PasswordResetRequestView(auth_views.PasswordResetView):
+    form_class = _ResetForm
+    template_name = "core/password_reset_form.html"
+    email_template_name = "registration/password_reset_email.html"
+    subject_template_name = "registration/password_reset_subject.txt"
+
+    def dispatch(self, request, *args, **kwargs):
+        if request.method == "POST" and reset_requests_exceeded(request):
+            messages.error(request, "Too many requests. Please wait 15 minutes and try again.")
+            return redirect("password_reset")
+        return super().dispatch(request, *args, **kwargs)
+
+    def form_valid(self, form):
+        from .invites import link_expiry_days
+
+        record_reset_request(self.request)
+        base = urlsplit(_public_base_url(self.request))
+        form.save(
+            domain_override=base.netloc,
+            use_https=base.scheme == "https",
+            subject_template_name=self.subject_template_name,
+            email_template_name=self.email_template_name,
+            request=self.request,
+            extra_email_context={
+                "org": OrganizationSettings.load(), "expires_days": link_expiry_days(),
+            },
+        )
+        return redirect("password_reset_done")
+
+
+class SetPasswordFromLinkView(auth_views.PasswordResetConfirmView):
+    """The page an invite or reset email links to. Signs them in once the password is set."""
+
+    template_name = "core/password_reset_confirm.html"
+    post_reset_login = True
+    post_reset_login_backend = "django.contrib.auth.backends.ModelBackend"
+    success_url = reverse_lazy("dashboard")
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        messages.success(self.request, "Your password is set. You're signed in.")
+        return response

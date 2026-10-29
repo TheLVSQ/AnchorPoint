@@ -17,7 +17,7 @@ def _send(
 ) -> None:
     """
     Render templates and send an email with HTML and plain-text alternatives.
-    Catches all exceptions and logs them — never raises.
+    Catches all exceptions and logs them — never raises. Returns whether it was sent.
     """
     try:
         text_body = render_to_string(text_template, context)
@@ -33,6 +33,8 @@ def _send(
         msg.send()
     except Exception:
         logger.exception("Failed to send email '%s' to %s", subject, to)
+        return False
+    return True
 
 
 def send_welcome_email(user) -> None:
@@ -49,6 +51,21 @@ def send_welcome_email(user) -> None:
         text_template="emails/welcome.txt",
         html_template="emails/welcome.html",
         context={"user": user, "org": org},
+    )
+
+
+def send_invite_email(user, link, *, invited_by, expires_days) -> bool:
+    """Email a new (or not yet signed-in) user their set-your-password link."""
+    from core.models import OrganizationSettings
+
+    org = OrganizationSettings.load()
+    return _send(
+        subject=f"You're invited to {org.name or 'AnchorPoint'}",
+        to=[user.email],
+        text_template="emails/invite.txt",
+        html_template="emails/invite.html",
+        context={"user": user, "org": org, "link": link, "expires_days": expires_days,
+                 "invited_by": invited_by.get_full_name() or invited_by.username},
     )
 
 

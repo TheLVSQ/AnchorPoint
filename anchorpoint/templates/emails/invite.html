@@ -1,0 +1,15 @@
+{% extends "emails/base.html" %}
+{% block content %}
+<h2 style="color: #1a3a5c; margin-top: 0;">Hi {{ user.first_name|default:"there" }},</h2>
+<p style="color: #444444; line-height: 1.6;">
+  {{ invited_by }} invited you to sign in to {{ org.name|default:"AnchorPoint" }}, where you'll see your serving schedule.
+</p>
+<p style="margin: 28px 0;">
+  <a href="{{ link }}" style="background-color: #1a3a5c; color: #ffffff; padding: 12px 22px; border-radius: 6px; text-decoration: none; font-weight: bold;">Set your password</a>
+</p>
+<p style="color: #444444; line-height: 1.6;">
+  Your sign-in email is <strong>{{ user.email }}</strong>. The button works once, for {{ expires_days }} day{{ expires_days|pluralize }}.
+  If it has expired, use "Forgot password?" on the sign-in page.
+</p>
+<p style="color: #444444;">— {{ org.name|default:"AnchorPoint" }}</p>
+{% endblock %}

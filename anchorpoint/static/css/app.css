@@ -278,7 +278,8 @@ button:disabled, .btn[aria-disabled="true"] { opacity: 0.55; cursor: not-allowed
     font-weight: 800; font-size: 0.85rem; letter-spacing: 0.02em;
     overflow: hidden;
 }
-.brand-mark--logo { background: #fff; }
+/* No tile behind an uploaded logo: its own transparency shows through in light and dark mode. */
+.brand-mark--logo { background: transparent; }
 .brand-mark img { width: 100%; height: 100%; object-fit: contain; }
 .brand-copy { display: flex; flex-direction: column; min-width: 0; line-height: 1.2; }
 .brand-copy span { font-weight: 700; font-size: 0.95rem; }
@@ -971,6 +972,7 @@ label + .help-text, label + small.help-text { display: block; margin: -0.15rem 0
 .auth-card__brand { text-align: center; margin-bottom: 1.5rem; }
 .auth-card__brand .brand-mark { width: 48px; height: 48px; border-radius: 12px; margin: 0 auto 0.75rem; font-size: 1rem; }
 .auth-card__brand h1 { margin-bottom: 0.15rem; }
+.auth-card__foot { text-align: center; margin: 1.25rem 0 0; font-size: 0.9rem; }
 .auth-card__google { display: flex; justify-content: center; margin-bottom: 1.25rem; min-height: 44px; }
 .divider { display: flex; align-items: center; gap: 0.75rem; margin: 0 0 1.25rem; color: var(--muted); font-size: 0.83rem; }
 .divider::before, .divider::after { content: ""; flex: 1; border-top: 1px solid var(--border); }

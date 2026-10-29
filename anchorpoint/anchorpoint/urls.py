@@ -18,6 +18,7 @@ Including another URLconf
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
+from django.contrib.auth import views as auth_views
 from core.login_throttle import throttled_admin_login
 from django.http import JsonResponse
 from django.urls import include, path
@@ -38,6 +39,18 @@ urlpatterns = [
     path("login/", core_views.login_view, name="login"),
     path("logout/", core_views.logout_view, name="logout"),
     path("auth/google/", core_views.google_auth_callback, name="google_auth"),
+    path("password-reset/", core_views.PasswordResetRequestView.as_view(), name="password_reset"),
+    path(
+        "password-reset/sent/",
+        auth_views.PasswordResetDoneView.as_view(template_name="core/password_reset_done.html"),
+        name="password_reset_done",
+    ),
+    path(
+        "password-reset/<uidb64>/<token>/",
+        core_views.SetPasswordFromLinkView.as_view(),
+        name="password_reset_confirm",
+    ),
+    path("people/<int:person_id>/invite/", core_views.person_invite, name="person_invite"),
     path("", core_views.dashboard, name="dashboard"),
     path("profile/", core_views.profile, name="profile"),
     path("permissions/roles/", core_views.manage_roles, name="manage_roles"),
