@@ -81,10 +81,13 @@ def collect_issues(now=None):
     )
     failed_blasts = failed.filter(channel=Communication.Channel.VOICE).count()
     failed_sms = failed.filter(channel=Communication.Channel.SMS).count()
+    failed_email = failed.filter(channel=Communication.Channel.EMAIL).count()
     if failed_blasts:
         issues.append(f"{failed_blasts} phone blast(s) failed in the last 24 hours.")
     if failed_sms:
         issues.append(f"{failed_sms} SMS message(s) failed in the last 24 hours.")
+    if failed_email:
+        issues.append(f"{failed_email} email(s) failed in the last 24 hours.")
 
     return issues
 

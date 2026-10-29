@@ -11,9 +11,6 @@ _(empty — the UI refresh and security review both shipped 2026-10-01; see Comp
 - [ ] **Address verification on person add.** Compare USPS Web Tools API (free, US-only) with Smarty/Lob (paid, easier).
   - Pattern: normalize, autocomplete on blur, store a `verified` flag.
   - Degrade gracefully when no API is configured.
-- [ ] **Email sending.** Transactional plus blast, alongside the existing SMS/phone blasts.
-  - Add an `email` adapter (`messaging/adapters.py`) + `Person.email_opt_in`; the outbound
-    communications module already handles consent, blackout, scheduling and Deliveries.
 - [ ] **Bulk import API.** The spec is at `docs/superpowers/specs/2026-05-07-bulk-import-api-design.md`. Reuse the `import_signups` matching logic.
 - [ ] **REST API.** Rebuild it on main. The May attempt (people, households, groups, events, check-in session endpoints in `anchorpoint/api/`) diverged too far to merge. It's preserved as the tag `archive/development`; view it with `git show archive/development:anchorpoint/api/viewsets.py`. DRF is already pinned in `docker/requirements.txt` but isn't in `INSTALLED_APPS`.
 

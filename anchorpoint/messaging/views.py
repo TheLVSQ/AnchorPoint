@@ -11,10 +11,17 @@ from core.models import OrganizationSettings
 from core.permissions import communications_required
 
 from . import outbound
-from .forms import PhoneBlastForm, SmsBroadcastForm
+from people.models import Person
+
+from .forms import EmailBroadcastForm, PhoneBlastForm, SmsBroadcastForm
 from .models import Communication, Delivery
 from .adapters import CALL_STATUS_WEBHOOK_PATH
-from .services import AudioProcessingError, get_site_base_url, transcode_to_mp3
+from .services import (
+    AudioProcessingError,
+    get_site_base_url,
+    person_pk_from_unsubscribe_token,
+    transcode_to_mp3,
+)
 
 Channel = Communication.Channel
 
@@ -28,12 +35,15 @@ def _queued_message(comm, noun):
 @communications_required
 def communications_home(request):
     broadcasts = Communication.objects.filter(kind=Communication.Kind.BROADCAST).select_related(
-        "created_by"
+        "created_by", "group", "person"
     )
     sms_messages = broadcasts.filter(channel=Channel.SMS)[:5]
+    emails = broadcasts.filter(channel=Channel.EMAIL)[:5]
     phone_blasts = broadcasts.filter(channel=Channel.VOICE)[:5]
     context = {
         "sms_messages": sms_messages,
+        "emails": emails,
+        "email_ready": outbound.channel_ready(Channel.EMAIL),
         "phone_blasts_with_stats": [(b, _blast_stats(b)) for b in phone_blasts],
         "twilio_ready": outbound.channel_ready(Channel.SMS),
     }
@@ -67,6 +77,48 @@ def sms_compose(request):
     else:
         form = SmsBroadcastForm()
     return render(request, "messaging/sms_form.html", {"form": form, "twilio_ready": twilio_ready})
+
+
+@communications_required
+def email_compose(request):
+    email_ready = outbound.channel_ready(Channel.EMAIL)
+    if request.method == "POST":
+        form = EmailBroadcastForm(request.POST)
+        if form.is_valid():
+            person, group = form.target()
+            try:
+                comm = outbound.broadcast(
+                    Channel.EMAIL,
+                    created_by=request.user,
+                    person=person,
+                    group=group,
+                    scheduled_for=form.cleaned_data.get("scheduled_for"),
+                    subject=form.cleaned_data["subject"],
+                    body=form.cleaned_data["body"],
+                )
+            except outbound.BroadcastRejected as exc:
+                messages.error(request, str(exc))
+            else:
+                messages.success(request, _queued_message(comm, "Email"))
+                return redirect("messaging:home")
+    else:
+        form = EmailBroadcastForm()
+    return render(request, "messaging/email_form.html", {"form": form, "email_ready": email_ready})
+
+
+def email_unsubscribe(request, token):
+    """Public page from an email's unsubscribe link. GET only asks; the POST turns emails
+    off, so mail scanners that prefetch links can't unsubscribe anyone."""
+    pk = person_pk_from_unsubscribe_token(token)
+    person = Person.objects.filter(pk=pk).first() if pk is not None else None
+    if person is None:
+        raise Http404("Unknown unsubscribe link")
+    done = request.method == "POST"
+    if done and person.email_opt_in:
+        person.email_opt_in = False
+        person.save(update_fields=["email_opt_in"])
+    org = OrganizationSettings.load()
+    return render(request, "messaging/unsubscribe.html", {"person": person, "done": done, "org": org})
 
 
 @communications_required

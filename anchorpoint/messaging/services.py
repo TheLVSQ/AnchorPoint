@@ -1,4 +1,5 @@
-"""Content preparation for outbound communications: phone-blast audio + public base URL."""
+"""Content preparation for outbound communications: phone-blast audio, public base URL,
+and email unsubscribe links."""
 import logging
 import os
 import shutil
@@ -7,7 +8,9 @@ import tempfile
 import uuid
 
 from django.conf import settings as django_settings
+from django.core import signing
 from django.core.files.base import ContentFile
+from django.urls import reverse
 
 from core.models import OrganizationSettings
 
@@ -46,6 +49,24 @@ def get_site_base_url(settings_obj: OrganizationSettings | None = None) -> str |
         "status callback or absolute audio URL."
     )
     return None
+
+
+_UNSUBSCRIBE_SALT = "messaging.unsubscribe"
+
+
+def unsubscribe_url(person, base_url):
+    """Absolute link that turns off ``person``'s church emails. It never expires: an
+    old email's link must keep working."""
+    token = signing.dumps(person.pk, salt=_UNSUBSCRIBE_SALT)
+    return f"{base_url}{reverse('messaging:email_unsubscribe', args=[token])}"
+
+
+def person_pk_from_unsubscribe_token(token):
+    """The person pk an unsubscribe token was made for, or None if it was tampered with."""
+    try:
+        return signing.loads(token, salt=_UNSUBSCRIBE_SALT)
+    except signing.BadSignature:
+        return None
 
 
 # ffprobe format_name -> demuxer to force. Only plain audio/video containers;

@@ -10,9 +10,14 @@ channel to ``FakeAdapter``, so no test can reach Twilio by accident.
 """
 import logging
 
+from django.conf import settings as django_settings
+from django.core.mail import EmailMultiAlternatives
+from django.core.mail.message import make_msgid
+from django.template.loader import render_to_string
+
 from core.models import OrganizationSettings
 
-from .services import get_site_base_url
+from .services import get_site_base_url, unsubscribe_url
 from .twilio_client import (
     TwilioClient,
     TwilioConfigurationError,
@@ -72,6 +77,44 @@ class TwilioVoice:
             )
         except (TwilioConfigurationError, TwilioRequestError) as exc:
             raise DeliveryError(str(exc)) from exc
+
+
+class Email:
+    """Sends through Django's configured mail backend (SMTP in prod). Every broadcast email
+    carries an unsubscribe link, in the footer and the List-Unsubscribe header."""
+
+    def __init__(self, settings_obj: OrganizationSettings):
+        self.settings_obj = settings_obj
+        self.base_url = get_site_base_url(settings_obj)
+
+    def ready(self) -> bool:
+        return bool(django_settings.DEFAULT_FROM_EMAIL)
+
+    def send(self, delivery) -> str:
+        comm = delivery.communication
+        unsubscribe = (
+            unsubscribe_url(delivery.person, self.base_url)
+            if delivery.person and self.base_url else ""
+        )
+        context = {"comm": comm, "org": self.settings_obj, "unsubscribe_url": unsubscribe}
+        message_id = make_msgid(domain="anchorpoint")
+        headers = {"Message-ID": message_id}
+        if unsubscribe:
+            headers["List-Unsubscribe"] = f"<{unsubscribe}>"
+        msg = EmailMultiAlternatives(
+            subject=comm.subject,
+            body=render_to_string("emails/broadcast.txt", context),
+            from_email=django_settings.DEFAULT_FROM_EMAIL,
+            to=[delivery.address],
+            headers=headers,
+        )
+        msg.attach_alternative(render_to_string("emails/broadcast.html", context), "text/html")
+        try:
+            msg.send()
+        except Exception as exc:  # SMTP, DNS, timeouts: all mean "not sent"
+            logger.warning("Email to %s failed: %s", delivery.address, exc)
+            raise DeliveryError(f"Email could not be sent: {exc}") from exc
+        return message_id.strip("<>")
 
 
 class FakeAdapter:

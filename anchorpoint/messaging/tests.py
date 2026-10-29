@@ -8,6 +8,7 @@ from datetime import datetime, time, timedelta, timezone as dt_timezone
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
+from django.core import mail
 from django.core.files.base import ContentFile
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
@@ -20,14 +21,16 @@ from groups.models import Group, GroupMembership
 from people.models import Person
 
 from . import outbound
-from .adapters import DeliveryError, FakeAdapter, TwilioSms, TwilioVoice
-from .forms import PhoneBlastForm, SmsBroadcastForm
+from .adapters import DeliveryError, Email, FakeAdapter, TwilioSms, TwilioVoice
+from .forms import EmailBroadcastForm, PhoneBlastForm, SmsBroadcastForm
+from .services import person_pk_from_unsubscribe_token, unsubscribe_url
 from .models import Communication, Delivery
 from .services import AudioProcessingError, get_site_base_url
 from .twilio_client import TwilioClient, TwilioConfigurationError
 
 SMS = Communication.Channel.SMS
 VOICE = Communication.Channel.VOICE
+EMAIL = Communication.Channel.EMAIL
 
 
 class MessagingTestCase(TestCase):
@@ -867,3 +870,175 @@ class MergeKeepsHistoryTests(MessagingTestCase):
         outbound.send_transactional(SMS, people=[dupe], body="Pickup code ABCD")
         merge_persons(self.person, dupe)
         self.assertEqual(Delivery.objects.get().person, self.person)
+
+
+# ---------------------------------------------------------------------------
+# Email channel
+# ---------------------------------------------------------------------------
+
+class EmailTestCase(MessagingTestCase):
+    def setUp(self):
+        super().setUp()
+        self.person.email = "recipient@example.org"
+        self.person.save()
+
+
+class EmailBroadcastFormTests(EmailTestCase):
+    def _form(self, **data):
+        base = {"target_type": "person", "person": self.person.pk, "group": "",
+                "subject": "Sunday", "body": "See you there", "scheduled_for": ""}
+        base.update(data)
+        return EmailBroadcastForm(data=base)
+
+    def test_person_target(self):
+        form = self._form()
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(form.target(), (self.person, None))
+
+    def test_subject_required(self):
+        form = self._form(subject="")
+        self.assertFalse(form.is_valid())
+        self.assertIn("subject", form.errors)
+
+    def test_person_without_email_rejected(self):
+        self.person.email = ""
+        self.person.save()
+        form = self._form()
+        self.assertFalse(form.is_valid())
+        self.assertIn("email address", form.errors["person"][0])
+
+    def test_unsubscribed_person_rejected(self):
+        self.person.email_opt_in = False
+        self.person.save()
+        form = self._form()
+        self.assertFalse(form.is_valid())
+        self.assertIn("unsubscribed", form.errors["person"][0])
+
+    def test_group_with_no_email_rejected(self):
+        team = Group.objects.create(name="No Emails", category="volunteer")
+        GroupMembership.objects.create(
+            group=team, person=Person.objects.create(first_name="No", last_name="Email"))
+        form = self._form(target_type="group", person="", group=team.pk)
+        self.assertFalse(form.is_valid())
+        self.assertIn("email address", form.non_field_errors()[0])
+
+    def test_quiet_hours_do_not_block_email(self):
+        self.blackout_all_day()
+        self.assertTrue(self._form().is_valid())
+
+
+class EmailOutboundTests(EmailTestCase):
+    def test_email_is_on_by_default(self):
+        self.assertTrue(Person.objects.create(first_name="New", last_name="Person").email_opt_in)
+
+    def test_group_email_reaches_only_people_with_email_turned_on(self):
+        off = Person.objects.create(first_name="Off", last_name="Person",
+                                    email="off@example.org", email_opt_in=False)
+        GroupMembership.objects.create(group=self.group, person=off)
+        comm = outbound.broadcast(EMAIL, created_by=self.user, group=self.group,
+                                  subject="Hi", body="Body")
+        self.assertEqual([d.address for d in comm.deliveries.all()], ["recipient@example.org"])
+        self.assertEqual(comm.summary, "'Hi'")
+
+    def test_dispatch_sends_email_inside_quiet_hours_but_holds_texts(self):
+        outbound.broadcast(EMAIL, created_by=self.user, person=self.person, subject="Hi", body="x")
+        outbound.broadcast(SMS, created_by=self.user, person=self.person, body="x")
+        self.blackout_all_day()
+        report = outbound.dispatch_due()
+        self.assertEqual(report.deferred, 1)
+        self.assertEqual([c.channel for c in report.sent], [EMAIL])
+        self.assertEqual(FakeAdapter.sent[0][:2], (EMAIL, "recipient@example.org"))
+
+    def test_unsubscribed_after_queueing_is_skipped(self):
+        comm = outbound.broadcast(EMAIL, created_by=self.user, person=self.person,
+                                  subject="Hi", body="x")
+        self.person.email_opt_in = False
+        self.person.save()
+        outbound.dispatch_due()
+        delivery = comm.deliveries.get()
+        self.assertEqual((delivery.status, delivery.skip_reason),
+                         (Delivery.Status.SKIPPED, Delivery.SkipReason.OPTED_OUT))
+
+
+@override_settings(DEFAULT_FROM_EMAIL="church@example.org", SITE_BASE_URL="https://ap.example.org",
+                   EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
+class EmailAdapterTests(EmailTestCase):
+    def _delivery(self):
+        comm = outbound.broadcast(EMAIL, created_by=self.user, person=self.person,
+                                  subject="Schedule change", body="Rehearsal at 6.\n\nThanks!")
+        return comm.deliveries.select_related("communication", "person").get()
+
+    def test_sends_with_unsubscribe_link(self):
+        provider_id = Email(self.settings_obj).send(self._delivery())
+        self.assertTrue(provider_id)
+        self.assertEqual(len(mail.outbox), 1)
+        msg = mail.outbox[0]
+        self.assertEqual((msg.subject, msg.to, msg.from_email),
+                         ("Schedule change", ["recipient@example.org"], "church@example.org"))
+        link = unsubscribe_url(self.person, "https://ap.example.org")
+        self.assertIn(link, msg.body)
+        self.assertIn(link, msg.alternatives[0][0])
+        self.assertEqual(msg.extra_headers["List-Unsubscribe"], f"<{link}>")
+
+    def test_ready_needs_a_from_address(self):
+        self.assertTrue(Email(self.settings_obj).ready())
+        with override_settings(DEFAULT_FROM_EMAIL=""):
+            self.assertFalse(Email(self.settings_obj).ready())
+
+    def test_smtp_failure_is_a_delivery_error(self):
+        delivery = self._delivery()
+        with patch("messaging.adapters.EmailMultiAlternatives.send", side_effect=OSError("down")):
+            with self.assertRaises(DeliveryError):
+                Email(self.settings_obj).send(delivery)
+
+
+class EmailViewTests(StaffViewTestCase):
+    def setUp(self):
+        super().setUp()
+        self.person.email = "recipient@example.org"
+        self.person.save()
+
+    def test_compose_queues_email_to_group(self):
+        resp = self.client.post(reverse("messaging:email_compose"), {
+            "target_type": "group", "group": self.group.pk, "subject": "Sunday",
+            "body": "See you", "scheduled_for": "",
+        })
+        self.assertRedirects(resp, reverse("messaging:home"))
+        comm = Communication.objects.get()
+        self.assertEqual((comm.channel, comm.subject, comm.group), (EMAIL, "Sunday", self.group))
+        home = self.client.get(reverse("messaging:home"))
+        self.assertContains(home, "Recent emails")
+        self.assertContains(home, "Sunday")
+
+    def test_compose_keeps_picked_person_on_error(self):
+        resp = self.client.post(reverse("messaging:email_compose"), {
+            "target_type": "person", "person": self.person.pk, "subject": "", "body": "x",
+        })
+        self.assertContains(resp, f'value="{self.person.pk}" checked')
+        self.assertFalse(Communication.objects.exists())
+
+
+class UnsubscribeViewTests(EmailTestCase):
+    def _url(self):
+        link = unsubscribe_url(self.person, "")
+        return link
+
+    def test_token_round_trips(self):
+        token = self._url().rstrip("/").rsplit("/", 1)[1]
+        self.assertEqual(person_pk_from_unsubscribe_token(token), self.person.pk)
+
+    def test_get_asks_without_unsubscribing(self):
+        resp = self.client.get(self._url())
+        self.assertContains(resp, "Unsubscribe from emails")
+        self.person.refresh_from_db()
+        self.assertTrue(self.person.email_opt_in)
+
+    def test_post_unsubscribes_without_login(self):
+        resp = self.client.post(self._url())
+        self.assertContains(resp, "unsubscribed")
+        self.person.refresh_from_db()
+        self.assertFalse(self.person.email_opt_in)
+
+    def test_tampered_token_404s(self):
+        resp = self.client.get(reverse("messaging:email_unsubscribe", args=["nope"]))
+        self.assertEqual(resp.status_code, 404)

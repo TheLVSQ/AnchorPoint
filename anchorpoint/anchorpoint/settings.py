@@ -221,6 +221,7 @@ if TESTING:
 OUTBOUND_ADAPTERS = {
     "sms": "messaging.adapters.TwilioSms",
     "voice": "messaging.adapters.TwilioVoice",
+    "email": "messaging.adapters.Email",
 }
 if TESTING:
     OUTBOUND_ADAPTERS = {channel: "messaging.adapters.FakeAdapter" for channel in OUTBOUND_ADAPTERS}
