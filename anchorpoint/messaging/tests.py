@@ -148,7 +148,8 @@ class SmsBroadcastFormTests(MessagingTestCase):
 
 class PhoneBlastFormTests(MessagingTestCase):
     def _form(self, audio=None, **data):
-        base = {"title": "Voicemail", "group": self.group.pk, "scheduled_for": "", "notes": ""}
+        base = {"target_type": "group", "title": "Voicemail", "group": self.group.pk,
+                "person": "", "scheduled_for": "", "notes": ""}
         base.update(data)
         audio = audio or SimpleUploadedFile("note.mp3", b"data")
         return PhoneBlastForm(data=base, files={"audio_file": audio})
@@ -172,6 +173,26 @@ class PhoneBlastFormTests(MessagingTestCase):
     def test_accepts_valid_audio(self):
         form = self._form(SimpleUploadedFile("ok.mp3", b"audio-bytes"))
         self.assertTrue(form.is_valid(), form.errors)
+
+    def test_defaults_to_group(self):
+        self.assertEqual(PhoneBlastForm()["target_type"].value(), "group")
+
+    def test_person_target(self):
+        form = self._form(target_type="person", person=self.person.pk, group="")
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(form.target(), (self.person, None))
+
+    def test_opted_out_person_rejected(self):
+        self.person.phone_opt_in = False
+        self.person.save()
+        form = self._form(target_type="person", person=self.person.pk, group="")
+        self.assertFalse(form.is_valid())
+        self.assertIn("opted out", form.errors["person"][0])
+
+    def test_missing_person_selection(self):
+        form = self._form(target_type="person", person="")
+        self.assertFalse(form.is_valid())
+        self.assertIn("person", form.errors)
 
 
 class CheckBroadcastTests(MessagingTestCase):
@@ -492,7 +513,8 @@ class ComposeViewTests(StaffViewTestCase):
         with patch("messaging.views.transcode_to_mp3",
                    return_value=ContentFile(b"mp3", name="x.mp3")) as transcode:
             resp = self.client.post(reverse("messaging:phone_blast_create"), {
-                "title": "Snow day", "group": self.group.pk, "scheduled_for": "", "notes": "",
+                "target_type": "group", "title": "Snow day", "group": self.group.pk,
+                "scheduled_for": "", "notes": "",
                 "audio_file": SimpleUploadedFile("rec.webm", b"webm"),
             })
         self.assertRedirects(resp, reverse("messaging:home"))
@@ -502,11 +524,38 @@ class ComposeViewTests(StaffViewTestCase):
         self.assertTrue(comm.audio_file.name.endswith(".mp3"))
         self.assertEqual(comm.deliveries.count(), 1)
 
+    def test_phone_blast_to_one_person(self):
+        other = Person.objects.create(first_name="Other", last_name="Member",
+                                      phone="+15553334444", phone_opt_in=True)
+        GroupMembership.objects.create(group=self.group, person=other)
+        with patch("messaging.views.transcode_to_mp3",
+                   return_value=ContentFile(b"mp3", name="x.mp3")):
+            resp = self.client.post(reverse("messaging:phone_blast_create"), {
+                "target_type": "person", "person": self.person.pk, "group": self.group.pk,
+                "title": "Quick call", "audio_file": SimpleUploadedFile("rec.webm", b"webm"),
+            })
+        self.assertRedirects(resp, reverse("messaging:home"))
+        comm = Communication.objects.get()
+        self.assertEqual((comm.target_type, comm.person, comm.group),
+                         (Communication.TargetType.PERSON, self.person, None))
+        self.assertEqual([d.person for d in comm.deliveries.all()], [self.person])
+        detail = self.client.get(reverse("messaging:phone_blast_detail", args=[comm.pk]))
+        self.assertContains(detail, "Recipient One ·")
+
+    def test_phone_blast_form_keeps_picked_person_on_error(self):
+        resp = self.client.post(reverse("messaging:phone_blast_create"), {
+            "target_type": "person", "person": self.person.pk, "title": "",
+            "audio_file": SimpleUploadedFile("rec.webm", b"webm"),
+        })
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, f'value="{self.person.pk}" checked')
+        self.assertFalse(Communication.objects.exists())
+
     def test_phone_blast_audio_error_shows_on_form(self):
         with patch("messaging.views.transcode_to_mp3",
                    side_effect=AudioProcessingError("could not process")):
             resp = self.client.post(reverse("messaging:phone_blast_create"), {
-                "title": "Snow day", "group": self.group.pk,
+                "target_type": "group", "title": "Snow day", "group": self.group.pk,
                 "audio_file": SimpleUploadedFile("rec.webm", b"webm"),
             })
         self.assertContains(resp, "could not process")

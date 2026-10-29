@@ -21,37 +21,7 @@
                 {{ form.non_field_errors.0 }}
             </div>
         {% endif %}
-        <div class="form-section">
-            <h2>Recipients</h2>
-            <div class="form-grid">
-                <div class="form-field form-field--full">
-                    <label for="{{ form.target_type.id_for_label }}">Send to</label>
-                    {{ form.target_type }}
-                </div>
-                <div class="form-field form-field--full" data-field="person">
-                    {% with picked=form.picked_people %}
-                    <label for="person-q">Person</label>
-                    <input id="person-q" type="search" name="q" placeholder="Search by name, email or phone…" autocomplete="off"
-                           value="{% if picked %}{{ picked.0.first_name }} {{ picked.0.last_name }}{% endif %}"
-                           hx-get="{% url 'person_pick' %}"
-                           hx-trigger="input changed delay:300ms, search" hx-target="#person-results">
-                    <div id="person-results" class="search-results person-results">{% if picked %}{% include "people/partials/person_pick_results.html" with people=picked selected=picked.0.pk only %}{% endif %}</div>
-                    {% endwith %}
-                    <p class="help-text">Select when sending to a single individual.</p>
-                    {% if form.person.errors %}
-                        <p class="error-text">{{ form.person.errors.0 }}</p>
-                    {% endif %}
-                </div>
-                <div class="form-field" data-field="group">
-                    <label for="{{ form.group.id_for_label }}">Group</label>
-                    {{ form.group }}
-                    <p class="help-text">Select when you want to reach a whole group.</p>
-                    {% if form.group.errors %}
-                        <p class="error-text">{{ form.group.errors.0 }}</p>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
+        {% include "messaging/partials/recipients.html" %}
         <div class="form-section">
             <h2>Message</h2>
             <div class="form-grid">
@@ -78,33 +48,4 @@
     </form>
 </section>
 
-<script>
-    (function() {
-        const targetSelect = document.getElementById("{{ form.target_type.id_for_label }}");
-        const personField = document.querySelector("[data-field='person']");
-        const groupField = document.querySelector("[data-field='group']");
-
-        function refresh() {
-            const value = targetSelect ? targetSelect.value : "";
-            if (!personField || !groupField) {
-                return;
-            }
-            personField.style.display = value === "person" ? "block" : "none";
-            groupField.style.display = value === "group" ? "block" : "none";
-        }
-
-        // Enter in the person search must not submit (and send) the message.
-        const personSearch = document.getElementById("person-q");
-        if (personSearch) {
-            personSearch.addEventListener("keydown", function(event) {
-                if (event.key === "Enter") event.preventDefault();
-            });
-        }
-
-        if (targetSelect) {
-            targetSelect.addEventListener("change", refresh);
-            refresh();
-        }
-    })();
-</script>
 {% endblock %}

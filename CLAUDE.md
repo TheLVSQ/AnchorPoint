@@ -250,7 +250,8 @@ Screenshots come from `scripts/help_screenshots.py`: it seeds a **throwaway `*_d
 fictional families (repo is public — never real data), drives your installed Chrome via
 Playwright (docs-only dependency, not in requirements), and can write the guide as a PDF.
 See its docstring for the one-time DB container + `LABEL_FONT_DIR` (DejaVu fonts for the
-sample labels). Re-run it when check-in screens change.
+sample labels). Re-run it when check-in screens change; `--guide communications` re-shoots the
+text/phone-blast guides (fake Twilio settings, pre-made results, nothing is sent).
 
 ## Common Tasks
 

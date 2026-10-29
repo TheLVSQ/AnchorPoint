@@ -48,6 +48,14 @@ class HelpViewTests(TestCase):
         self.assertContains(resp, "Step 1")
         self.assertContains(resp, "Print / save PDF")
 
+    def test_every_guide_is_listed_and_renders(self):
+        self.client.force_login(self.user)
+        listing = self.client.get(reverse("help:list"))
+        for guide in GUIDES:
+            self.assertContains(listing, guide.title)
+            resp = self.client.get(reverse("help:guide", args=[guide.slug]))
+            self.assertContains(resp, guide.title)
+
     def test_unknown_guide_404s(self):
         self.client.force_login(self.user)
         resp = self.client.get(reverse("help:guide", args=["nope"]))

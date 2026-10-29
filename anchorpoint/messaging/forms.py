@@ -10,14 +10,24 @@ from .models import Communication
 
 
 class _BroadcastForm(forms.ModelForm):
-    """Compose form for a broadcast. Consent, schedule and blackout rules live in the
-    outbound communications module; this form only maps its Problems onto fields."""
+    """Compose form for a broadcast to one person or a group. Consent, schedule and
+    blackout rules live in the outbound communications module; this form only maps its
+    Problems onto fields."""
 
     channel = None
+    default_target = Communication.TargetType.PERSON
 
-    def _target(self, cleaned):
-        """Return (person, group) the broadcast is aimed at."""
-        raise NotImplementedError
+    target_type = forms.ChoiceField(choices=Communication.TargetType.choices)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["target_type"].initial = self.default_target
+        self.fields["person"].required = False
+        self.fields["group"].required = False
+        # Picked from a search (people.views.person_pick), never rendered as a <select>.
+        self.fields["person"].queryset = Person.objects.all()
+        self.fields["person"].widget = forms.HiddenInput()
+        self.fields["group"].queryset = Group.objects.filter(is_active=True).order_by("name")
 
     def clean(self):
         cleaned = super().clean()
@@ -37,15 +47,31 @@ class _BroadcastForm(forms.ModelForm):
         return cleaned
 
     def target(self):
+        """(person, None) or (None, group): who the broadcast is aimed at."""
         return self._target(self.cleaned_data)
+
+    def picked_people(self):
+        """[the person already chosen] or [], so a form sent back with errors keeps it."""
+        try:
+            person = self.fields["person"].clean(self["person"].value())
+        except forms.ValidationError:
+            return []
+        return [person] if person else []
+
+    def _target(self, cleaned):
+        if cleaned.get("target_type") == Communication.TargetType.GROUP:
+            group = cleaned.get("group")
+            if not group and "group" not in self.errors:
+                self.add_error("group", "Select the group you want to contact.")
+            return None, group
+        person = cleaned.get("person")
+        if not person and "person" not in self.errors:
+            self.add_error("person", "Select a person to send this message to.")
+        return person, None
 
 
 class SmsBroadcastForm(_BroadcastForm):
     channel = Communication.Channel.SMS
-
-    target_type = forms.ChoiceField(
-        choices=Communication.TargetType.choices, initial=Communication.TargetType.PERSON
-    )
 
     class Meta:
         model = Communication
@@ -66,39 +92,15 @@ class SmsBroadcastForm(_BroadcastForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["body"].required = True
-        self.fields["person"].required = False
-        self.fields["group"].required = False
-        # Picked from a search (people.views.person_pick), never rendered as a <select>.
-        self.fields["person"].queryset = Person.objects.all()
-        self.fields["person"].widget = forms.HiddenInput()
-        self.fields["group"].queryset = Group.objects.filter(is_active=True).order_by("name")
-
-    def picked_people(self):
-        """[the person already chosen] or [], so a form sent back with errors keeps it."""
-        try:
-            person = self.fields["person"].clean(self["person"].value())
-        except forms.ValidationError:
-            return []
-        return [person] if person else []
-
-    def _target(self, cleaned):
-        if cleaned.get("target_type") == Communication.TargetType.GROUP:
-            group = cleaned.get("group")
-            if not group and "group" not in self.errors:
-                self.add_error("group", "Select a group to broadcast your SMS.")
-            return None, group
-        person = cleaned.get("person")
-        if not person and "person" not in self.errors:
-            self.add_error("person", "Select a person to send this message to.")
-        return person, None
 
 
 class PhoneBlastForm(_BroadcastForm):
     channel = Communication.Channel.VOICE
+    default_target = Communication.TargetType.GROUP
 
     class Meta:
         model = Communication
-        fields = ["title", "group", "audio_file", "scheduled_for", "notes"]
+        fields = ["target_type", "person", "group", "title", "audio_file", "scheduled_for", "notes"]
         widgets = {
             "notes": forms.Textarea(attrs={"rows": 3, "placeholder": "Optional notes"}),
             "scheduled_for": forms.DateTimeInput(attrs={"type": "datetime-local"}),
@@ -112,10 +114,6 @@ class PhoneBlastForm(_BroadcastForm):
         super().__init__(*args, **kwargs)
         self.fields["title"].required = True
         self.fields["audio_file"].required = True
-        self.fields["group"].required = True
-        self.fields["group"].queryset = Group.objects.filter(is_active=True).order_by("name")
-        self.fields["group"].empty_label = None
-        self.fields["group"].error_messages["required"] = "Select the group you want to contact."
 
     def clean_audio_file(self):
         audio = self.cleaned_data.get("audio_file")
@@ -131,6 +129,3 @@ class PhoneBlastForm(_BroadcastForm):
                 "Unsupported audio format. Upload an MP3 or WAV, or record in the browser."
             )
         return audio
-
-    def _target(self, cleaned):
-        return None, cleaned.get("group")

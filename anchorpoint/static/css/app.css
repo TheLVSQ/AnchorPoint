@@ -120,6 +120,8 @@
 
 /* ----------------------------------------------------------------- Base -- */
 *, *::before, *::after { box-sizing: border-box; }
+/* Keep the hidden attribute winning over component display rules (e.g. .btn's inline-flex). */
+[hidden] { display: none !important; }
 html { overflow-y: scroll; -webkit-text-size-adjust: 100%; }
 body {
     margin: 0;

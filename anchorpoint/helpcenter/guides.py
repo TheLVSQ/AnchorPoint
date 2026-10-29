@@ -40,6 +40,20 @@ GUIDES = [
                 "and a test run, start to finish.",
         audience="Check-in admins",
     ),
+    Guide(
+        slug="text-blasts",
+        title="Sending text messages",
+        summary="Text one person or a whole group, now or on a schedule, and check what "
+                "was sent.",
+        audience="Staff who send communications",
+    ),
+    Guide(
+        slug="phone-blasts",
+        title="Sending phone blasts",
+        summary="Record a voice message, call one person or a whole group with it, and see "
+                "who answered.",
+        audience="Staff who send communications",
+    ),
 ]
 
 _BY_SLUG = {g.slug: g for g in GUIDES}
