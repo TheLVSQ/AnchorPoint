@@ -13,7 +13,11 @@ One-time setup:
 
 Run from the repo root:
     DB_NAME=anchorpoint_docs DB_PORT=5434 .venv/bin/python scripts/help_screenshots.py \\
-      [--pdf checkin-setup-guide.pdf]
+      [--guide communications] [--pdf checkin-setup-guide.pdf]
+
+--guide picks which guide's screens to capture (default: checkin-setup). The
+communications screens use fake Twilio settings and pre-made results; nothing
+is ever sent.
 
 On macOS, also set LABEL_FONT_DIR (see save_labels) or the sample labels are skipped.
 """
@@ -25,13 +29,15 @@ import subprocess
 import sys
 import time
 import urllib.request
-from datetime import date, time as dtime
+from datetime import date, time as dtime, timedelta
 from io import StringIO
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 APP = ROOT / "anchorpoint"
-OUT = APP / "helpcenter" / "static" / "help" / "checkin-setup"
+HELP = APP / "helpcenter" / "static" / "help"
+OUT = HELP / "checkin-setup"
+COMMS_OUT = HELP / "communications"
 PORT = 8765
 BASE = f"http://127.0.0.1:{PORT}"
 KIOSK = ".kiosk-header, .kiosk-card"
@@ -52,6 +58,7 @@ import django  # noqa: E402
 django.setup()
 
 from django.contrib.auth.models import User  # noqa: E402
+from django.core.files.base import ContentFile  # noqa: E402
 from django.core.management import call_command  # noqa: E402
 from django.test import Client  # noqa: E402
 from django.utils import timezone  # noqa: E402
@@ -60,7 +67,9 @@ from checkin.models import (  # noqa: E402
     CheckInConfiguration, CheckInSession, CheckInWindow, PrintAgent, Room,
 )
 from core.models import OrganizationSettings  # noqa: E402
+from groups.models import Group, GroupMembership  # noqa: E402
 from households.models import Household, HouseholdMember  # noqa: E402
+from messaging.models import Communication, Delivery  # noqa: E402
 from people.models import Person  # noqa: E402
 
 
@@ -76,6 +85,8 @@ def seed():
     org = OrganizationSettings.load()
     org.name = "Harbor Community Church"
     org.kiosk_pin = KIOSK_PIN
+    # No Twilio unless seed_comms() fakes it, so the kiosk run never texts out.
+    org.twilio_account_sid = org.twilio_auth_token = org.twilio_phone_number = ""
     org.save()
 
     rooms = {}
@@ -176,11 +187,11 @@ def start_server():
     sys.exit("Dev server didn't start:\n" + proc.stderr.read().decode())
 
 
-def shoot(page, name, selector="#main", pad=0):
+def shoot(page, name, selector="#main", pad=0, out=OUT):
     """Screenshot one element, or with pad, the padded area spanning every
     element the selector matches (the kiosk's header + card, minus the blank
     full-height backdrop)."""
-    path = OUT / f"{name}.png"
+    path = out / f"{name}.png"
     if pad:
         boxes = [el.bounding_box() for el in page.locator(selector).all()]
         x0, y0 = min(b["x"] for b in boxes), min(b["y"] for b in boxes)
@@ -217,8 +228,139 @@ def save_labels(session):
     print("  saved sample labels")
 
 
+def seed_comms(user):
+    """A fictional team, fake Twilio settings (so the "not configured" warning
+    stays out of the shots) and finished sends made straight in the ORM.
+    Nothing here dials or texts: no broadcast() and no dispatcher runs."""
+    org = OrganizationSettings.load()
+    org.twilio_account_sid = "AC" + "0" * 32
+    org.twilio_auth_token = "docs-only-not-a-real-token"
+    org.twilio_phone_number = "+15550100000"
+    org.sms_blackout_start, org.sms_blackout_end = dtime(21, 0), dtime(8, 0)
+    org.save()
+
+    team, _ = Group.objects.update_or_create(
+        name="Worship Team",
+        defaults={"description": "Musicians and tech crew for Sunday services.", "is_active": True},
+    )
+    people = {}
+    for first, last, opted_in in [("Jordan", "Carter", True), ("Sam", "Carter", True),
+                                  ("Linh", "Nguyen", True), ("Grace", "Okafor", False)]:
+        person = Person.objects.get(first_name=first, last_name=last)
+        person.phone_opt_in = opted_in
+        person.save()
+        GroupMembership.objects.get_or_create(group=team, person=person)
+        people[first] = person
+
+    Communication.objects.filter(created_by=user).delete()
+    now = timezone.now()
+    hour = timedelta(hours=1)
+
+    text = Communication.objects.create(
+        channel=Communication.Channel.SMS, created_by=user, status=Communication.Status.COMPLETED,
+        target_type=Communication.TargetType.GROUP, group=team,
+        body="Rehearsal moves to 6:30 tonight. Doors open at 6:15. See you there!",
+        started_at=now - 26 * hour, completed_at=now - 26 * hour,
+    )
+    for person in people.values():
+        if person.phone_opt_in:
+            Delivery.objects.create(communication=text, person=person, address=person.phone,
+                                    status=Delivery.Status.SENT, sent_at=text.started_at)
+    Communication.objects.create(
+        channel=Communication.Channel.SMS, created_by=user,
+        target_type=Communication.TargetType.PERSON, person=people["Linh"],
+        body="Hi Linh! Can you run slides this Sunday? Reply YES or NO.",
+        scheduled_for=(timezone.localtime(now) + timedelta(days=1)).replace(
+            hour=10, minute=0, second=0, microsecond=0),
+    )
+
+    blast = Communication.objects.create(
+        channel=Communication.Channel.VOICE, created_by=user, status=Communication.Status.COMPLETED,
+        target_type=Communication.TargetType.GROUP, group=team,
+        title="Snow day: no rehearsal tonight",
+        started_at=now - 2 * hour, completed_at=now - 2 * hour + timedelta(minutes=4),
+    )
+    silence = subprocess.run(
+        ["ffmpeg", "-loglevel", "error", "-f", "lavfi", "-i", "anullsrc=r=22050:cl=mono",
+         "-t", "24", "-f", "mp3", "-"], capture_output=True,
+    ).stdout
+    if silence:
+        blast.audio_file.save("snow-day.mp3", ContentFile(silence))
+    for first, status, minutes in [("Jordan", Delivery.Status.ANSWERED, 1),
+                                   ("Sam", Delivery.Status.NO_ANSWER, 2),
+                                   ("Linh", Delivery.Status.ANSWERED, 3)]:
+        person = people[first]
+        Delivery.objects.create(
+            communication=blast, person=person, address=person.phone, status=status,
+            sent_at=blast.started_at,
+            completed_at=blast.started_at + timedelta(minutes=minutes),
+        )
+    grace = people["Grace"]
+    Delivery.objects.create(communication=blast, person=grace, address=grace.phone,
+                            status=Delivery.Status.SKIPPED,
+                            skip_reason=Delivery.SkipReason.OPTED_OUT)
+    return team, blast, people
+
+
+def shoot_comms(browser, cookie, user):
+    """Screens for the text-blast and phone-blast guides. Forms are filled in,
+    never submitted."""
+    COMMS_OUT.mkdir(parents=True, exist_ok=True)
+    team, blast, people = seed_comms(user)
+    shot = lambda page, name, selector="#main": shoot(page, name, selector, out=COMMS_OUT)  # noqa: E731
+
+    ctx = browser.new_context(viewport={"width": 1280, "height": 900},
+                              device_scale_factor=2, color_scheme="light")
+    ctx.add_cookies([cookie])
+    page = ctx.new_page()
+
+    page.goto(f"{BASE}/communications/")
+    shot(page, "00-home")
+    page.goto(f"{BASE}/settings/organization/")
+    shot(page, "01-twilio-settings", '.form-section:has-text("Twilio Account SID")')
+    linh = people["Linh"]
+    page.goto(f"{BASE}/people/{linh.pk}/edit/")
+    shot(page, "02-opt-in", ".checkbox-field:has(input[name=phone_opt_in])")
+
+    page.goto(f"{BASE}/communications/sms/new/")
+    page.fill("#person-q", "Linh")
+    page.wait_for_selector("#person-results input[name=person]")
+    page.check(f"#person-results input[value='{linh.pk}']")
+    page.fill("#id_body", "Hi Linh! Can you run slides this Sunday? Reply YES or NO.")
+    shot(page, "10-text-person")
+
+    page.goto(f"{BASE}/communications/sms/new/")
+    page.select_option("#id_target_type", "group")
+    page.select_option("#id_group", str(team.pk))
+    page.fill("#id_body", "Rehearsal moves to 6:30 tonight. Doors open at 6:15. See you there!")
+    shot(page, "11-text-group")
+
+    page.goto(f"{BASE}/people/{linh.pk}/")
+    shot(page, "12-history", '.card:has(h2:text("Communications History"))')
+
+    page.goto(f"{BASE}/communications/phone-blasts/new/")
+    page.fill("#id_title", "Snow day: no rehearsal tonight")
+    page.select_option("#id_group", str(team.pk))
+    shot(page, "20-blast-form")
+
+    page.goto(f"{BASE}/communications/phone-blasts/new/")
+    page.select_option("#id_target_type", "person")
+    page.fill("#person-q", "Linh")
+    page.wait_for_selector("#person-results input[name=person]")
+    page.check(f"#person-results input[value='{linh.pk}']")
+    page.fill("#id_title", "Thank you, Linh")
+    shot(page, "22-blast-person")
+
+    page.goto(f"{BASE}/communications/phone-blast/{blast.pk}/")
+    page.wait_for_load_state("networkidle")
+    shot(page, "21-blast-detail")
+    ctx.close()
+
+
 def main():
     parser = argparse.ArgumentParser()
+    parser.add_argument("--guide", choices=["checkin-setup", "communications"],
+                        default="checkin-setup", help="Which guide's screens to capture.")
     parser.add_argument("--pdf", help="Also save the guide as a PDF to this path.")
     args = parser.parse_args()
 
@@ -236,6 +378,10 @@ def main():
     try:
         with sync_playwright() as pw:
             browser = pw.chromium.launch(channel="chrome")
+            if args.guide == "communications":
+                shoot_comms(browser, cookie, user)
+                browser.close()
+                return
 
             # ---- Admin screens (desktop, signed in) ----
             admin = browser.new_context(viewport={"width": 1280, "height": 900},

@@ -6,7 +6,7 @@
         <span class="chip">Phone Blast</span>
         <h1>Create Phone Blast</h1>
         <p class="page-subtitle">
-            Record a short update on your phone, upload the audio file (MP3 or WAV), and AnchorPoint will dial your selected group.
+            Record a short update on your phone, upload the audio file (MP3 or WAV), and AnchorPoint will call the person or group you pick.
         </p>
     </div>
     {% if not twilio_ready %}
@@ -19,6 +19,7 @@
         {% if form.non_field_errors %}
             <div class="message">{{ form.non_field_errors.0 }}</div>
         {% endif %}
+        {% include "messaging/partials/recipients.html" %}
         <div class="form-section">
             <h2>Details</h2>
             <div class="form-grid">
@@ -27,13 +28,6 @@
                     {{ form.title }}
                     {% if form.title.errors %}
                         <p class="error-text">{{ form.title.errors.0 }}</p>
-                    {% endif %}
-                </div>
-                <div class="form-field form-field--full">
-                    <label for="{{ form.group.id_for_label }}">Group</label>
-                    {{ form.group }}
-                    {% if form.group.errors %}
-                        <p class="error-text">{{ form.group.errors.0 }}</p>
                     {% endif %}
                 </div>
                 <div class="form-field form-field--full">

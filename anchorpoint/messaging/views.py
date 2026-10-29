@@ -85,11 +85,13 @@ def phone_blast_create(request):
             except AudioProcessingError as exc:
                 form.add_error("audio_file", str(exc))
             else:
+                person, group = form.target()
                 try:
                     comm = outbound.broadcast(
                         Channel.VOICE,
                         created_by=request.user,
-                        group=form.cleaned_data["group"],
+                        person=person,
+                        group=group,
                         scheduled_for=form.cleaned_data.get("scheduled_for"),
                         title=form.cleaned_data["title"],
                         audio_file=audio,
@@ -113,7 +115,7 @@ def phone_blast_create(request):
 
 def _get_blast(pk):
     return get_object_or_404(
-        Communication.objects.select_related("created_by", "group"),
+        Communication.objects.select_related("created_by", "group", "person"),
         pk=pk, channel=Channel.VOICE, kind=Communication.Kind.BROADCAST,
     )
 
