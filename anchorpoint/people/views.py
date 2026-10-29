@@ -8,6 +8,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 from messaging.models import Delivery
 
+from core import invites
 from core.permissions import staff_or_communications_required, staff_required
 from households.forms import (
     HouseholdMembershipForm,
@@ -373,6 +374,7 @@ def people_detail(request, pk):
         "new_household_form": new_household_form,
         "guardians": guardians,
         "show_emergency": show_emergency,
+        "login_user": invites.login_for(person),
     }
     return render(request, "people/people_detail.html", context)
 

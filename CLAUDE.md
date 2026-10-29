@@ -41,7 +41,17 @@ Centralized decorators for consistent authorization:
 - `@staff_required` - Staff+ views (people, groups, events, attendance)
 - `@communications_required` - SMS/phone blast access
 
-Role hierarchy: Admin > Staff > Volunteer Admin > Volunteer
+Role hierarchy: Admin > Staff > Volunteer Admin > Volunteer > Team Member. **Volunteer** = the
+check-in team (live manager, checkout, so it sees children). **Team Member** = scheduled volunteers
+(worship, greeters…): own dashboard/profile/help only; tests in `core/test_invites.py` assert it
+reaches no staff or check-in page.
+
+**Invites + forgot password** (`core/invites.py`): staff click **Invite to log in** on a person's
+profile → a Team Member login (email = login, one login per address, linked to the Person; an
+existing login is reused, its role untouched) and an emailed set-your-password link. Invites and
+"Forgot password?" share Django's reset token (single use, `PASSWORD_RESET_TIMEOUT`, default 3
+days) and build links from `SITE_BASE_URL`, never the request host. Reset requests are throttled
+per IP (`core/login_throttle.py`).
 
 ### Person identity (`people/services/identity.py`)
 

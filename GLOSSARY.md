@@ -84,3 +84,14 @@ explicitly; adults get pickup-code texts and are listed as guardians.
 **Primary adult**: the family's main adult, always an Adult member, or blank. When the primary leaves
 or stops being an adult, the longest-standing other adult takes over; a family with no primary gets
 its first adult. Every membership change goes through `households/membership.py`.
+
+## Logins (`core/`)
+
+**Team Member**: the login role for scheduled volunteers (worship, greeters, BKiDS…). Sees their own
+dashboard, profile and help, never check-in or anyone else's data. Invites create Team Members.
+_Avoid_: calling them "Volunteers": the **Volunteer** role means the check-in team, which can see and
+check out children.
+
+**Invite**: a staff action on a person's profile that gives them a login and emails a single-use
+set-your-password link. Resend until they've signed in once; after that they use "Forgot password?".
+

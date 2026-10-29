@@ -971,6 +971,7 @@ label + .help-text, label + small.help-text { display: block; margin: -0.15rem 0
 .auth-card__brand { text-align: center; margin-bottom: 1.5rem; }
 .auth-card__brand .brand-mark { width: 48px; height: 48px; border-radius: 12px; margin: 0 auto 0.75rem; font-size: 1rem; }
 .auth-card__brand h1 { margin-bottom: 0.15rem; }
+.auth-card__foot { text-align: center; margin: 1.25rem 0 0; font-size: 0.9rem; }
 .auth-card__google { display: flex; justify-content: center; margin-bottom: 1.25rem; min-height: 44px; }
 .divider { display: flex; align-items: center; gap: 0.75rem; margin: 0 0 1.25rem; color: var(--muted); font-size: 0.83rem; }
 .divider::before, .divider::after { content: ""; flex: 1; border-top: 1px solid var(--border); }

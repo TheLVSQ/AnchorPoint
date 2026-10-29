@@ -223,6 +223,31 @@
         </section>
 
         <section class="card">
+            <div class="card__head"><h2>Login</h2></div>
+            {% if login_user %}
+                <dl class="kv">
+                    <div><dt>Signs in as</dt><dd>{{ login_user.email }}</dd></div>
+                    <div><dt>Role</dt><dd>{{ login_user.profile.get_role_display }}</dd></div>
+                    <div><dt>Last signed in</dt><dd>{% if login_user.last_login %}{{ login_user.last_login|date:"M j, Y" }}{% else %}Never (invite not used yet){% endif %}</dd></div>
+                </dl>
+                {% if not login_user.last_login %}
+                <form method="post" action="{% url 'person_invite' person.pk %}" class="mt-2">
+                    {% csrf_token %}
+                    <button type="submit" class="btn ghost btn-sm">Resend invite</button>
+                </form>
+                {% endif %}
+            {% elif person.email %}
+                <p class="muted-text">No login yet. An invite emails {{ person.first_name }} a link to set a password and see their schedule.</p>
+                <form method="post" action="{% url 'person_invite' person.pk %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm">Invite to log in</button>
+                </form>
+            {% else %}
+                <p class="muted-text">Add an email address to invite {{ person.first_name }} to log in.</p>
+            {% endif %}
+        </section>
+
+        <section class="card">
             <div class="card__head"><h2>Health &amp; Security</h2></div>
             <dl class="kv">
                 <div><dt>Allergies</dt><dd>{% if person.allergies %}<strong class="text-danger">{{ person.allergies }}</strong>{% else %}None noted{% endif %}</dd></div>

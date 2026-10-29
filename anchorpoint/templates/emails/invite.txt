@@ -1,0 +1,13 @@
+{% autoescape off %}Hi {{ user.first_name|default:"there" }},
+
+{{ invited_by }} invited you to sign in to {{ org.name|default:"AnchorPoint" }}, where you'll see your serving schedule.
+
+Set your password here (the link works once, for {{ expires_days }} day{{ expires_days|pluralize }}):
+{{ link }}
+
+Your sign-in email is {{ user.email }}.
+
+If the link has expired, use "Forgot password?" on the sign-in page.
+
+— {{ org.name|default:"AnchorPoint" }}
+{% endautoescape %}
