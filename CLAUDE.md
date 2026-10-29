@@ -72,9 +72,12 @@ Every text / phone blast to people in the directory goes through this one module
 - **Transactional** (event-triggered, e.g. check-in pickup code): `send_transactional()`
   sends immediately, obeys opt-in, ignores blackout; records nothing if Twilio isn't set up.
 - **Adapters** (`messaging/adapters.py`): `settings.OUTBOUND_ADAPTERS` maps channel →
-  `TwilioSms` / `TwilioVoice`; under tests every channel is `FakeAdapter` (call
-  `FakeAdapter.reset()` in setUp; set `is_ready` / `fail_with` to simulate). Email = a new
-  adapter + consent field.
+  `TwilioSms` / `TwilioVoice` / `Email`; under tests every channel is `FakeAdapter` (call
+  `FakeAdapter.reset()` in setUp; set `is_ready` / `fail_with` to simulate).
+- **Email** sends through Django's mail backend (Google Workspace SMTP in prod; ready =
+  `DEFAULT_FROM_EMAIL` set). Consent is `Person.email_opt_in`, **on by default**; every broadcast
+  email has a signed unsubscribe link (`/communications/unsubscribe/<token>/`, public, GET asks and
+  POST turns it off) plus a `List-Unsubscribe` header. Quiet hours don't apply to email.
 - The Delivery is the audit trail (person page "Communications History" reads Deliveries).
 - Staff operational alerts (family flags, health email, welcome/registration emails) are
   *not* Communications; they use `messaging/twilio_client.py` / `send_mail` directly.

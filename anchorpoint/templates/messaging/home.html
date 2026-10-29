@@ -4,16 +4,20 @@
 <div class="page-header page-header--split">
     <div>
         <h1>Communications</h1>
-        <p class="page-subtitle">Texts and phone blasts to your people and groups. Every send is logged on each person's profile.</p>
+        <p class="page-subtitle">Texts, emails and phone blasts to your people and groups. Every send is logged on each person's profile.</p>
     </div>
     <div class="page-actions">
         <a class="btn ghost" href="{% url 'messaging:phone_blast_create' %}">New phone blast</a>
+        <a class="btn ghost" href="{% url 'messaging:email_compose' %}">New email</a>
         <a class="btn" href="{% url 'messaging:sms_compose' %}">New text</a>
     </div>
 </div>
 
 {% if not twilio_ready %}
     <div class="callout callout--warning"><strong>Add Twilio credentials</strong> in <a href="{% url 'organization_settings' %}">Organization Settings</a> to send texts and calls.</div>
+{% endif %}
+{% if not email_ready %}
+    <div class="callout callout--warning"><strong>Email isn't set up on the server.</strong> Add the SMTP settings (<code>EMAIL_HOST_USER</code>, <code>DEFAULT_FROM_EMAIL</code>) to send emails.</div>
 {% endif %}
 
 <div class="split split--even">
@@ -33,6 +37,25 @@
             </ul>
         {% else %}
             <p class="empty-state">No texts sent yet.</p>
+        {% endif %}
+    </section>
+
+    <section class="card">
+        <div class="card__head"><h2>Recent emails</h2></div>
+        {% if emails %}
+            <ul class="row-list">
+            {% for email in emails %}
+                <li class="row-list__item">
+                    <div class="row-list__main">
+                        <strong>{{ email.subject|truncatechars:70 }}</strong>
+                        <span class="muted-text">{{ email.group.name|default:email.person }} · {{ email.created_by.get_full_name|default:email.created_by.username }}{% if email.scheduled_for %} · scheduled {{ email.scheduled_for|date:"M j, g:i A" }}{% endif %}</span>
+                    </div>
+                    <span class="chip {% if email.status == 'completed' %}chip--success{% elif email.status == 'failed' %}chip--danger{% elif email.status == 'scheduled' or email.status == 'sending' %}chip--warning{% else %}chip--neutral{% endif %}">{% if email.status == 'scheduled' and not email.scheduled_for %}Queued{% else %}{{ email.get_status_display }}{% endif %}</span>
+                </li>
+            {% endfor %}
+            </ul>
+        {% else %}
+            <p class="empty-state">No emails sent yet.</p>
         {% endif %}
     </section>
 

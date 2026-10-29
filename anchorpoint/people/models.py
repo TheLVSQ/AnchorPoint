@@ -64,6 +64,11 @@ class Person(models.Model):
         help_text="Can this person receive text messages at their phone number? "
                   "Opt-in by default OFF — must be explicitly granted.",
     )
+    email_opt_in = models.BooleanField(
+        default=True,
+        help_text="Can this person receive church emails? On by default; turned off when "
+                  "they unsubscribe.",
+    )
     birthdate = models.DateField(blank=True, null=True)
     grade = models.CharField(
         max_length=20, choices=GRADE_CHOICES, blank=True, null=True

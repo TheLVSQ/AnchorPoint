@@ -94,6 +94,25 @@ class SmsBroadcastForm(_BroadcastForm):
         self.fields["body"].required = True
 
 
+class EmailBroadcastForm(_BroadcastForm):
+    channel = Communication.Channel.EMAIL
+
+    class Meta:
+        model = Communication
+        fields = ["target_type", "person", "group", "subject", "body", "scheduled_for"]
+        widgets = {
+            "subject": forms.TextInput(attrs={"placeholder": "e.g. Schedule change for Sunday"}),
+            "body": forms.Textarea(attrs={"rows": 10}),
+            "scheduled_for": forms.DateTimeInput(attrs={"type": "datetime-local"}),
+        }
+        labels = {"body": "Message"}
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["subject"].required = True
+        self.fields["body"].required = True
+
+
 class PhoneBlastForm(_BroadcastForm):
     channel = Communication.Channel.VOICE
     default_target = Communication.TargetType.GROUP

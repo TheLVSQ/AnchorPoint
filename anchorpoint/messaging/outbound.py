@@ -30,12 +30,32 @@ from .models import Communication, Delivery
 
 Channel = Communication.Channel
 
-# Which Person field holds the address, and which holds consent, per channel. Email gets
-# its own entry (and an opt-in field) when the email channel lands.
-_ADDRESS_FIELD = {Channel.SMS: "phone", Channel.VOICE: "phone"}
-_CONSENT_FIELD = {Channel.SMS: "phone_opt_in", Channel.VOICE: "phone_opt_in"}
+# Which Person field holds the address, and which holds consent, per channel.
+_ADDRESS_FIELD = {Channel.SMS: "phone", Channel.VOICE: "phone", Channel.EMAIL: "email"}
+_CONSENT_FIELD = {
+    Channel.SMS: "phone_opt_in", Channel.VOICE: "phone_opt_in", Channel.EMAIL: "email_opt_in",
+}
 
-_NOT_READY = "Add your Twilio SID, auth token, and phone number in Organization Settings."
+# Quiet hours hold texts and calls. Email doesn't ring anyone's phone, so it goes out anytime.
+_QUIET_HOURS_CHANNELS = (Channel.SMS, Channel.VOICE)
+
+_TWILIO_NOT_READY = "Add your Twilio SID, auth token, and phone number in Organization Settings."
+_NOT_READY = {
+    Channel.SMS: _TWILIO_NOT_READY,
+    Channel.VOICE: _TWILIO_NOT_READY,
+    Channel.EMAIL: "Email isn't set up on the server (DEFAULT_FROM_EMAIL / SMTP settings).",
+}
+
+# Compose-time wording per channel: (no address, opted out, nobody in the group reachable).
+_RECIPIENT_PROBLEMS = {
+    Channel.SMS: ("That person does not have a phone number.",
+                  "This person has opted out of phone contact.",
+                  "Nobody in this group has a phone number with contact opt-in."),
+    Channel.EMAIL: ("That person does not have an email address.",
+                    "This person has unsubscribed from church emails.",
+                    "Nobody in this group has an email address with emails turned on."),
+}
+_RECIPIENT_PROBLEMS[Channel.VOICE] = _RECIPIENT_PROBLEMS[Channel.SMS]
 
 # A call with no status callback after this long is settled as "no status received",
 # so one lost callback can't leave a blast "Sending" forever.
@@ -97,29 +117,29 @@ def check_broadcast(channel, *, person=None, group=None, scheduled_for=None, now
     now = now or timezone.now()
     problems = []
     if not _adapter(channel, settings_obj).ready():
-        problems.append(Problem(None, _NOT_READY))
+        problems.append(Problem(None, _NOT_READY[channel]))
 
+    no_address, opted_out, nobody = _RECIPIENT_PROBLEMS[channel]
     if person is not None:
         if not _address(person, channel):
-            problems.append(Problem("person", "That person does not have a phone number."))
+            problems.append(Problem("person", no_address))
         elif not _consents(person, channel):
-            problems.append(Problem("person", "This person has opted out of phone contact."))
+            problems.append(Problem("person", opted_out))
     elif group is not None:
         if not _group_recipients(group, channel):
-            problems.append(Problem(
-                None, "Nobody in this group has a phone number with contact opt-in."
-            ))
+            problems.append(Problem(None, nobody))
     else:
         problems.append(Problem(None, "Choose a person or a group to contact."))
 
+    quiet_hours_apply = channel in _QUIET_HOURS_CHANNELS
     if scheduled_for:
         if scheduled_for < now:
             problems.append(Problem("scheduled_for", "Schedule time must be in the future."))
-        elif is_within_blackout_window(settings_obj, scheduled_for):
+        elif quiet_hours_apply and is_within_blackout_window(settings_obj, scheduled_for):
             problems.append(Problem(
                 "scheduled_for", "This time falls inside your configured blackout window."
             ))
-    elif is_within_blackout_window(settings_obj, now):
+    elif quiet_hours_apply and is_within_blackout_window(settings_obj, now):
         problems.append(Problem(
             None,
             "You are inside the configured blackout window. Choose a later send time.",
@@ -128,7 +148,7 @@ def check_broadcast(channel, *, person=None, group=None, scheduled_for=None, now
 
 
 def broadcast(channel, *, created_by, person=None, group=None, scheduled_for=None,
-              title="", body="", audio_file=None, notes="") -> Communication:
+              title="", subject="", body="", audio_file=None, notes="") -> Communication:
     """Queue a staff-written Communication with one pending Delivery per consenting
     recipient. The scheduler (``dispatch_due``) sends it, at ``scheduled_for`` or within
     a minute. Raises BroadcastRejected if ``check_broadcast`` finds problems."""
@@ -145,6 +165,7 @@ def broadcast(channel, *, created_by, person=None, group=None, scheduled_for=Non
             status=Communication.Status.SCHEDULED,
             created_by=created_by,
             title=title,
+            subject=subject,
             body=body,
             audio_file=audio_file or "",
             notes=notes,
@@ -208,8 +229,9 @@ def dispatch_due(now=None) -> DispatchReport:
         .order_by("created_at")
     )
     if is_within_blackout_window(settings_obj, now):
-        report.deferred = due.count()
-        return report
+        held = due.filter(channel__in=_QUIET_HOURS_CHANNELS)
+        report.deferred = held.count()
+        due = due.exclude(channel__in=_QUIET_HOURS_CHANNELS)
 
     for comm in due:
         # Claim it, so an overlapping scheduler run can't send it twice.
@@ -224,7 +246,8 @@ def dispatch_due(now=None) -> DispatchReport:
             _send_pending(comm, adapter, recheck_consent=True)
         else:
             comm.deliveries.filter(status=Delivery.Status.PENDING).update(
-                status=Delivery.Status.FAILED, error_message=_NOT_READY, completed_at=now
+                status=Delivery.Status.FAILED, error_message=_NOT_READY[comm.channel],
+                completed_at=now,
             )
             _settle(comm, attempted=1, sent=0)
         (report.failed if comm.status == Communication.Status.FAILED else report.sent).append(comm)

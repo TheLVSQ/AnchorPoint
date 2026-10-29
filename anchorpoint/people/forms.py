@@ -71,6 +71,7 @@ class PersonForm(forms.ModelForm):
             "first_name",
             "last_name",
             "email",
+            "email_opt_in",
             "phone",
             "phone_opt_in",
             "birthdate",
