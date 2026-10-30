@@ -9,6 +9,7 @@ _(empty — the UI refresh and security review both shipped 2026-10-01; see Comp
 ## Next up
 
 - [ ] **Teams & Plans: replace Planning Center** (#134). Phases 1–2 live before the Jan 1, 2027 renewal.
+  - [ ] Per-plan needs (e.g. an extra vocalist on Easter): today a plan always uses its service type's needs.
 - [ ] **Address verification on person add.** Compare USPS Web Tools API (free, US-only) with Smarty/Lob (paid, easier).
   - Pattern: normalize, autocomplete on blur, store a `verified` flag.
   - Degrade gracefully when no API is configured.

@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}{% if service_type %}Edit {{ service_type.name }}{% else %}New service type{% endif %}{% endblock %}
+{% block content %}
+<a class="back-link" href="{% if service_type %}{% url 'scheduling:schedule' service_type.pk %}{% else %}{% url 'scheduling:service_type_list' %}{% endif %}">&larr; {% if service_type %}{{ service_type.name }}{% else %}Schedules{% endif %}</a>
+
+<div class="page-header">
+    <h1>{% if service_type %}Edit {{ service_type.name }}{% else %}New service type{% endif %}</h1>
+    <p class="page-subtitle">Each date of this service gets a plan with these positions to fill.</p>
+</div>
+
+<form method="post" class="form-section">
+    {% csrf_token %}
+    {% for field in form %}{% if not field.name|slice:":5" == "need_" %}
+        {% if field.name == "is_active" %}
+        <div class="checkbox-field"><label for="{{ field.id_for_label }}">{{ field }} {{ field.label }}</label></div>
+        {% else %}
+        <div class="form-field">
+            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {{ field }}
+            {% if field.errors %}<p class="error-text">{{ field.errors.0 }}</p>{% elif field.help_text %}<p class="help-text">{{ field.help_text }}</p>{% endif %}
+        </div>
+        {% endif %}
+    {% endif %}{% endfor %}
+
+    <fieldset class="form-field needs-fieldset">
+        <legend>People needed each date</legend>
+        <p class="help-text">How many of each position. Leave 0 for positions this service doesn't use.</p>
+        {% for team, fields in form.teams %}
+        <div class="needs-team">
+            <h3>{{ team.name }}</h3>
+            <div class="needs-grid">
+                {% for field in fields %}
+                <label class="needs-grid__item" for="{{ field.id_for_label }}">
+                    <span>{{ field.label }}</span>
+                    {{ field }}
+                </label>
+                {% if field.errors %}<p class="error-text">{{ field.errors.0 }}</p>{% endif %}
+                {% endfor %}
+            </div>
+        </div>
+        {% empty %}
+        <p class="empty-state">No team has positions yet. Open a volunteer team under <a href="{% url 'groups:list' %}">Groups</a> and add its positions (Keys, Vocals, Sound…) first.</p>
+        {% endfor %}
+    </fieldset>
+
+    <div class="form-actions">
+        <button type="submit" class="btn">{% if service_type %}Save{% else %}Create{% endif %}</button>
+        <a class="btn ghost" href="{% if service_type %}{% url 'scheduling:schedule' service_type.pk %}{% else %}{% url 'scheduling:service_type_list' %}{% endif %}">Cancel</a>
+    </div>
+</form>
+{% endblock %}

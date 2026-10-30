@@ -27,6 +27,7 @@ _NAV_SECTIONS = [
     ("/profile/", "profile"),
     ("/help/", "help"),
     ("/serving/", "serving"),
+    ("/plans/", "plans"),
 ]
 
 

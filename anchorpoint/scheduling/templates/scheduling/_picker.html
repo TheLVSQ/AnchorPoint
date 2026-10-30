@@ -1,0 +1,20 @@
+<div class="sched-cell sched-cell--picking" id="{{ cell.dom_id }}">
+    <p class="sched-picker__title">{{ cell.position.name }} · {{ cell.plan.date|date:"M j" }}</p>
+    {% if fits %}
+    <ul class="sched-picker">
+        {% for c in fits %}{% include "scheduling/_picker_option.html" %}{% endfor %}
+    </ul>
+    {% else %}
+    <p class="help-text">No one on {{ cell.position.group.name }} is marked for {{ cell.position.name }} yet{% if not others %}, and the team has no one else to add{% endif %}. Set positions with <strong>Edit</strong> on the team page.</p>
+    {% endif %}
+    {% if others %}
+    <details class="sched-picker__others"{% if not fits %} open{% endif %}>
+        <summary>Others on {{ cell.position.group.name }} ({{ others|length }})</summary>
+        <ul class="sched-picker">
+            {% for c in others %}{% include "scheduling/_picker_option.html" with not_marked=True %}{% endfor %}
+        </ul>
+    </details>
+    {% endif %}
+    <button type="button" class="btn ghost btn-sm" hx-get="{% url 'scheduling:cell' cell.plan.pk cell.position.pk %}"
+            hx-target="#{{ cell.dom_id }}" hx-swap="outerHTML">Done</button>
+</div>

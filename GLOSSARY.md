@@ -114,3 +114,16 @@ pattern, set per team; the week is the date's week of the month. _Avoid_: callin
 
 **Blockout**: dates a person can't serve on any team (vacation, "out the 14th"), optionally repeating
 every year. Exceptions only; regular patterns are serving weeks.
+
+**Service type**: a kind of service that gets scheduled ("Sunday Morning", "VBS 2027"): its weekday
+(or every day, for VBS), time, and how many of each position each date needs. _Avoid_: event (that's
+the Events app).
+
+**Plan**: one date of a service type, holding who serves in each position. One plan covers every
+team on that date. _Avoid_: service, schedule (the schedule is the grid of plans).
+
+**Assignment**: one person in one position on one plan: Pending, Accepted or Declined. Declined ones
+stay visible but don't fill the position.
+
+**Already serving**: the person has another (not declined) assignment that date, on any plan or
+position. A warning, like being outside their serving weeks or blocked out; staff can still schedule.

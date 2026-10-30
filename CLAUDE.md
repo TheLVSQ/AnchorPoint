@@ -262,19 +262,27 @@ is combined, not dropped, and merging two people who both have logins is blocked
 
 ## Teams & Plans (`scheduling/` app, plan in issue #134)
 
-The Planning Center replacement, built on existing Groups (a team = a `Group`). Phase 1a so far:
+The Planning Center replacement, built on existing Groups (a team = a `Group`). Phases 1a–1b so far:
 - **Positions** (`groups.Position`): roles on a team. `GroupMembership.positions` = what that person
   can fill; `GroupMembership.serving_weeks` = which weeks of the month they serve on that team
   (digits, `"12345"` default, `"3"` = 3rd Sunday only). Staff edit both via **Edit** on a member.
   Check-in classrooms and event-registration groups aren't schedulable (`Group.is_schedulable`).
 - **Blockouts** (`scheduling.Blockout`): dates a person can't serve on any team, optionally
   `repeats_yearly` (may cross New Year; Feb 29 → Feb 28). Not for regular patterns.
-- **Availability** (`scheduling/availability.py`): `available(memberships, day, position)` and
-  `reasons_unavailable(membership, day)`. The week is the date's week of the month (15th–21st = 3).
-  The schedule grid must ask this module, never re-derive the rules.
+- **Availability** (`scheduling/availability.py`): `Availability(person_ids, days).reasons(...)`
+  answers "why not" for a whole grid in 2 queries (outside their weeks, blocked out, already serving
+  that day); `reasons_unavailable(membership, day)` for one. Warnings only: staff can still schedule.
+  The week is the date's week of the month (15th–21st = 3). Never re-derive these rules in a view.
+- **Service types → Plans → Assignments** (`scheduling/schedule.py`, staff, `/plans/`): a
+  `ServiceType` has a weekday (blank = every day, e.g. VBS), a time and `ServiceTypeNeed`s (position
+  + count). "Add dates" makes one `Plan` per date (`generate_plans`, safe to re-run). The grid is
+  needs (rows, by team) × plans (columns); `build_grid` / `build_cell` / `candidates` / `assign`.
+  Cells are HTMX partials (`_cell.html`, `_picker.html`); the picker offers only that team's members
+  and confirms before scheduling someone with a warning. An `Assignment` is pending until 1c adds
+  accept/decline; a position that's on a schedule can't be removed (`Assignment.position` PROTECT).
 - **My serving** (`/serving/`, any login linked to a Person): the volunteer's own teams (set their
   weeks; positions are staff-only) and blockouts. Staff see the same on the person page.
-- Person merge combines positions, weeks and leader role on shared teams; blockouts move.
+- Person merge combines positions, weeks and leader role on shared teams; blockouts and assignments move.
 
 ## Help guides (`helpcenter/` app, `/help/`)
 

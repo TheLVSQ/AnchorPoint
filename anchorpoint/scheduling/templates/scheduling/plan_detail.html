@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}{{ plan.service_type.name }} {{ plan.date|date:"M j" }}{% endblock %}
+{% block content %}
+<a class="back-link" href="{% url 'scheduling:schedule' plan.service_type.pk %}?start={{ plan.date|date:'Y-m-d' }}">&larr; {{ plan.service_type.name }}</a>
+
+<div class="page-header page-header--split">
+    <div>
+        <h1>{{ plan.date|date:"l, F j" }}</h1>
+        <p class="page-subtitle">{{ plan.service_type.name }}{% if plan.time %} · {{ plan.time|time:"g:i A" }}{% endif %}{% if plan.title %} · {{ plan.title }}{% endif %}</p>
+    </div>
+    <div class="page-actions">
+        {% if previous %}<a class="btn ghost btn-sm" href="{% url 'scheduling:plan_detail' previous.pk %}">&larr; {{ previous.date|date:"M j" }}</a>{% endif %}
+        {% if next %}<a class="btn ghost btn-sm" href="{% url 'scheduling:plan_detail' next.pk %}">{{ next.date|date:"M j" }} &rarr;</a>{% endif %}
+    </div>
+</div>
+
+<div class="split split--main-first">
+    <div class="split__main">
+        {% for team_rows in grid %}
+        <section class="card">
+            <div class="card__head"><h2>{{ team_rows.team.name }}</h2></div>
+            <ul class="plan-positions">
+                {% for row in team_rows.rows %}
+                <li class="plan-positions__row">
+                    <div class="plan-positions__name"><strong>{{ row.position.name }}</strong>{% if row.needed %}<small>Needs {{ row.needed }}</small>{% endif %}</div>
+                    {% include "scheduling/_cell.html" with cell=row.cells.0 %}
+                </li>
+                {% endfor %}
+            </ul>
+        </section>
+        {% empty %}
+        <div class="empty-state">{{ plan.service_type.name }} doesn't need any positions yet. <a href="{% url 'scheduling:service_type_edit' plan.service_type.pk %}">Pick them</a>.</div>
+        {% endfor %}
+    </div>
+    <aside class="split__side">
+        <section class="card">
+            <div class="card__head"><h2>Details</h2></div>
+            <form method="post">
+                {% csrf_token %}
+                {% for field in form %}
+                <div class="form-field">
+                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                    {{ field }}
+                    {% if field.errors %}<p class="error-text">{{ field.errors.0 }}</p>{% elif field.help_text %}<p class="help-text">{{ field.help_text }}</p>{% endif %}
+                </div>
+                {% endfor %}
+                <button type="submit" class="btn btn-sm">Save</button>
+            </form>
+        </section>
+        <section class="card">
+            <div class="card__head"><h2>Delete this date</h2></div>
+            <p class="muted-text">Removes the plan and everyone scheduled on it.</p>
+            <form method="post" action="{% url 'scheduling:plan_delete' plan.pk %}"
+                  hx-confirm="Delete {{ plan.date|date:'M j' }} and everyone scheduled on it?">
+                {% csrf_token %}
+                <button type="submit" class="btn danger btn-sm">Delete {{ plan.date|date:"M j" }}</button>
+            </form>
+        </section>
+    </aside>
+</div>
+{% endblock %}

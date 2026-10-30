@@ -1,0 +1,23 @@
+<div class="sched-cell{% if cell.short %} sched-cell--short{% endif %}" id="{{ cell.dom_id }}">
+    {% if cell.slots %}
+    <ul class="sched-cell__list">
+        {% for slot in cell.slots %}{% with a=slot.assignment %}
+        <li class="sched-slot sched-slot--{{ a.status }}">
+            <span class="sched-slot__name">{{ a.person.first_name }} {{ a.person.last_name }}</span>
+            {% if a.status != "pending" %}<span class="chip chip--{% if a.status == 'accepted' %}success{% else %}danger{% endif %}">{{ a.get_status_display }}</span>{% endif %}
+            <form method="post" action="{% url 'scheduling:assignment_remove' a.pk %}"
+                  hx-post="{% url 'scheduling:assignment_remove' a.pk %}" hx-target="#{{ cell.dom_id }}" hx-swap="outerHTML">
+                {% csrf_token %}
+                <button type="submit" class="sched-slot__remove" aria-label="Remove {{ a.person.first_name }} from {{ cell.position.name }}" title="Remove">&times;</button>
+            </form>
+            {% for warning in slot.warnings %}<span class="sched-slot__warn">⚠ {{ warning }}</span>{% endfor %}
+        </li>
+        {% endwith %}{% endfor %}
+    </ul>
+    {% endif %}
+    <div class="sched-cell__foot">
+        {% if cell.needed %}<span class="sched-cell__count">{{ cell.filled }} of {{ cell.needed }}</span>{% endif %}
+        <button type="button" class="btn ghost btn-sm" hx-get="{% url 'scheduling:cell_pick' cell.plan.pk cell.position.pk %}"
+                hx-target="#{{ cell.dom_id }}" hx-swap="outerHTML" aria-label="Add someone to {{ cell.position.name }} on {{ cell.plan.date|date:'M j' }}">+ Add</button>
+    </div>
+</div>

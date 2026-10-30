@@ -1130,3 +1130,48 @@ html.embed-html { overflow-y: auto; background: transparent; }
 .blockout-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0 0.75rem; margin-top: 1rem; }
 .blockout-form .checkbox-field, .blockout-form .form-actions { grid-column: 1 / -1; }
 .blockout-form .form-actions { margin-top: 0; }
+
+/* Schedules: service types, the dates × positions grid, plan pages. */
+.needs-fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
+.needs-fieldset legend { padding: 0; margin-bottom: 0.2rem; font-size: 0.85rem; font-weight: 600; color: var(--text); }
+.needs-team + .needs-team { margin-top: 1rem; }
+.needs-team h3 { margin: 0 0 0.4rem; font-size: 0.95rem; }
+.needs-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 0.5rem 1rem; }
+.needs-grid__item { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; font-weight: 500; margin: 0; }
+.needs-grid__item .need-input { width: 4.5rem; margin: 0; }
+.sched-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem; margin-bottom: 1rem; }
+.sched-toolbar__pager { display: flex; gap: 0.5rem; margin-left: auto; }
+.sched-grid { border-collapse: separate; border-spacing: 0; width: 100%; }
+.sched-grid th, .sched-grid td { border-bottom: 1px solid var(--border); border-right: 1px solid var(--border); padding: 0.5rem; vertical-align: top; text-align: left; }
+.sched-grid thead th { background: var(--surface-2); font-size: 0.85rem; white-space: nowrap; }
+.sched-grid th small { display: block; color: var(--muted); font-weight: 500; font-size: 0.75rem; }
+.sched-grid td { min-width: 170px; }
+/* Position names stay visible while the dates scroll sideways on a phone. */
+.sched-grid tbody th, .sched-grid__corner { position: sticky; left: 0; z-index: 1; background: var(--surface); min-width: 120px; font-size: 0.9rem; }
+.sched-grid thead .sched-grid__corner { z-index: 2; }
+.sched-grid tr.sched-grid__team th { background: var(--surface-sunken); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
+.sched-cell { display: flex; flex-direction: column; gap: 0.35rem; }
+.sched-cell--short .sched-cell__count { color: var(--warning); font-weight: 600; }
+.sched-cell__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.3rem; }
+.sched-cell__foot { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
+.sched-cell__count { font-size: 0.78rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.sched-slot { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.4rem; font-size: 0.9rem; }
+.sched-slot form { margin: 0 0 0 auto; }
+.sched-slot--declined .sched-slot__name { text-decoration: line-through; color: var(--muted); }
+.sched-slot__remove { border: 0; background: none; color: var(--faint); font-size: 1.1rem; line-height: 1; padding: 0 0.2rem; cursor: pointer; }
+.sched-slot__remove:hover { color: var(--danger); }
+.sched-slot__warn { flex-basis: 100%; font-size: 0.75rem; color: var(--warning); }
+.sched-cell--picking { background: var(--surface-2); border-radius: var(--radius-sm); padding: 0.4rem; }
+.sched-picker__title { margin: 0; font-size: 0.8rem; font-weight: 600; color: var(--muted); }
+.sched-picker { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.25rem; }
+.sched-picker form { margin: 0; }
+.sched-picker__option { display: flex; flex-direction: column; align-items: flex-start; width: 100%; text-align: left; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); color: var(--text); padding: 0.35rem 0.5rem; font: inherit; font-size: 0.88rem; cursor: pointer; }
+.sched-picker__option:hover { border-color: var(--primary); }
+.sched-picker__option small { font-size: 0.74rem; color: var(--warning); }
+.sched-picker__option--warn { background: var(--warning-soft); }
+.sched-picker__others summary { cursor: pointer; font-size: 0.8rem; color: var(--muted); margin-bottom: 0.25rem; }
+@media (max-width: 960px) { .split--main-first .split__side { order: 0; } }
+.plan-positions { list-style: none; margin: 0; padding: 0; }
+.plan-positions__row { display: grid; grid-template-columns: minmax(110px, 0.6fr) 1.4fr; gap: 0.75rem; padding: 0.65rem 0; border-top: 1px solid var(--border); }
+.plan-positions__row:first-child { border-top: 0; padding-top: 0; }
+.plan-positions__name small { display: block; color: var(--muted); font-size: 0.78rem; }

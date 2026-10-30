@@ -1,0 +1,14 @@
+{% with p=c.membership.person %}
+<li>
+    <form method="post" action="{% url 'scheduling:cell_assign' cell.plan.pk cell.position.pk %}"
+          hx-post="{% url 'scheduling:cell_assign' cell.plan.pk cell.position.pk %}" hx-target="#{{ cell.dom_id }}" hx-swap="outerHTML"
+          {% if c.reasons or not_marked %}hx-confirm="{{ p.first_name }} {{ p.last_name }}{% if not_marked %} isn't marked for {{ cell.position.name }}{% endif %}{% for r in c.reasons %}{% if forloop.first and not not_marked %}: {% else %}; {% endif %}{{ r }}{% endfor %}. Schedule anyway?"{% endif %}>
+        {% csrf_token %}
+        <input type="hidden" name="person" value="{{ p.pk }}">
+        <button type="submit" class="sched-picker__option{% if c.reasons %} sched-picker__option--warn{% endif %}">
+            <strong>{{ p.first_name }} {{ p.last_name }}</strong>
+            {% for r in c.reasons %}<small>⚠ {{ r }}</small>{% endfor %}
+        </button>
+    </form>
+</li>
+{% endwith %}

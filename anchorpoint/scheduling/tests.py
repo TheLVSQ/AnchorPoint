@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, time, timedelta
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
@@ -10,9 +10,11 @@ from groups.models import Group, GroupMembership, Position
 from people.models import Person
 from people.services.merge import merge_persons
 
-from . import availability
-from .forms import BlockoutForm
-from .models import Blockout
+from django.utils import timezone
+
+from . import availability, schedule
+from .forms import BlockoutForm, ServiceTypeForm
+from .models import Assignment, Blockout, Plan, ServiceType, ServiceTypeNeed
 
 User = get_user_model()
 
@@ -285,3 +287,258 @@ class MyServingTests(TeamTestCase):
                               .status_code, (302, 403))
         self.assertTrue(self.team.positions.filter(pk=self.keys.pk).exists())
         self.assertFalse(Blockout.objects.exists())
+
+
+# ---------------------------------------------------------------------------
+# 1b: service types, plans, the schedule grid
+# ---------------------------------------------------------------------------
+
+class PlanTestCase(TeamTestCase):
+    THIRD_SUNDAY = date(2026, 11, 15)
+    FIRST_SUNDAY = date(2026, 11, 1)
+
+    def setUp(self):
+        super().setUp()
+        self.sunday = ServiceType.objects.create(name="Sunday Morning", weekday=6,
+                                                 default_time=time(10, 30))
+        ServiceTypeNeed.objects.create(service_type=self.sunday, position=self.keys, count=1)
+        ServiceTypeNeed.objects.create(service_type=self.sunday, position=self.vocals, count=2)
+        self.plan = Plan.objects.create(service_type=self.sunday, date=self.THIRD_SUNDAY)
+
+
+class GeneratePlansTests(TestCase):
+    def test_one_plan_per_weekday_and_rerun_adds_nothing(self):
+        sunday = ServiceType.objects.create(name="Sunday Morning", weekday=6,
+                                            default_time=time(10, 30))
+        added = schedule.generate_plans(sunday, date(2026, 11, 1), date(2026, 11, 30))
+        self.assertEqual(added, 5)
+        self.assertEqual([p.date.day for p in sunday.plans.all()], [1, 8, 15, 22, 29])
+        self.assertEqual(sunday.plans.first().time, time(10, 30))
+        self.assertEqual(schedule.generate_plans(sunday, date(2026, 11, 1), date(2026, 12, 6)), 1)
+
+    def test_no_weekday_means_every_day(self):
+        vbs = ServiceType.objects.create(name="VBS 2027", weekday=None)
+        self.assertEqual(schedule.generate_plans(vbs, date(2027, 6, 14), date(2027, 6, 18)), 5)
+
+
+class AlreadyServingTests(PlanTestCase):
+    def test_another_position_that_day_is_a_reason(self):
+        Assignment.objects.create(plan=self.plan, position=self.vocals, person=self.sam)
+        self.assertEqual(availability.reasons_unavailable(self.sam_on_team, self.THIRD_SUNDAY),
+                         ["Already serving: Vocals on Sunday Morning"])
+
+    def test_declined_doesnt_count(self):
+        Assignment.objects.create(plan=self.plan, position=self.vocals, person=self.sam,
+                                  status=Assignment.Status.DECLINED)
+        self.assertEqual(availability.reasons_unavailable(self.sam_on_team, self.THIRD_SUNDAY), [])
+
+    def test_other_service_type_same_day_counts(self):
+        evening = ServiceType.objects.create(name="Evening", weekday=6)
+        other = Plan.objects.create(service_type=evening, date=self.THIRD_SUNDAY)
+        Assignment.objects.create(plan=other, position=self.keys, person=self.sam)
+        self.assertEqual(availability.reasons_unavailable(self.sam_on_team, self.THIRD_SUNDAY),
+                         ["Already serving: Keys on Evening"])
+
+
+class GridTests(PlanTestCase):
+    def cell(self, grid, position, plan_index=0):
+        for team_rows in grid:
+            for row in team_rows.rows:
+                if row.position == position:
+                    return row.cells[plan_index]
+
+    def test_rows_counts_and_warnings(self):
+        Assignment.objects.create(plan=self.plan, position=self.keys, person=self.sam)
+        Assignment.objects.create(plan=self.plan, position=self.vocals, person=self.sam)
+        # Blocked out after being scheduled: the grid still has to show it.
+        Blockout.objects.create(person=self.sam, starts_on=self.THIRD_SUNDAY,
+                                ends_on=self.THIRD_SUNDAY, note="Away")
+        grid = schedule.build_grid(self.sunday, [self.plan])
+        self.assertEqual([t.team for t in grid], [self.team])
+        self.assertEqual([r.position for r in grid[0].rows], [self.keys, self.vocals])
+        keys = self.cell(grid, self.keys)
+        self.assertEqual((keys.filled, keys.needed, keys.short), (1, 1, 0))
+        self.assertEqual(keys.slots[0].warnings,
+                         ["Blocked out: Away", "Already serving: Vocals on Sunday Morning"])
+        self.assertEqual(self.cell(grid, self.vocals).short, 1)
+
+    def test_pattern_warning_and_declined_leaves_the_slot_open_without_warnings(self):
+        first = Plan.objects.create(service_type=self.sunday, date=self.FIRST_SUNDAY)
+        Assignment.objects.create(plan=first, position=self.keys, person=self.alex,
+                                  status=Assignment.Status.DECLINED)
+        Assignment.objects.create(plan=first, position=self.vocals, person=self.alex)
+        grid = schedule.build_grid(self.sunday, [first])
+        keys = self.cell(grid, self.keys)
+        self.assertEqual(keys.short, 1)
+        self.assertEqual(keys.slots[0].warnings, [])  # they said no: nothing to warn about
+        self.assertEqual(self.cell(grid, self.vocals).slots[0].warnings,
+                         ["Serves 3rd only on Worship, not the 1st week"])
+
+    def test_someone_off_the_team_and_a_position_no_longer_needed_still_show(self):
+        sound = Position.objects.create(group=self.team, name="Sound")
+        outsider = Person.objects.create(first_name="Pat", last_name="Moss")
+        Assignment.objects.create(plan=self.plan, position=sound, person=outsider)
+        cell = self.cell(schedule.build_grid(self.sunday, [self.plan]), sound)
+        self.assertEqual(cell.needed, 0)
+        self.assertEqual(cell.slots[0].warnings, ["Not on Worship"])
+
+    def test_team_filter(self):
+        kids = Group.objects.create(name="Kids Team", category="volunteer")
+        teacher = Position.objects.create(group=kids, name="Teacher")
+        ServiceTypeNeed.objects.create(service_type=self.sunday, position=teacher)
+        self.assertEqual([t.team for t in schedule.build_grid(self.sunday, [self.plan])],
+                         [kids, self.team])
+        self.assertEqual([t.team for t in schedule.build_grid(self.sunday, [self.plan], team=kids)],
+                         [kids])
+
+    def test_query_count_doesnt_grow_with_the_grid(self):
+        plans = [self.plan] + [Plan.objects.create(service_type=self.sunday,
+                                                   date=self.THIRD_SUNDAY + timedelta(weeks=w))
+                               for w in range(1, 6)]
+        for plan in plans:
+            for person in (self.alex, self.sam):
+                Assignment.objects.create(plan=plan, position=self.vocals, person=person)
+        with self.assertNumQueries(5):
+            schedule.build_grid(self.sunday, plans)
+
+
+class CandidateTests(PlanTestCase):
+    def test_fits_available_first_others_and_people_in_the_cell_left_out(self):
+        pat = Person.objects.create(first_name="Pat", last_name="Moss")
+        GroupMembership.objects.create(group=self.team, person=pat)  # no positions yet
+        first = Plan.objects.create(service_type=self.sunday, date=self.FIRST_SUNDAY)
+        fits, others = schedule.candidates(first, self.keys)
+        self.assertEqual([c.membership.person for c in fits], [self.sam, self.alex])
+        self.assertEqual(fits[1].reasons, ["Serves 3rd only on Worship, not the 1st week"])
+        self.assertEqual([c.membership.person for c in others], [pat])
+        Assignment.objects.create(plan=first, position=self.keys, person=self.sam)
+        fits, _ = schedule.candidates(first, self.keys)
+        self.assertEqual([c.membership.person for c in fits], [self.alex])
+
+
+class ScheduleViewTests(PlanTestCase):
+    HX = {"HTTP_HX_REQUEST": "true"}
+
+    def setUp(self):
+        super().setUp()
+        self.staff = make_login("staff", UserProfile.Role.STAFF)
+        self.client.force_login(self.staff)
+
+    def test_create_service_type_with_needs(self):
+        resp = self.client.post(reverse("scheduling:service_type_create"), {
+            "name": "VBS 2027", "weekday": "", "default_time": "09:00", "is_active": "on",
+            f"need_{self.keys.pk}": "2", f"need_{self.vocals.pk}": "0",
+        })
+        vbs = ServiceType.objects.get(name="VBS 2027")
+        self.assertRedirects(resp, reverse("scheduling:schedule", args=[vbs.pk]))
+        self.assertIsNone(vbs.weekday)
+        self.assertEqual(list(vbs.needs.values_list("position__name", "count")), [("Keys", 2)])
+
+    def test_editing_a_need_to_zero_removes_it(self):
+        form = ServiceTypeForm({"name": "Sunday Morning", "weekday": "6", "is_active": "on",
+                                f"need_{self.keys.pk}": "1", f"need_{self.vocals.pk}": "0"},
+                               instance=self.sunday)
+        self.assertTrue(form.is_valid(), form.errors)
+        form.save()
+        self.assertEqual([n.position for n in self.sunday.needs.all()], [self.keys])
+
+    def test_add_dates_and_grid(self):
+        resp = self.client.post(reverse("scheduling:plans_add", args=[self.sunday.pk]),
+                                {"starts_on": "2026-11-01", "ends_on": "2026-11-30"})
+        self.assertRedirects(resp, reverse("scheduling:schedule", args=[self.sunday.pk])
+                             + "?start=2026-11-01")
+        self.assertEqual(self.sunday.plans.count(), 5)
+        resp = self.client.get(reverse("scheduling:schedule", args=[self.sunday.pk])
+                               + "?start=2026-11-01")
+        self.assertContains(resp, "Sun, Nov 15")
+        self.assertContains(resp, "Needs 2")
+
+    def test_list_page(self):
+        resp = self.client.get(reverse("scheduling:service_type_list"))
+        self.assertContains(resp, "Sunday Morning")
+
+    def test_pick_assign_remove(self):
+        pick = self.client.get(reverse("scheduling:cell_pick", args=[self.plan.pk, self.keys.pk]),
+                               **self.HX)
+        self.assertContains(pick, "Alex Rivera")
+        self.assertContains(pick, "Sam Lee")
+        url = reverse("scheduling:cell_assign", args=[self.plan.pk, self.keys.pk])
+        resp = self.client.post(url, {"person": self.sam.pk}, **self.HX)
+        self.assertContains(resp, "Sam Lee")
+        self.assertContains(resp, "1 of 1")
+        assignment = Assignment.objects.get()
+        self.assertEqual((assignment.person, assignment.created_by), (self.sam, self.staff))
+        resp = self.client.post(reverse("scheduling:assignment_remove", args=[assignment.pk]),
+                                **self.HX)
+        self.assertContains(resp, "0 of 1")
+        self.assertFalse(Assignment.objects.exists())
+
+    def test_assign_refuses_someone_not_on_the_team(self):
+        outsider = Person.objects.create(first_name="Pat", last_name="Moss")
+        resp = self.client.post(
+            reverse("scheduling:cell_assign", args=[self.plan.pk, self.keys.pk]),
+            {"person": outsider.pk}, **self.HX)
+        self.assertEqual(resp.status_code, 404)
+        self.assertFalse(Assignment.objects.exists())
+
+    def test_without_htmx_assign_goes_to_the_plan_page(self):
+        resp = self.client.post(
+            reverse("scheduling:cell_assign", args=[self.plan.pk, self.keys.pk]),
+            {"person": self.sam.pk})
+        self.assertRedirects(resp, reverse("scheduling:plan_detail", args=[self.plan.pk]))
+
+    def test_plan_page_edit_and_delete(self):
+        Assignment.objects.create(plan=self.plan, position=self.keys, person=self.sam)
+        url = reverse("scheduling:plan_detail", args=[self.plan.pk])
+        self.assertContains(self.client.get(url), "Sam Lee")
+        self.client.post(url, {"title": "Thanksgiving", "time": "10:30", "notes": ""})
+        self.plan.refresh_from_db()
+        self.assertEqual(self.plan.title, "Thanksgiving")
+        self.client.post(reverse("scheduling:plan_delete", args=[self.plan.pk]))
+        self.assertFalse(Plan.objects.exists())
+        self.assertFalse(Assignment.objects.exists())
+
+    def test_position_on_a_schedule_cant_be_removed(self):
+        Assignment.objects.create(plan=self.plan, position=self.keys, person=self.sam)
+        resp = self.client.post(reverse("groups:position_remove",
+                                        args=[self.team.pk, self.keys.pk]), follow=True)
+        self.assertContains(resp, "Keys is on 1 schedule.")
+        self.assertTrue(Position.objects.filter(pk=self.keys.pk).exists())
+
+    def test_team_on_a_schedule_cant_be_deleted(self):
+        Assignment.objects.create(plan=self.plan, position=self.keys, person=self.sam)
+        resp = self.client.post(reverse("groups:delete", args=[self.team.pk]), follow=True)
+        self.assertContains(resp, "Worship is on 1 schedule.")
+        self.assertTrue(Group.objects.filter(pk=self.team.pk).exists())
+        self.plan.delete()
+        self.client.post(reverse("groups:delete", args=[self.team.pk]))
+        self.assertFalse(Group.objects.filter(pk=self.team.pk).exists())
+
+    def test_person_page_lists_upcoming(self):
+        upcoming = Plan.objects.create(service_type=self.sunday,
+                                       date=timezone.localdate() + timedelta(days=3))
+        Assignment.objects.create(plan=upcoming, position=self.keys, person=self.sam)
+        resp = self.client.get(reverse("people_detail", args=[self.sam.pk]))
+        self.assertContains(resp, "Scheduled")
+        self.assertContains(resp, upcoming.date.strftime("%b %-d"))
+
+    def test_team_member_is_refused(self):
+        self.client.force_login(make_login("alex", UserProfile.Role.TEAM_MEMBER, person=self.alex))
+        for url in (reverse("scheduling:schedule", args=[self.sunday.pk]),
+                    reverse("scheduling:cell_pick", args=[self.plan.pk, self.keys.pk])):
+            self.assertIn(self.client.get(url).status_code, (302, 403))
+        resp = self.client.post(reverse("scheduling:cell_assign",
+                                        args=[self.plan.pk, self.keys.pk]), {"person": self.alex.pk})
+        self.assertIn(resp.status_code, (302, 403))
+        self.assertFalse(Assignment.objects.exists())
+
+
+class MergeAssignmentTests(PlanTestCase):
+    def test_both_records_in_the_same_slot_collapse_to_one(self):
+        dupe = Person.objects.create(first_name="Sam", last_name="Lee")
+        Assignment.objects.create(plan=self.plan, position=self.keys, person=self.sam)
+        Assignment.objects.create(plan=self.plan, position=self.keys, person=dupe)
+        Assignment.objects.create(plan=self.plan, position=self.vocals, person=dupe)
+        merge_persons(self.sam, dupe)
+        self.assertEqual(sorted(a.position.name for a in self.sam.assignments.all()),
+                         ["Keys", "Vocals"])
