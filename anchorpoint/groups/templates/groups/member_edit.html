@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}{{ membership.person }} on {{ group.name }}{% endblock %}
+{% block content %}
+<a class="back-link" href="{% url 'groups:detail' group.pk %}">&larr; {{ group.name }}</a>
+
+<div class="page-header">
+    <h1>{{ membership.person.first_name }} {{ membership.person.last_name }}</h1>
+    <p class="page-subtitle">On {{ group.name }}</p>
+</div>
+
+<form method="post" class="form-section">
+    {% csrf_token %}
+    <div class="form-field">
+        <label for="{{ form.role.id_for_label }}">{{ form.role.label }}</label>
+        {{ form.role }}
+    </div>
+    {% if group.is_schedulable %}
+    <fieldset class="form-field check-list">
+        <legend>{{ form.positions.label }}</legend>
+        {% if form.positions.field.queryset %}
+            {{ form.positions }}
+        {% else %}
+            <p class="muted-text">{{ group.name }} has no positions yet. Add them on the group page.</p>
+        {% endif %}
+        <p class="help-text">{{ form.positions.help_text }}</p>
+    </fieldset>
+    <fieldset class="form-field check-list check-list--row">
+        <legend>{{ form.serving_weeks.label }}</legend>
+        {{ form.serving_weeks }}
+        {% if form.serving_weeks.errors %}<p class="error-text">{{ form.serving_weeks.errors.0 }}</p>{% endif %}
+        <p class="help-text">{{ form.serving_weeks.help_text }}</p>
+    </fieldset>
+    {% endif %}
+    <div class="form-actions">
+        <button type="submit" class="btn">Save</button>
+        <a class="btn ghost" href="{% url 'groups:detail' group.pk %}">Cancel</a>
+    </div>
+</form>
+{% endblock %}

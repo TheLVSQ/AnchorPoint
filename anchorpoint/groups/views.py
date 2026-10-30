@@ -10,8 +10,8 @@ from core.permissions import staff_required
 from households.models import Household
 from people.models import Person
 
-from .forms import GroupForm
-from .models import Group, GroupMembership
+from .forms import GroupForm, MembershipForm, PositionForm
+from .models import Group, GroupMembership, Position
 
 
 @staff_required
@@ -71,15 +71,56 @@ def group_create(request):
     })
 
 
-@staff_required
-def group_detail(request, pk):
-    group = get_object_or_404(Group, pk=pk)
-    memberships = group.memberships.select_related("person").order_by(
+def _memberships(group):
+    return group.memberships.select_related("person").prefetch_related("positions").order_by(
         "person__last_name", "person__first_name"
     )
+
+
+@staff_required
+def group_detail(request, pk, position_form=None):
+    group = get_object_or_404(Group, pk=pk)
     return render(request, "groups/group_detail.html", {
         "group": group,
-        "memberships": memberships,
+        "memberships": _memberships(group),
+        "positions": group.positions.annotate(people=Count("memberships")),
+        "position_form": position_form or PositionForm(group=group),
+    })
+
+
+@staff_required
+@require_POST
+def position_add(request, pk):
+    group = get_object_or_404(Group, pk=pk)
+    form = PositionForm(request.POST, group=group)
+    if not form.is_valid():
+        return group_detail(request, pk, position_form=form)
+    position = form.save()
+    messages.success(request, f"Added {position.name}. Tick it on each member who can fill it.")
+    return redirect("groups:detail", pk=pk)
+
+
+@staff_required
+@require_POST
+def position_remove(request, pk, position_id):
+    position = get_object_or_404(Position, pk=position_id, group_id=pk)
+    position.delete()
+    messages.success(request, f"Removed {position.name}.")
+    return redirect("groups:detail", pk=pk)
+
+
+@staff_required
+def member_edit(request, pk, mid):
+    membership = get_object_or_404(
+        GroupMembership.objects.select_related("group", "person"), pk=mid, group_id=pk
+    )
+    form = MembershipForm(request.POST or None, instance=membership)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        messages.success(request, f"Updated {membership.person} on {membership.group}.")
+        return redirect("groups:detail", pk=pk)
+    return render(request, "groups/member_edit.html", {
+        "form": form, "membership": membership, "group": membership.group,
     })
 
 
@@ -119,12 +160,9 @@ def group_delete(request, pk):
 # ---------------------------------------------------------------------------
 
 def _render_member_list(request, group):
-    memberships = group.memberships.select_related("person").order_by(
-        "person__last_name", "person__first_name"
-    )
     return render(request, "groups/group_member_list.html", {
         "group": group,
-        "memberships": memberships,
+        "memberships": _memberships(group),
     })
 
 

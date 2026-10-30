@@ -65,6 +65,7 @@ urlpatterns = [
         core_views.organization_settings,
         name="organization_settings",
     ),
+    path("", include("scheduling.urls")),
     path("people/", include("people.urls")),
     path("families/", include(("households.urls", "households"), namespace="households")),
     path("groups/", include("groups.urls")),

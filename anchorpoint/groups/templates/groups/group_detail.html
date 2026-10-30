@@ -23,7 +23,7 @@
 </div>
 
 {% with has_about=group.description|default:group.location|default:group.meeting_schedule|default:group.capacity %}
-<div class="{% if has_about %}split{% else %}single{% endif %}">
+<div class="{% if has_about or group.is_schedulable %}split{% else %}single{% endif %}">
     <div class="split__main">
         <section class="card">
             <div class="card__head"><h2>Members</h2></div>
@@ -37,8 +37,38 @@
             {% include "groups/group_member_list.html" %}
         </section>
     </div>
-    {% if has_about %}
+    {% if has_about or group.is_schedulable %}
     <aside class="split__side">
+        {% if group.is_schedulable %}
+        <section class="card">
+            <div class="card__head"><h2>Positions</h2></div>
+            <p class="muted-text">The roles people are scheduled into. Tick who can fill each one with <strong>Edit</strong> on a member.</p>
+            {% if positions %}
+            <ul class="row-list">
+                {% for position in positions %}
+                <li class="row-list__item">
+                    <div class="row-list__main">
+                        <strong>{{ position.name }}</strong>
+                        <span class="muted-text">{{ position.people }} {{ position.people|pluralize:"person,people" }}</span>
+                    </div>
+                    <form method="post" action="{% url 'groups:position_remove' group.pk position.pk %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn ghost danger btn-sm" aria-label="Remove {{ position.name }}">Remove</button>
+                    </form>
+                </li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+            <form method="post" action="{% url 'groups:position_add' group.pk %}" class="inline-add">
+                {% csrf_token %}
+                <label class="visually-hidden" for="{{ position_form.name.id_for_label }}">{{ position_form.name.label }}</label>
+                {{ position_form.name }}
+                <button type="submit" class="btn btn-sm">Add</button>
+            </form>
+            {% if position_form.name.errors %}<p class="error-text">{{ position_form.name.errors.0 }}</p>{% endif %}
+        </section>
+        {% endif %}
+        {% if has_about %}
         <section class="card">
             <div class="card__head"><h2>About</h2></div>
             {% if group.description %}<p>{{ group.description }}</p>{% endif %}
@@ -48,6 +78,7 @@
                 {% if group.capacity %}<div><dt>Capacity</dt><dd>{{ group.capacity }}</dd></div>{% endif %}
             </dl>
         </section>
+        {% endif %}
     </aside>
     {% endif %}
 </div>

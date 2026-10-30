@@ -101,3 +101,16 @@ check out children.
 **Invite**: a staff action on a person's profile that gives them a login and emails a single-use
 set-your-password link. Resend until they've signed in once; after that they use "Forgot password?".
 
+## Teams & Plans (`scheduling/`, `groups/`)
+
+**Team**: a Group people are scheduled from (worship, kids, greeters…). Check-in classrooms and
+event-registration groups are never teams. _Avoid_: ministry, department.
+
+**Position**: a role on a team that someone is scheduled into (Keys, Vocals, Sound). Each team member
+is marked with the positions they can fill. _Avoid_: slot, role (role means member/leader).
+
+**Serving weeks**: which weeks of the month a person serves on one team ("3rd only"). A standing
+pattern, set per team; the week is the date's week of the month. _Avoid_: calling it a blockout.
+
+**Blockout**: dates a person can't serve on any team (vacation, "out the 14th"), optionally repeating
+every year. Exceptions only; regular patterns are serving weeks.

@@ -104,6 +104,7 @@
         <section class="card">
             <h2>Welcome</h2>
             <p class="muted-text">There's nothing scheduled for you today. Update your contact details any time from <a href="{% url 'profile' %}">My profile</a>.</p>
+            {% if nav.serving %}<p><a class="btn ghost btn-sm" href="{% url 'scheduling:my_serving' %}">Set the weeks you serve and dates you're away</a></p>{% endif %}
         </section>
         {% endif %}
     </div>

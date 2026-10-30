@@ -81,6 +81,7 @@ INSTALLED_APPS = [
     "households",
     "events",
     "groups",
+    "scheduling",
     "messaging",
     "checkin",
     "reporting",

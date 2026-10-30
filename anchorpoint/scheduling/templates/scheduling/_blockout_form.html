@@ -1,0 +1,18 @@
+<form method="post" action="{{ action }}" class="blockout-form">
+    {% csrf_token %}
+    {% for field in form %}
+        {% if field.name == "repeats_yearly" %}
+        <div class="checkbox-field">
+            <label for="{{ field.id_for_label }}">{{ field }} {{ field.label }}</label>
+        </div>
+        {% else %}
+        <div class="form-field">
+            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {{ field }}
+            {% if field.errors %}<p class="error-text">{{ field.errors.0 }}</p>{% elif field.help_text %}<p class="help-text">{{ field.help_text }}</p>{% endif %}
+        </div>
+        {% endif %}
+    {% endfor %}
+    {% if form.non_field_errors %}<p class="error-text">{{ form.non_field_errors.0 }}</p>{% endif %}
+    <div class="form-actions"><button type="submit" class="btn btn-sm">Add blockout</button></div>
+</form>
