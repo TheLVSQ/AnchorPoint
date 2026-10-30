@@ -17,6 +17,7 @@ _(empty — the UI refresh and security review both shipped 2026-10-01; see Comp
 ## Backlog
 
 ### Features
+- [ ] Email channel: add a `subject` to `outbound.send_transactional` when the first system email (scheduling reminders) uses it. Email is system-only; there is no staff composer.
 - [ ] Embed code generator for event info
 - [ ] Check-in: Create Room flow → age/grade auto-assignment
   - Min/Max as a K-12 dropdown

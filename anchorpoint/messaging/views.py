@@ -13,7 +13,7 @@ from core.permissions import communications_required
 from . import outbound
 from people.models import Person
 
-from .forms import EmailBroadcastForm, PhoneBlastForm, SmsBroadcastForm
+from .forms import PhoneBlastForm, SmsBroadcastForm
 from .models import Communication, Delivery
 from .adapters import CALL_STATUS_WEBHOOK_PATH
 from .services import (
@@ -38,12 +38,9 @@ def communications_home(request):
         "created_by", "group", "person"
     )
     sms_messages = broadcasts.filter(channel=Channel.SMS)[:5]
-    emails = broadcasts.filter(channel=Channel.EMAIL)[:5]
     phone_blasts = broadcasts.filter(channel=Channel.VOICE)[:5]
     context = {
         "sms_messages": sms_messages,
-        "emails": emails,
-        "email_ready": outbound.channel_ready(Channel.EMAIL),
         "phone_blasts_with_stats": [(b, _blast_stats(b)) for b in phone_blasts],
         "twilio_ready": outbound.channel_ready(Channel.SMS),
     }
@@ -77,33 +74,6 @@ def sms_compose(request):
     else:
         form = SmsBroadcastForm()
     return render(request, "messaging/sms_form.html", {"form": form, "twilio_ready": twilio_ready})
-
-
-@communications_required
-def email_compose(request):
-    email_ready = outbound.channel_ready(Channel.EMAIL)
-    if request.method == "POST":
-        form = EmailBroadcastForm(request.POST)
-        if form.is_valid():
-            person, group = form.target()
-            try:
-                comm = outbound.broadcast(
-                    Channel.EMAIL,
-                    created_by=request.user,
-                    person=person,
-                    group=group,
-                    scheduled_for=form.cleaned_data.get("scheduled_for"),
-                    subject=form.cleaned_data["subject"],
-                    body=form.cleaned_data["body"],
-                )
-            except outbound.BroadcastRejected as exc:
-                messages.error(request, str(exc))
-            else:
-                messages.success(request, _queued_message(comm, "Email"))
-                return redirect("messaging:home")
-    else:
-        form = EmailBroadcastForm()
-    return render(request, "messaging/email_form.html", {"form": form, "email_ready": email_ready})
 
 
 def email_unsubscribe(request, token):
