@@ -1,0 +1,22 @@
+#!/bin/sh
+# Restart the cloudflared service if /usr/bin/cloudflared is newer than the
+# running process (i.e. apt just upgraded it). Called from the DPkg::Post-Invoke
+# hook in /etc/apt/apt.conf.d/52unattended-cloudflared after every dpkg run;
+# does nothing when cloudflared wasn't touched.
+set -eu
+
+BIN=/usr/bin/cloudflared
+[ -x "$BIN" ] || exit 0
+systemctl is-active --quiet cloudflared || exit 0
+
+started=$(systemctl show cloudflared -p ActiveEnterTimestamp --value)
+[ -n "$started" ] || exit 0
+started_s=$(date -d "$started" +%s)
+# ctime, not mtime: dpkg keeps the build date as mtime, but replacing the file on
+# install sets ctime to the install time.
+binary_s=$(stat -c %Z "$BIN")
+
+if [ "$binary_s" -gt "$started_s" ]; then
+    logger -t cloudflared-autoupdate "cloudflared updated to $($BIN --version 2>/dev/null | head -1); restarting"
+    systemctl restart cloudflared
+fi
