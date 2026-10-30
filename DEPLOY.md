@@ -194,6 +194,14 @@ docker compose exec web python manage.py createsuperuser
 - Run: `docker compose exec web python manage.py collectstatic --noinput`
 - Check that whitenoise is in MIDDLEWARE
 
+### Emails fail with "Network is unreachable" or time out
+- DigitalOcean blocks outbound SMTP ports 25, 465 and 587 on droplets. Use Mailgun on
+  port **2525** (`EMAIL_HOST=smtp.mailgun.org`, `EMAIL_PORT=2525`, SMTP credentials from
+  Mailgun's domain settings; see `.env.production.example`)
+- Check the port from the droplet: `nc -vz -4 -w 5 smtp.mailgun.org 2525`
+- Recreate the containers that send mail: `docker compose --env-file .env.production up -d --force-recreate web cron`
+- Test: `docker compose exec -T web python manage.py sendtestemail you@example.org`
+
 ### Database connection errors
 - Wait for the database container to be healthy
 - Check `DB_HOST=db` (not localhost)

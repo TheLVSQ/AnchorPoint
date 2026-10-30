@@ -84,8 +84,8 @@ Every text / phone blast to people in the directory goes through this one module
 - **Adapters** (`messaging/adapters.py`): `settings.OUTBOUND_ADAPTERS` maps channel →
   `TwilioSms` / `TwilioVoice` / `Email`; under tests every channel is `FakeAdapter` (call
   `FakeAdapter.reset()` in setUp; set `is_ready` / `fail_with` to simulate).
-- **Email** sends through Django's mail backend (Google Workspace SMTP in prod; ready =
-  `DEFAULT_FROM_EMAIL` set). Consent is `Person.email_opt_in`, **on by default**; every broadcast
+- **Email** sends through Django's mail backend (Mailgun SMTP on port 2525 in prod, because
+  DigitalOcean blocks 25/465/587; ready = `DEFAULT_FROM_EMAIL` set). Consent is `Person.email_opt_in`, **on by default**; every broadcast
   email has a signed unsubscribe link (`/communications/unsubscribe/<token>/`, public, GET asks and
   POST turns it off) plus a `List-Unsubscribe` header. Quiet hours don't apply to email.
 - The Delivery is the audit trail (person page "Communications History" reads Deliveries).
