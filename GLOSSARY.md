@@ -15,8 +15,9 @@ person's communication history is their Deliveries. _Avoid_: recipient row, log 
 that does the actual sending (Twilio for sms/voice, Django's mail backend for email; an in-memory
 fake in tests).
 
-**Broadcast**: a Communication a staff member writes and sends to a person or a group. Broadcasts
-obey opt-in and the blackout window, and always go out through the every-minute scheduler.
+**Broadcast**: a Communication a staff member writes and sends to a person or a group: a text or a
+phone blast (email is system-only, so staff can't write one). Broadcasts obey opt-in and the
+blackout window, and always go out through the every-minute scheduler.
 
 **Transactional**: a Communication triggered by an event, not written by staff, e.g. the check-in
 pickup-code text. Obeys opt-in, ignores the blackout window, sends immediately.
@@ -26,7 +27,7 @@ phone-blast broadcasts that come due inside it wait until it ends. Email ignores
 
 **Opt-in**: a person's consent for a channel. `phone_opt_in` (texts + phone blasts) is off until staff
 tick it. `email_opt_in` is on by default and turns off when the person clicks **Unsubscribe** in any
-broadcast email (a signed, non-expiring link).
+email sent through the email channel (a signed, non-expiring link).
 
 **Outbound communications module**: `messaging/outbound.py`, the one place that decides who may be
 contacted, when, over which channel, and records what happened.

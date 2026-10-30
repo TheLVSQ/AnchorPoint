@@ -22,7 +22,7 @@ from people.models import Person
 
 from . import outbound
 from .adapters import DeliveryError, Email, FakeAdapter, TwilioSms, TwilioVoice
-from .forms import EmailBroadcastForm, PhoneBlastForm, SmsBroadcastForm
+from .forms import PhoneBlastForm, SmsBroadcastForm
 from .services import person_pk_from_unsubscribe_token, unsubscribe_url
 from .models import Communication, Delivery
 from .services import AudioProcessingError, get_site_base_url
@@ -883,48 +883,32 @@ class EmailTestCase(MessagingTestCase):
         self.person.save()
 
 
-class EmailBroadcastFormTests(EmailTestCase):
-    def _form(self, **data):
-        base = {"target_type": "person", "person": self.person.pk, "group": "",
-                "subject": "Sunday", "body": "See you there", "scheduled_for": ""}
-        base.update(data)
-        return EmailBroadcastForm(data=base)
+class EmailRecipientCheckTests(EmailTestCase):
+    def _messages(self, **target):
+        return [p.message for p in outbound.check_broadcast(EMAIL, **target)]
 
-    def test_person_target(self):
-        form = self._form()
-        self.assertTrue(form.is_valid(), form.errors)
-        self.assertEqual(form.target(), (self.person, None))
-
-    def test_subject_required(self):
-        form = self._form(subject="")
-        self.assertFalse(form.is_valid())
-        self.assertIn("subject", form.errors)
+    def test_person_with_email_is_ok(self):
+        self.assertEqual(self._messages(person=self.person), [])
 
     def test_person_without_email_rejected(self):
         self.person.email = ""
         self.person.save()
-        form = self._form()
-        self.assertFalse(form.is_valid())
-        self.assertIn("email address", form.errors["person"][0])
+        self.assertIn("email address", self._messages(person=self.person)[0])
 
     def test_unsubscribed_person_rejected(self):
         self.person.email_opt_in = False
         self.person.save()
-        form = self._form()
-        self.assertFalse(form.is_valid())
-        self.assertIn("unsubscribed", form.errors["person"][0])
+        self.assertIn("unsubscribed", self._messages(person=self.person)[0])
 
     def test_group_with_no_email_rejected(self):
         team = Group.objects.create(name="No Emails", category="volunteer")
         GroupMembership.objects.create(
             group=team, person=Person.objects.create(first_name="No", last_name="Email"))
-        form = self._form(target_type="group", person="", group=team.pk)
-        self.assertFalse(form.is_valid())
-        self.assertIn("email address", form.non_field_errors()[0])
+        self.assertIn("email address", self._messages(group=team)[0])
 
     def test_quiet_hours_do_not_block_email(self):
         self.blackout_all_day()
-        self.assertTrue(self._form().is_valid())
+        self.assertEqual(self._messages(person=self.person), [])
 
 
 class EmailOutboundTests(EmailTestCase):
@@ -992,30 +976,15 @@ class EmailAdapterTests(EmailTestCase):
                 Email(self.settings_obj).send(delivery)
 
 
-class EmailViewTests(StaffViewTestCase):
-    def setUp(self):
-        super().setUp()
-        self.person.email = "recipient@example.org"
-        self.person.save()
+class SystemEmailOnlyTests(StaffViewTestCase):
+    """Email is for system emails only: staff get no composer on the Communications page."""
 
-    def test_compose_queues_email_to_group(self):
-        resp = self.client.post(reverse("messaging:email_compose"), {
-            "target_type": "group", "group": self.group.pk, "subject": "Sunday",
-            "body": "See you", "scheduled_for": "",
-        })
-        self.assertRedirects(resp, reverse("messaging:home"))
-        comm = Communication.objects.get()
-        self.assertEqual((comm.channel, comm.subject, comm.group), (EMAIL, "Sunday", self.group))
+    def test_no_email_composer(self):
         home = self.client.get(reverse("messaging:home"))
-        self.assertContains(home, "Recent emails")
-        self.assertContains(home, "Sunday")
-
-    def test_compose_keeps_picked_person_on_error(self):
-        resp = self.client.post(reverse("messaging:email_compose"), {
-            "target_type": "person", "person": self.person.pk, "subject": "", "body": "x",
-        })
-        self.assertContains(resp, f'value="{self.person.pk}" checked')
-        self.assertFalse(Communication.objects.exists())
+        self.assertContains(home, "New text")
+        self.assertNotContains(home, "New email")
+        self.assertNotContains(home, "Recent emails")
+        self.assertEqual(self.client.get("/communications/email/new/").status_code, 404)
 
 
 class UnsubscribeViewTests(EmailTestCase):

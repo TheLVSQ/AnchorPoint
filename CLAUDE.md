@@ -88,6 +88,9 @@ Every text / phone blast to people in the directory goes through this one module
   DigitalOcean blocks 25/465/587; ready = `DEFAULT_FROM_EMAIL` set). Consent is `Person.email_opt_in`, **on by default**; every broadcast
   email has a signed unsubscribe link (`/communications/unsubscribe/<token>/`, public, GET asks and
   POST turns it off) plus a `List-Unsubscribe` header. Quiet hours don't apply to email.
+- **Email is system-only:** staff can't write emails (no composer; they send texts and phone
+  blasts). The channel stays for event-triggered emails such as scheduling reminders, so people
+  can't be turned into a mailing list. `send_transactional` has no `subject` yet (see `TODO.md`).
 - The Delivery is the audit trail (person page "Communications History" reads Deliveries).
 - Staff operational alerts (family flags, health email, welcome/registration emails) are
   *not* Communications; they use `messaging/twilio_client.py` / `send_mail` directly.
