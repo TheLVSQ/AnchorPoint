@@ -21,6 +21,7 @@ anchorpoint/              # Django project root (manage.py, .env)
 ├── people/               # Person/contact management, merge service
 ├── households/           # Family groupings and relationships (/families/)
 ├── groups/               # Volunteer teams, check-in classrooms, community groups
+├── scheduling/           # Teams & Plans (Planning Center replacement): blockouts, availability
 ├── events/               # Events, registrations, attendee matching
 ├── checkin/              # Check-in kiosk system, label printing, print agents
 ├── messaging/            # SMS and phone blast communications (Twilio)
@@ -253,6 +254,22 @@ conservative (first name must match; differing birthdates veto; a shared child i
 family-duplicate signal; different `external_id`s never pair). `--dry-run` prints counts only.
 Merges go through `people/services/merge.py`: safety text (allergies, custody, pickup, notes)
 is combined, not dropped, and merging two people who both have logins is blocked.
+
+## Teams & Plans (`scheduling/` app, plan in issue #134)
+
+The Planning Center replacement, built on existing Groups (a team = a `Group`). Phase 1a so far:
+- **Positions** (`groups.Position`): roles on a team. `GroupMembership.positions` = what that person
+  can fill; `GroupMembership.serving_weeks` = which weeks of the month they serve on that team
+  (digits, `"12345"` default, `"3"` = 3rd Sunday only). Staff edit both via **Edit** on a member.
+  Check-in classrooms and event-registration groups aren't schedulable (`Group.is_schedulable`).
+- **Blockouts** (`scheduling.Blockout`): dates a person can't serve on any team, optionally
+  `repeats_yearly` (may cross New Year; Feb 29 → Feb 28). Not for regular patterns.
+- **Availability** (`scheduling/availability.py`): `available(memberships, day, position)` and
+  `reasons_unavailable(membership, day)`. The week is the date's week of the month (15th–21st = 3).
+  The schedule grid must ask this module, never re-derive the rules.
+- **My serving** (`/serving/`, any login linked to a Person): the volunteer's own teams (set their
+  weeks; positions are staff-only) and blockouts. Staff see the same on the person page.
+- Person merge combines positions, weeks and leader role on shared teams; blockouts move.
 
 ## Help guides (`helpcenter/` app, `/help/`)
 

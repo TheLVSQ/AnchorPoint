@@ -4,7 +4,8 @@ Re-points every related row (check-ins, household + group memberships, event
 registrations, comms, primary-adult refs) from the duplicate onto the survivor,
 fills the survivor's blank fields from the duplicate (never overwriting), then
 deletes the duplicate. Each merge is atomic. Group memberships and grade carry
-over, so a merged VBS child keeps their eligibility / roster spot.
+over, so a merged VBS child keeps their eligibility / roster spot; on a team both
+records were on, positions, serving weeks and leader role are combined. Blockouts move.
 """
 
 from django.db import IntegrityError, transaction
@@ -60,9 +61,30 @@ def merge_persons(survivor, duplicate):
         for f in identity.FILL_FIELDS + identity.APPEND_FIELDS + ["custody_flag", "photo_consent"]
     })
 
+    _combine_shared_teams(duplicate, survivor)
     _repoint_relations(duplicate, survivor)
     duplicate.delete()
     return survivor
+
+
+def _combine_shared_teams(duplicate, survivor):
+    """When both records are on the same team, the duplicate's membership is dropped by the
+    unique constraint: carry its scheduling details onto the survivor's first."""
+    from groups.models import ALL_WEEKS, GroupMembership
+
+    kept = {m.group_id: m for m in GroupMembership.objects.filter(person=survivor)}
+    for dup in GroupMembership.objects.filter(person=duplicate, group_id__in=kept):
+        mine = kept[dup.group_id]
+        mine.positions.add(*dup.positions.all())
+        changed = []
+        if mine.serving_weeks == ALL_WEEKS and dup.serving_weeks != ALL_WEEKS:
+            mine.serving_weeks = dup.serving_weeks
+            changed.append("serving_weeks")
+        if dup.role == "leader" and mine.role != "leader":
+            mine.role = "leader"
+            changed.append("role")
+        if changed:
+            mine.save(update_fields=changed)
 
 
 def _has_login(person):

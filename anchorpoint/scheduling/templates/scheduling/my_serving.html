@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}My serving{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>My serving</h1>
+    <p class="page-subtitle">Which weeks you serve on each team, and the dates you're away. Leaders see this when they build the schedule.</p>
+</div>
+
+{% if not person %}
+    <div class="empty-state">Your login isn't linked to a person in the directory yet, so there's nothing to show. Ask a staff member to link it.</div>
+{% else %}
+<div class="split split--even">
+    <section class="card">
+        <div class="card__head"><h2>My teams</h2></div>
+        {% for membership, form in teams %}
+        <div class="serving-team">
+            <h3>{{ membership.group.name }}</h3>
+            <p class="muted-text">{% for p in membership.positions.all %}{{ p.name }}{% if not forloop.last %}, {% endif %}{% empty %}No positions yet{% endfor %}{% if membership.role == "leader" %} · Leader{% endif %}</p>
+            <form method="post" action="{% url 'scheduling:my_serving_weeks' membership.pk %}">
+                {% csrf_token %}
+                <fieldset class="form-field check-list check-list--row">
+                    <legend>Weeks I serve</legend>
+                    {{ form.serving_weeks }}
+                    {% if form.serving_weeks.errors %}<p class="error-text">{{ form.serving_weeks.errors.0 }}</p>{% endif %}
+                </fieldset>
+                <button type="submit" class="btn ghost btn-sm">Save {{ membership.group.name }}</button>
+            </form>
+        </div>
+        {% empty %}
+        <p class="empty-state">You're not on any teams yet.</p>
+        {% endfor %}
+        {% if teams %}<p class="help-text mt-2">Positions are set by your team leader. Ask them if one is missing.</p>{% endif %}
+    </section>
+
+    <section class="card">
+        <div class="card__head"><h2>Dates I'm away</h2></div>
+        <p class="muted-text">Blockouts apply to every team. Tick <strong>Every year</strong> for dates that repeat, like a yearly trip.</p>
+        {% if blockouts %}
+        <ul class="row-list">
+            {% for b in blockouts %}
+            <li class="row-list__item">
+                <div class="row-list__main">
+                    <strong>{{ b.label }}</strong>
+                    {% if b.note %}<span class="muted-text">{{ b.note }}</span>{% endif %}
+                </div>
+                <form method="post" action="{% url 'scheduling:my_blockout_delete' b.pk %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn ghost danger btn-sm">Remove</button>
+                </form>
+            </li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+        {% url 'scheduling:my_blockout_add' as add_url %}
+        {% include "scheduling/_blockout_form.html" with form=blockout_form action=add_url %}
+    </section>
+</div>
+{% endif %}
+{% endblock %}

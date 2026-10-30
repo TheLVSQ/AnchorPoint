@@ -186,13 +186,15 @@ class TeamMemberAccessTests(TestCase):
             ("checkin:checkin_manager", [self.session.pk]),
             ("checkin:checkin_manager_roster", [self.session.pk]),
             ("checkin:checkout_lookup", [self.session.pk]),
+            ("groups:member_edit", [1, 1]), ("groups:position_add", [1]),
+            ("scheduling:person_blockout_add", [self.child.pk]),
         ]
         for name, args in refused:
             with self.subTest(name):
                 resp = self.client.get(reverse(name, args=args))
                 self.assertIn(resp.status_code, (302, 403), f"{name} returned {resp.status_code}")
                 self.assertNotContains(resp, "Peanuts", status_code=resp.status_code)
-        for name in ("dashboard", "profile", "help:list"):
+        for name in ("dashboard", "profile", "help:list", "scheduling:my_serving"):
             with self.subTest(name):
                 resp = self.client.get(reverse(name))
                 self.assertEqual(resp.status_code, 200)

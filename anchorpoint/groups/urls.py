@@ -13,4 +13,8 @@ urlpatterns = [
     path("<int:pk>/members/add/", views.group_member_add, name="member_add"),
     path("<int:pk>/members/<int:mid>/remove/", views.group_member_remove, name="member_remove"),
     path("<int:pk>/member-search/", views.group_member_search, name="member_search"),
+    path("<int:pk>/members/<int:mid>/edit/", views.member_edit, name="member_edit"),
+    path("<int:pk>/positions/add/", views.position_add, name="position_add"),
+    path("<int:pk>/positions/<int:position_id>/remove/", views.position_remove,
+         name="position_remove"),
 ]

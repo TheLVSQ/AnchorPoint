@@ -7,8 +7,12 @@
             <span class="avatar" aria-hidden="true">{{ membership.person.first_name|slice:":1" }}{{ membership.person.last_name|slice:":1" }}</span>
             <div class="row-list__main">
                 <a href="{% url 'people_detail' membership.person.pk %}"><strong>{{ membership.person.first_name }} {{ membership.person.last_name }}</strong></a>
+                {% if group.is_schedulable %}
+                <span class="muted-text">{% for p in membership.positions.all %}{{ p.name }}{% if not forloop.last %}, {% endif %}{% empty %}No positions{% endfor %} · {{ membership.serving_weeks_label }}</span>
+                {% endif %}
             </div>
             <span class="chip chip--neutral">{{ membership.get_role_display }}</span>
+            <a class="btn ghost btn-sm" href="{% url 'groups:member_edit' group.pk membership.pk %}">Edit</a>
             <form method="post" action="{% url 'groups:member_remove' group.pk membership.pk %}"
                   hx-post="{% url 'groups:member_remove' group.pk membership.pk %}" hx-target="#member-list" hx-swap="outerHTML">
                 {% csrf_token %}

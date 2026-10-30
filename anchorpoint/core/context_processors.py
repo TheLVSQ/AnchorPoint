@@ -26,6 +26,7 @@ _NAV_SECTIONS = [
     ("/settings/", "settings"),
     ("/profile/", "profile"),
     ("/help/", "help"),
+    ("/serving/", "serving"),
 ]
 
 
@@ -50,6 +51,7 @@ def _nav(request):
         "checkin": is_checkin_admin(user),
         "comms": has_communications_access(user),
         "admin": is_admin(user),
+        "serving": bool(getattr(getattr(user, "profile", None), "person_id", None)),
     }
 
 

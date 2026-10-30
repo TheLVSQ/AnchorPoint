@@ -1115,3 +1115,18 @@ html.embed-html { overflow-y: auto; background: transparent; }
     padding: 0 0 4px;
 }
 .embed-main > .container { padding: 0; max-width: none; }
+
+/* ---------------------------------------------------- Teams & serving -- */
+/* CheckboxSelectMultiple renders <div><div><label><input> 1st</label></div>…</div>. */
+.check-list { border: 0; padding: 0; margin: 0 0 0.5rem; min-width: 0; }
+.check-list legend { padding: 0; margin-bottom: 0.4rem; font-size: 0.85rem; font-weight: 600; color: var(--text); }
+.check-list > div { display: flex; flex-direction: column; gap: 0.1rem; margin-bottom: 0.9rem; }
+.check-list--row > div { flex-direction: row; flex-wrap: wrap; gap: 0.25rem 1.1rem; }
+.check-list label { display: flex; align-items: center; gap: 0.5rem; font-weight: 500; margin: 0; padding: 0.25rem 0; cursor: pointer; }
+.inline-add { display: flex; gap: 0.5rem; align-items: flex-start; margin-top: 0.75rem; }
+.inline-add input { flex: 1; margin-bottom: 0; }
+.serving-team + .serving-team { border-top: 1px solid var(--border); margin-top: 1rem; padding-top: 1rem; }
+.serving-team h3 { margin: 0 0 0.2rem; font-size: 1rem; }
+.blockout-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0 0.75rem; margin-top: 1rem; }
+.blockout-form .checkbox-field, .blockout-form .form-actions { grid-column: 1 / -1; }
+.blockout-form .form-actions { margin-top: 0; }

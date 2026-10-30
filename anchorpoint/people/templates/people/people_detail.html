@@ -249,6 +249,49 @@
         </section>
 
         <section class="card">
+            <div class="card__head"><h2>Serving</h2></div>
+            {% if serving %}
+            <ul class="row-list">
+                {% for m in serving %}
+                <li class="row-list__item">
+                    <div class="row-list__main">
+                        <a href="{% url 'groups:detail' m.group.pk %}"><strong>{{ m.group.name }}</strong></a>
+                        <span class="muted-text">{% for p in m.positions.all %}{{ p.name }}{% if not forloop.last %}, {% endif %}{% empty %}No positions{% endfor %} · {{ m.serving_weeks_label }}</span>
+                    </div>
+                    <a class="btn ghost btn-sm" href="{% url 'groups:member_edit' m.group.pk m.pk %}">Edit</a>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="muted-text">Not on any teams.</p>
+            {% endif %}
+            <h3 class="mt-2">Blockouts</h3>
+            {% if blockouts %}
+            <ul class="row-list">
+                {% for b in blockouts %}
+                <li class="row-list__item">
+                    <div class="row-list__main">
+                        <strong>{{ b.label }}</strong>
+                        {% if b.note %}<span class="muted-text">{{ b.note }}</span>{% endif %}
+                    </div>
+                    <form method="post" action="{% url 'scheduling:person_blockout_delete' person.pk b.pk %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn ghost danger btn-sm">Remove</button>
+                    </form>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="muted-text">No upcoming blockouts.</p>
+            {% endif %}
+            <details class="disclosure">
+                <summary>Add a blockout</summary>
+                {% url 'scheduling:person_blockout_add' person.pk as add_url %}
+                {% include "scheduling/_blockout_form.html" with form=blockout_form action=add_url %}
+            </details>
+        </section>
+
+        <section class="card">
             <div class="card__head"><h2>Health &amp; Security</h2></div>
             <dl class="kv">
                 <div><dt>Allergies</dt><dd>{% if person.allergies %}<strong class="text-danger">{{ person.allergies }}</strong>{% else %}None noted{% endif %}</dd></div>
