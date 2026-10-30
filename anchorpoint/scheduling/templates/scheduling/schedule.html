@@ -10,6 +10,14 @@
     </div>
     <div class="page-actions">
         <a class="btn ghost" href="{% url 'scheduling:service_type_edit' service_type.pk %}">Edit positions</a>
+        {% if draft_people %}
+        <form method="post" action="{% url 'scheduling:send_requests' service_type.pk %}"
+              hx-confirm="Email {{ draft_people }} {{ draft_people|pluralize:'person,people' }}{% if team %} on {{ team.name }}{% endif %} the dates they're scheduled for (all upcoming dates marked Not sent)?">
+            {% csrf_token %}
+            {% if team %}<input type="hidden" name="team" value="{{ team.pk }}">{% endif %}
+            <button type="submit" class="btn">Send {% if team %}{{ team.name }} {% endif %}requests ({{ draft_people }})</button>
+        </form>
+        {% endif %}
     </div>
 </div>
 
@@ -56,7 +64,7 @@
         {% endfor %}
     </table>
 </div>
-<p class="help-text mt-2">⚠ marks someone outside their usual weeks, blocked out, or already serving that day. You can still schedule them.</p>
+<p class="help-text mt-2">New people are <strong>Not sent</strong> until you press <strong>Send requests</strong>: then they get an email and can accept or decline. ⚠ marks someone outside their usual weeks, blocked out, or already serving that day; you can still schedule them.</p>
 {% endif %}
 
 <section class="card mt-4">

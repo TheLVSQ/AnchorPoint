@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Your serving schedule{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>Hi {{ person.first_name }}</h1>
+    <p class="page-subtitle">Here's when you're scheduled to serve. Let us know if you can make it.</p>
+</div>
+<section class="card single">
+    {% include "scheduling/_my_schedule.html" with action=request.path %}
+</section>
+{% if not request.user.is_authenticated %}
+<p class="help-text mt-3">Have a login? <a href="{% url 'login' %}">Sign in</a> to see this any time under <strong>My serving</strong>.</p>
+{% endif %}
+{% endblock %}

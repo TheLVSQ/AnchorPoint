@@ -201,6 +201,20 @@ def _dashboard_context(request):
                 "url": reverse("households:family_flags"),
             })
 
+    person_id = getattr(getattr(user, "profile", None), "person_id", None)
+    if person_id:
+        from scheduling.models import Assignment
+        from scheduling.requests import upcoming_for
+        unanswered = list(upcoming_for(person_id).filter(status=Assignment.Status.PENDING))
+        if unanswered:
+            first = unanswered[0]
+            ctx["attention"].insert(0, {
+                "label": "date to answer" if len(unanswered) == 1 else "dates to answer",
+                "count": len(unanswered),
+                "detail": f"Can you serve {first.position} on {first.plan.date:%a, %b %-d}?",
+                "url": reverse("scheduling:my_serving"),
+            })
+
     if staff:
         pending = EventRegistrationAttendee.objects.filter(
             match_status=EventRegistrationAttendee.MATCH_STATUS_PENDING
