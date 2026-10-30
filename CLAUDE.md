@@ -190,6 +190,11 @@ can fetch it.
 - **Weekly security reboot** — unattended-upgrades installs security updates daily; root cron
   (`/etc/cron.d/anchorpoint-reboot`) reboots **Tuesdays 07:30 UTC (~3:30am ET) only if
   `/var/run/reboot-required` exists**. Containers come back via `restart: unless-stopped`.
+- **cloudflared auto-update** — the tunnel runs from Cloudflare's apt repo as a systemd service with
+  `--no-autoupdate`. `docker/host/install-cloudflared-autoupdate.sh` (run once with sudo on the
+  droplet; installed 2026-10-30) adds that repo to unattended-upgrades and a dpkg hook
+  (`cloudflared-restart-if-updated`) that restarts the service when the binary's install time is
+  newer than the running process. Check: `sudo unattended-upgrade --dry-run --debug | grep cloudflared`.
 - **Storage** — deploys prune unused images/build cache older than a week; container logs are
   capped (10MB × 3 per service); backups keep 14 days; `cleanup_audio` purges finished
   phone-blast audio after 30 days (`AUDIO_RETENTION_DAYS`).

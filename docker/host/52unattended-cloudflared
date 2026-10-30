@@ -1,0 +1,12 @@
+// Let unattended-upgrades install cloudflared updates from Cloudflare's apt repo
+// (pkg.cloudflare.com), not just Ubuntu security updates. Installed to
+// /etc/apt/apt.conf.d/ by docker/host/install-cloudflared-autoupdate.sh.
+Unattended-Upgrade::Origins-Pattern {
+        "origin=cloudflared,codename=any,label=cloudflared";
+};
+
+// cloudflared runs with --no-autoupdate, so a new binary only takes effect once
+// the service restarts. After every dpkg run, restart it if the binary changed.
+DPkg::Post-Invoke {
+        "/usr/local/sbin/cloudflared-restart-if-updated || true";
+};
