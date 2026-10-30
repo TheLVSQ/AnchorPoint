@@ -8,7 +8,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 from messaging.models import Delivery
 from scheduling.forms import BlockoutForm
-from scheduling.services import current_blockouts, serving_memberships
+from scheduling.services import current_blockouts, serving_memberships, upcoming_assignments
 
 from core import invites
 from core.permissions import staff_or_communications_required, staff_required
@@ -379,6 +379,7 @@ def people_detail(request, pk):
         "login_user": invites.login_for(person),
         "serving": serving_memberships(person),
         "blockouts": current_blockouts(person),
+        "upcoming_assignments": upcoming_assignments(person),
         "blockout_form": BlockoutForm(person=person),
     }
     return render(request, "people/people_detail.html", context)

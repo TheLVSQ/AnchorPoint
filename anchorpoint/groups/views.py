@@ -9,6 +9,7 @@ from django.views.decorators.http import require_POST
 from core.permissions import staff_required
 from households.models import Household
 from people.models import Person
+from scheduling.models import Assignment
 
 from .forms import GroupForm, MembershipForm, PositionForm
 from .models import Group, GroupMembership, Position
@@ -104,6 +105,11 @@ def position_add(request, pk):
 @require_POST
 def position_remove(request, pk, position_id):
     position = get_object_or_404(Position, pk=position_id, group_id=pk)
+    plans = position.assignments.values("plan").distinct().count()
+    if plans:
+        messages.error(request, f"{position.name} is on {plans} schedule{'s' if plans != 1 else ''}. "
+                                "Take those people off it first.")
+        return redirect("groups:detail", pk=pk)
     position.delete()
     messages.success(request, f"Removed {position.name}.")
     return redirect("groups:detail", pk=pk)
@@ -149,6 +155,11 @@ def group_delete(request, pk):
     group = get_object_or_404(Group, pk=pk)
     if request.method == "POST":
         name = group.name
+        plans = Assignment.objects.filter(position__group=group).values("plan").distinct().count()
+        if plans:
+            messages.error(request, f"{name} is on {plans} schedule{'s' if plans != 1 else ''}. "
+                                    "Take its people off those dates first, or archive the group.")
+            return redirect("groups:detail", pk=group.pk)
         group.delete()
         messages.success(request, f"{name} deleted.")
         return redirect("groups:list")

@@ -1,5 +1,6 @@
 from datetime import timedelta
 
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
@@ -64,3 +65,95 @@ class Blockout(models.Model):
         """Still relevant: a yearly blockout always is; a one-off until it has ended."""
         today = today or timezone.localdate()
         return self.repeats_yearly or self.ends_on >= today
+
+
+class ServiceType(models.Model):
+    """A kind of service that gets scheduled ("Sunday Morning", "VBS 2027"). It says which
+    positions each date needs; a Plan is one date of it."""
+
+    WEEKDAYS = [(0, "Monday"), (1, "Tuesday"), (2, "Wednesday"), (3, "Thursday"),
+                (4, "Friday"), (5, "Saturday"), (6, "Sunday")]
+
+    name = models.CharField(max_length=80, unique=True)
+    weekday = models.PositiveSmallIntegerField(
+        choices=WEEKDAYS, null=True, blank=True, default=6,
+        help_text="Adding dates creates one plan per week on this day. "
+                  "Pick Every day for a run of days like VBS.",
+    )
+    default_time = models.TimeField("Service time", null=True, blank=True)
+    is_active = models.BooleanField("Active", default=True)
+
+    class Meta:
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+
+class ServiceTypeNeed(models.Model):
+    """How many people in one position each plan of a service type needs."""
+
+    service_type = models.ForeignKey(ServiceType, related_name="needs", on_delete=models.CASCADE)
+    position = models.ForeignKey("groups.Position", related_name="needs",
+                                 on_delete=models.CASCADE)
+    count = models.PositiveSmallIntegerField(default=1)
+
+    class Meta:
+        ordering = ["position__group__name", "position__name"]
+        constraints = [
+            models.UniqueConstraint(fields=["service_type", "position"],
+                                    name="unique_need_per_service_type"),
+        ]
+
+    def __str__(self):
+        return f"{self.service_type}: {self.count} × {self.position}"
+
+
+class Plan(models.Model):
+    """One date of a service type: who serves in each position."""
+
+    service_type = models.ForeignKey(ServiceType, related_name="plans", on_delete=models.CASCADE)
+    date = models.DateField()
+    time = models.TimeField(null=True, blank=True)
+    title = models.CharField(max_length=120, blank=True, help_text="Optional, e.g. Easter.")
+    notes = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ["date"]
+        constraints = [
+            models.UniqueConstraint(fields=["service_type", "date"],
+                                    name="unique_plan_per_date"),
+        ]
+
+    def __str__(self):
+        return f"{self.service_type} {self.date:%b %-d}"
+
+
+class Assignment(models.Model):
+    """One person in one position on one plan. Pending until they answer (1c)."""
+
+    class Status(models.TextChoices):
+        PENDING = "pending", "Pending"
+        ACCEPTED = "accepted", "Accepted"
+        DECLINED = "declined", "Declined"
+
+    plan = models.ForeignKey(Plan, related_name="assignments", on_delete=models.CASCADE)
+    # PROTECT: a position can't vanish from schedules people are on.
+    position = models.ForeignKey("groups.Position", related_name="assignments",
+                                 on_delete=models.PROTECT)
+    person = models.ForeignKey("people.Person", related_name="assignments",
+                               on_delete=models.CASCADE)
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.PENDING)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True,
+                                   related_name="+", on_delete=models.SET_NULL)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["plan__date", "position__name", "person__last_name"]
+        constraints = [
+            models.UniqueConstraint(fields=["plan", "position", "person"],
+                                    name="unique_assignment"),
+        ]
+
+    def __str__(self):
+        return f"{self.person} – {self.position} – {self.plan}"

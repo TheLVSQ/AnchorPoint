@@ -188,6 +188,8 @@ class TeamMemberAccessTests(TestCase):
             ("checkin:checkout_lookup", [self.session.pk]),
             ("groups:member_edit", [1, 1]), ("groups:position_add", [1]),
             ("scheduling:person_blockout_add", [self.child.pk]),
+            ("scheduling:service_type_list", []), ("scheduling:schedule", [1]),
+            ("scheduling:plan_detail", [1]), ("scheduling:cell_pick", [1, 1]),
         ]
         for name, args in refused:
             with self.subTest(name):

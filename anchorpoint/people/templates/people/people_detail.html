@@ -265,6 +265,20 @@
             {% else %}
             <p class="muted-text">Not on any teams.</p>
             {% endif %}
+            {% if upcoming_assignments %}
+            <h3 class="mt-2">Scheduled</h3>
+            <ul class="row-list">
+                {% for a in upcoming_assignments %}
+                <li class="row-list__item">
+                    <div class="row-list__main">
+                        <a href="{% url 'scheduling:plan_detail' a.plan.pk %}"><strong>{{ a.plan.date|date:"D, M j" }}</strong></a>
+                        <span class="muted-text">{{ a.position.name }} · {{ a.plan.service_type.name }}</span>
+                    </div>
+                    {% if a.status != "pending" %}<span class="chip chip--{% if a.status == 'accepted' %}success{% else %}danger{% endif %}">{{ a.get_status_display }}</span>{% endif %}
+                </li>
+                {% endfor %}
+            </ul>
+            {% endif %}
             <h3 class="mt-2">Blockouts</h3>
             {% if blockouts %}
             <ul class="row-list">

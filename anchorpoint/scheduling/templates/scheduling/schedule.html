@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}{{ service_type.name }}{% endblock %}
+{% block content %}
+<a class="back-link" href="{% url 'scheduling:service_type_list' %}">&larr; Schedules</a>
+
+<div class="page-header page-header--split">
+    <div>
+        <h1>{{ service_type.name }}</h1>
+        <p class="page-subtitle">{% if service_type.weekday is None %}Every day in its range{% else %}{{ service_type.get_weekday_display }}s{% endif %}{% if service_type.default_time %} at {{ service_type.default_time|time:"g:i A" }}{% endif %}{% if not service_type.is_active %} · Inactive{% endif %}</p>
+    </div>
+    <div class="page-actions">
+        <a class="btn ghost" href="{% url 'scheduling:service_type_edit' service_type.pk %}">Edit positions</a>
+    </div>
+</div>
+
+<div class="sched-toolbar">
+    {% if teams|length > 1 %}
+    <nav class="tabs tabs--compact" aria-label="Show one team">
+        <a class="tabs__tab" href="?start={{ start|date:'Y-m-d' }}"{% if not team %} aria-current="page"{% endif %}>All teams</a>
+        {% for t in teams %}
+        <a class="tabs__tab" href="?start={{ start|date:'Y-m-d' }}&team={{ t.pk }}"{% if team == t %} aria-current="page"{% endif %}>{{ t.name }}</a>
+        {% endfor %}
+    </nav>
+    {% endif %}
+    <div class="sched-toolbar__pager">
+        {% if earlier %}<a class="btn ghost btn-sm" href="?start={{ earlier|date:'Y-m-d' }}{% if team %}&team={{ team.pk }}{% endif %}">&larr; Earlier</a>{% endif %}
+        {% if later %}<a class="btn ghost btn-sm" href="?start={{ later|date:'Y-m-d' }}{% if team %}&team={{ team.pk }}{% endif %}">Later &rarr;</a>{% endif %}
+    </div>
+</div>
+
+{% if not plans %}
+    <div class="empty-state">No dates {% if earlier %}from {{ start|date:"M j" }} on{% else %}yet{% endif %}. Add some below.</div>
+{% elif not grid %}
+    <div class="empty-state">This service type doesn't need any positions yet. <a href="{% url 'scheduling:service_type_edit' service_type.pk %}">Pick the positions</a> each date needs.</div>
+{% else %}
+<div class="table-wrap sched-grid-wrap">
+    <table class="sched-grid">
+        <thead>
+            <tr>
+                <th scope="col" class="sched-grid__corner">Position</th>
+                {% for plan in plans %}
+                <th scope="col"><a href="{% url 'scheduling:plan_detail' plan.pk %}">{{ plan.date|date:"D, M j" }}</a>{% if plan.title %}<small>{{ plan.title }}</small>{% endif %}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        {% for team_rows in grid %}
+        <tbody>
+            <tr class="sched-grid__team"><th scope="rowgroup" colspan="{{ plans|length|add:1 }}">{{ team_rows.team.name }}</th></tr>
+            {% for row in team_rows.rows %}
+            <tr>
+                <th scope="row">{{ row.position.name }}{% if row.needed %}<small>Needs {{ row.needed }}</small>{% endif %}</th>
+                {% for cell in row.cells %}<td>{% include "scheduling/_cell.html" %}</td>{% endfor %}
+            </tr>
+            {% endfor %}
+        </tbody>
+        {% endfor %}
+    </table>
+</div>
+<p class="help-text mt-2">⚠ marks someone outside their usual weeks, blocked out, or already serving that day. You can still schedule them.</p>
+{% endif %}
+
+<section class="card mt-4">
+    <div class="card__head"><h2>Add dates</h2></div>
+    <p class="muted-text">Creates a plan for each {% if service_type.weekday is None %}day{% else %}{{ service_type.get_weekday_display }}{% endif %} in the range. Dates that already have one are skipped.</p>
+    <form method="post" action="{% url 'scheduling:plans_add' service_type.pk %}" class="inline-add">
+        {% csrf_token %}
+        {% for field in dates_form %}
+        <div class="form-field">
+            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {{ field }}
+        </div>
+        {% endfor %}
+        <button type="submit" class="btn btn-sm">Add dates</button>
+    </form>
+</section>
+{% endblock %}
