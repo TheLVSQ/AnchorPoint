@@ -306,7 +306,9 @@ fictional families (repo is public — never real data), drives your installed C
 Playwright (docs-only dependency, not in requirements), and can write the guide as a PDF.
 See its docstring for the one-time DB container + `LABEL_FONT_DIR` (DejaVu fonts for the
 sample labels). Re-run it when check-in screens change; `--guide communications` re-shoots the
-text/phone-blast guides (fake Twilio settings, pre-made results, nothing is sent).
+text/phone-blast guides (fake Twilio settings, pre-made results, nothing is sent); `--guide serving`
+re-shoots the scheduling guides (`scheduling.md` for staff, `serving.md` for volunteers; requests and
+answers are made in the ORM, no email goes out).
 
 ## Common Tasks
 

@@ -1168,9 +1168,10 @@ html.embed-html { overflow-y: auto; background: transparent; }
 .my-schedule__decline summary { list-style: none; }
 .my-schedule__decline summary::-webkit-details-marker { display: none; }
 .my-schedule__decline[open] { flex-basis: 100%; }
-.my-schedule__decline form { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; margin-top: 0.5rem; }
+.my-schedule .row-list__main .muted-text { white-space: normal; }
+.my-schedule__decline form { display: flex; flex-direction: column; align-items: flex-start; gap: 0.4rem; margin-top: 0.6rem; max-width: 26rem; }
 .my-schedule__decline label { font-size: 0.85rem; font-weight: 600; }
-.my-schedule__decline input[type="text"] { flex: 1 1 180px; margin: 0; }
+.my-schedule__decline input[type="text"] { width: 100%; margin: 0; }
 .sched-cell--picking { background: var(--surface-2); border-radius: var(--radius-sm); padding: 0.4rem; }
 .sched-picker__title { margin: 0; font-size: 0.8rem; font-weight: 600; color: var(--muted); }
 .sched-picker { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.25rem; }
