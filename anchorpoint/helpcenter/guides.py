@@ -54,6 +54,20 @@ GUIDES = [
                 "who answered.",
         audience="Staff who send communications",
     ),
+    Guide(
+        slug="scheduling",
+        title="Scheduling volunteers",
+        summary="Positions, a service type, filling the schedule, and sending people their "
+                "dates to accept or decline.",
+        audience="Staff who build schedules",
+    ),
+    Guide(
+        slug="serving",
+        title="Serving on a team",
+        summary="Sign in, answer when you're asked to serve, and set the weeks you serve and "
+                "the dates you're away.",
+        audience="Volunteers",
+    ),
 ]
 
 _BY_SLUG = {g.slug: g for g in GUIDES}

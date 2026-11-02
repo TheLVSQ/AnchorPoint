@@ -8,16 +8,17 @@ your installed Google Chrome via Playwright. Optionally writes the guide as PDF.
 One-time setup:
     docker run -d --name anchorpoint-docs-db -e POSTGRES_DB=anchorpoint_docs \\
       -e POSTGRES_USER=anchorpoint -e POSTGRES_PASSWORD=anchorpoint \\
-      -p 127.0.0.1:5434:5432 postgres:16-alpine
+      -p 127.0.0.1:5435:5432 postgres:16-alpine
     uv pip install --python .venv/bin/python playwright   # docs-only, not in requirements
 
 Run from the repo root:
-    DB_NAME=anchorpoint_docs DB_PORT=5434 .venv/bin/python scripts/help_screenshots.py \\
+    DB_NAME=anchorpoint_docs DB_PORT=5435 .venv/bin/python scripts/help_screenshots.py \\
       [--guide communications] [--pdf checkin-setup-guide.pdf]
 
 --guide picks which guide's screens to capture (default: checkin-setup). The
 communications screens use fake Twilio settings and pre-made results; nothing
-is ever sent.
+is ever sent. --guide serving shoots the scheduling guides (staff + volunteer);
+its requests and answers are made straight in the ORM and no email goes out.
 
 On macOS, also set LABEL_FONT_DIR (see save_labels) or the sample labels are skipped.
 """
@@ -38,6 +39,7 @@ APP = ROOT / "anchorpoint"
 HELP = APP / "helpcenter" / "static" / "help"
 OUT = HELP / "checkin-setup"
 COMMS_OUT = HELP / "communications"
+SERVING_OUT = HELP / "serving"
 PORT = 8765
 BASE = f"http://127.0.0.1:{PORT}"
 KIOSK = ".kiosk-header, .kiosk-card"
@@ -67,10 +69,13 @@ from checkin.models import (  # noqa: E402
     CheckInConfiguration, CheckInSession, CheckInWindow, PrintAgent, Room,
 )
 from core.models import OrganizationSettings  # noqa: E402
-from groups.models import Group, GroupMembership  # noqa: E402
+from groups.models import Group, GroupMembership, Position  # noqa: E402
 from households.models import Household, HouseholdMember  # noqa: E402
 from messaging.models import Communication, Delivery  # noqa: E402
 from people.models import Person  # noqa: E402
+from scheduling.models import (  # noqa: E402
+    Assignment, Blockout, Plan, ServiceType, ServiceTypeNeed,
+)
 
 
 def years_ago(n, month=3, day=14):
@@ -359,9 +364,158 @@ def shoot_comms(browser, cookie, user):
     ctx.close()
 
 
+def seed_serving(user):
+    """A fictional worship team on a Sunday Morning schedule: some dates sent and answered,
+    later ones still drafts. Answers and requests are set in the ORM; the request/reminder
+    cron never runs, so nothing is emailed."""
+    team, _ = Group.objects.update_or_create(
+        name="Worship Team", defaults={"category": "volunteer", "is_active": True,
+                                       "description": "Musicians and tech crew for Sunday services."})
+    positions = {n: Position.objects.get_or_create(group=team, name=n)[0]
+                 for n in ("Keys", "Vocals", "Guitar", "Sound")}
+    roster = [  # first, last, positions, weeks, email
+        ("Jordan", "Carter", ["Keys", "Vocals"], "12345", True),
+        ("Sam", "Carter", ["Vocals"], "13", True),
+        ("Linh", "Nguyen", ["Sound"], "12345", True),
+        ("Grace", "Okafor", ["Guitar", "Vocals"], "3", False),
+    ]
+    people = {}
+    for first, last, names, weeks, has_email in roster:
+        person = Person.objects.get(first_name=first, last_name=last)
+        person.email = f"{first.lower()}.{last.lower()}@example.org" if has_email else ""
+        person.email_opt_in = True
+        person.save()
+        membership, _ = GroupMembership.objects.get_or_create(group=team, person=person)
+        membership.serving_weeks = weeks
+        membership.role = "leader" if first == "Jordan" else "member"
+        membership.save()
+        membership.positions.set([positions[n] for n in names])
+        people[first] = person
+
+    sunday, _ = ServiceType.objects.update_or_create(
+        name="Sunday Morning", defaults={"weekday": 6, "default_time": dtime(10, 30)})
+    for name, count in [("Keys", 1), ("Vocals", 2), ("Guitar", 1), ("Sound", 1)]:
+        ServiceTypeNeed.objects.update_or_create(service_type=sunday, position=positions[name],
+                                                 defaults={"count": count})
+    Plan.objects.filter(service_type=sunday).delete()
+    today = timezone.localdate()
+    first_sunday = today + timedelta(days=(6 - today.weekday()) % 7 or 7)
+    plans = [Plan.objects.create(service_type=sunday, date=first_sunday + timedelta(weeks=w),
+                                 time=dtime(10, 30)) for w in range(4)]
+
+    Blockout.objects.filter(person__in=people.values()).delete()
+    Blockout.objects.create(person=people["Linh"], starts_on=plans[1].date,
+                            ends_on=plans[1].date + timedelta(days=2), note="Family trip")
+
+    sent = timezone.now() - timedelta(days=6)
+    A = Assignment.Status
+    for plan_i, who, pos, status, reason in [
+        (0, "Jordan", "Keys", A.ACCEPTED, ""), (0, "Sam", "Vocals", A.ACCEPTED, ""),
+        (0, "Linh", "Sound", A.PENDING, ""),
+        (1, "Jordan", "Keys", A.DECLINED, "Out of town for a wedding"),
+        (1, "Sam", "Vocals", A.PENDING, ""),
+        (2, "Jordan", "Vocals", A.PENDING, ""),
+    ]:
+        Assignment.objects.create(plan=plans[plan_i], position=positions[pos], person=people[who],
+                                  status=status, decline_reason=reason, created_by=user,
+                                  requested_at=sent, request_sent_at=sent,
+                                  responded_at=sent if status != A.PENDING else None)
+    for plan_i, who, pos in [(2, "Grace", "Guitar"), (2, "Linh", "Sound"),
+                             (3, "Jordan", "Keys"), (3, "Linh", "Sound")]:
+        Assignment.objects.create(plan=plans[plan_i], position=positions[pos],
+                                  person=people[who], created_by=user)  # drafts: not sent
+
+    volunteer = User.objects.filter(username="docs-volunteer").first()
+    if volunteer is None:
+        volunteer = User.objects.create_user("docs-volunteer", email=people["Jordan"].email)
+    volunteer.profile.role = volunteer.profile.Role.TEAM_MEMBER
+    volunteer.profile.person = people["Jordan"]
+    volunteer.profile.save()
+    return team, sunday, plans, people, volunteer
+
+
+def shoot_serving(browser, cookie, user):
+    """Screens for the staff "Scheduling volunteers" and volunteer "Serving on a team"
+    guides. Forms are filled in, never submitted."""
+    from django.contrib.auth.tokens import default_token_generator
+    from django.utils.encoding import force_bytes
+    from django.utils.http import urlsafe_base64_encode
+
+    from scheduling.requests import respond_url
+
+    SERVING_OUT.mkdir(parents=True, exist_ok=True)
+    team, sunday, plans, people, volunteer = seed_serving(user)
+    shot = lambda page, name, selector="#main": shoot(page, name, selector, out=SERVING_OUT)  # noqa: E731
+
+    # ---- Staff (desktop) ----
+    ctx = browser.new_context(viewport={"width": 1280, "height": 900},
+                              device_scale_factor=2, color_scheme="light")
+    ctx.add_cookies([cookie])
+    page = ctx.new_page()
+    page.goto(f"{BASE}/groups/{team.pk}/")
+    shot(page, "s01-positions", '.card:has(h2:text("Positions"))')
+    sam = GroupMembership.objects.get(group=team, person=people["Sam"])
+    page.goto(f"{BASE}/groups/{team.pk}/members/{sam.pk}/edit/")
+    shot(page, "s02-member-edit")
+    page.goto(f"{BASE}/people/{people['Linh'].pk}/")
+    shot(page, "s03-invite", '.card:has(h2:text("Login"))')
+    shot(page, "s04-person-serving", '.card:has(h2:text("Serving"))')
+    page.goto(f"{BASE}/plans/types/{sunday.pk}/edit/")
+    shot(page, "s05-service-type")
+    page.goto(f"{BASE}/plans/types/{sunday.pk}/")
+    shot(page, "s06-grid")
+    shot(page, "s07-add-dates", '.card:has(h2:text("Add dates"))')
+    shot(page, "s08-send", ".page-header")
+    vocals = Position.objects.get(group=team, name="Vocals")
+    # The 4th Sunday: everyone left on the team gets a warning to show.
+    page.click(f"#cell-{plans[2].pk}-{vocals.pk} button:has-text('+ Add')")
+    page.wait_for_selector(f"#cell-{plans[2].pk}-{vocals.pk}.sched-cell--picking")
+    page.mouse.move(0, 0)  # no hover highlight on a picker option
+    shot(page, "s09-picker", ".sched-grid-wrap")
+    ctx.close()
+
+    # ---- Volunteer (phone-sized) ----
+    phone = dict(viewport={"width": 420, "height": 900}, device_scale_factor=2,
+                 color_scheme="light")
+    anon = browser.new_context(**phone)
+    page = anon.new_page()
+    page.goto(f"{BASE}/login/")
+    shot(page, "v01-login")
+    uid = urlsafe_base64_encode(force_bytes(volunteer.pk))
+    token = default_token_generator.make_token(volunteer)
+    page.goto(f"{BASE}/password-reset/{uid}/{token}/")
+    page.wait_for_load_state("networkidle")
+    shot(page, "v02-set-password")
+    page.goto(respond_url(people["Jordan"], BASE))
+    shot(page, "v03-respond")
+    anon.close()
+
+    client = Client()
+    client.force_login(volunteer)
+    ctx = browser.new_context(**phone)
+    ctx.add_cookies([{"name": "sessionid", "value": client.cookies["sessionid"].value,
+                      "domain": "127.0.0.1", "path": "/"}])
+    page = ctx.new_page()
+    page.goto(f"{BASE}/")
+    shot(page, "v04-dashboard", ".attention")
+    page.goto(f"{BASE}/serving/")
+    shot(page, "v05-my-schedule", '.card:has(h2:text("My schedule"))')
+    pending = page.locator(".my-schedule__item:has(.chip--warning)").first
+    pending.locator("summary").click()
+    pending.locator("input[name=reason]").fill("Visiting family")
+    page.mouse.move(0, 0)
+    shot(page, "v06-decline", ".my-schedule__item:has(details[open])")
+    shot(page, "v07-weeks", '.card:has(h2:text("My teams"))')
+    page.fill("#id_starts_on", (plans[3].date + timedelta(days=-1)).isoformat())
+    page.fill("#id_ends_on", (plans[3].date + timedelta(days=6)).isoformat())
+    page.fill("#id_note", "Vacation")
+    shot(page, "v08-away", ".card:has(h2:text(\"Dates I'm away\"))")
+    ctx.close()
+
+
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--guide", choices=["checkin-setup", "communications"],
+    parser.add_argument("--guide", choices=["checkin-setup", "communications", "serving"],
                         default="checkin-setup", help="Which guide's screens to capture.")
     parser.add_argument("--pdf", help="Also save the guide as a PDF to this path.")
     args = parser.parse_args()
@@ -382,6 +536,10 @@ def main():
             browser = pw.chromium.launch(channel="chrome")
             if args.guide == "communications":
                 shoot_comms(browser, cookie, user)
+                browser.close()
+                return
+            if args.guide == "serving":
+                shoot_serving(browser, cookie, user)
                 browser.close()
                 return
 
