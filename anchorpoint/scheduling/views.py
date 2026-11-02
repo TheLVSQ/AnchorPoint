@@ -14,6 +14,7 @@ from core.permissions import staff_required
 from groups.models import Group, GroupMembership, Position
 from people.models import Person
 
+from . import requests as schedule_requests
 from . import schedule
 from .forms import (
     AddDatesForm, BlockoutForm, PlanForm, ServiceTypeForm, ServingWeeksForm,
@@ -43,6 +44,7 @@ def my_serving(request, blockout_form=None, weeks_form=None):
                 instance=membership, prefix=f"m{membership.pk}")))
     return render(request, "scheduling/my_serving.html", {
         "person": person,
+        "schedule": schedule_requests.upcoming_for(person) if person else [],
         "teams": teams,
         "blockouts": current_blockouts(person) if person else [],
         "blockout_form": blockout_form or (BlockoutForm(person=person) if person else None),
@@ -93,6 +95,49 @@ def my_blockout_delete(request, pk):
     blockout.delete()
     messages.success(request, f"Removed the blockout for {blockout.label}.")
     return redirect("scheduling:my_serving")
+
+
+def _answer(request, person):
+    """Apply an Accept / Decline POST for one of `person`'s visible assignments."""
+    assignment = get_object_or_404(
+        schedule_requests.upcoming_for(person), pk=request.POST.get("assignment") or 0)
+    accept = request.POST.get("answer") == "accept"
+    try:
+        schedule_requests.respond(assignment, accept=accept,
+                                  reason=request.POST.get("reason", ""))
+    except schedule_requests.TooLate as exc:
+        messages.error(request, str(exc))
+        return
+    when = f"{assignment.plan.date:%a, %b %-d}"
+    if accept:
+        messages.success(request, f"Thanks! You're serving {assignment.position} on {when}.")
+    else:
+        messages.success(request, f"Got it: you can't serve {assignment.position} on {when}. "
+                                  "We've let the scheduler know.")
+
+
+@login_required
+@require_POST
+def my_answer(request):
+    person = _own_person(request.user)
+    if not person:
+        raise Http404
+    _answer(request, person)
+    return redirect("scheduling:my_serving")
+
+
+def respond(request, token):
+    """Public: answer schedule requests from the emailed link, no login needed (one-time
+    VBS volunteers). Shows only this person's own dates, never who else is serving."""
+    person = schedule_requests.person_from_token(token)
+    if not person:
+        raise Http404
+    if request.method == "POST":
+        _answer(request, person)
+        return redirect("scheduling:respond", token=token)
+    return render(request, "scheduling/respond.html", {
+        "person": person, "schedule": schedule_requests.upcoming_for(person),
+    })
 
 
 # ---------------------------------------------------------------------------
@@ -174,7 +219,9 @@ def schedule_grid(request, pk):
     teams = list(Group.objects.filter(positions__needs__service_type=service_type)
                  .distinct().order_by("name"))
     team = next((t for t in teams if str(t.pk) == request.GET.get("team")), None)
+    drafts = schedule_requests.drafts(service_type, team)
     return render(request, "scheduling/schedule.html", {
+        "draft_people": drafts.values("person").distinct().count(),
         "service_type": service_type,
         "plans": plans,
         "grid": schedule.build_grid(service_type, plans, team=team),
@@ -203,6 +250,29 @@ def plans_add(request, pk):
     else:
         messages.info(request, "Those dates already have plans.")
     return redirect(f"{reverse('scheduling:schedule', args=[pk])}?start={start.isoformat()}")
+
+
+@staff_required
+@require_POST
+def send_requests(request, pk):
+    service_type = get_object_or_404(ServiceType, pk=pk)
+    team = Group.objects.filter(pk=request.POST.get("team") or 0).first()
+    back = reverse("scheduling:schedule", args=[pk]) + (f"?team={team.pk}" if team else "")
+    try:
+        people, unreachable = schedule_requests.queue_requests(service_type, team)
+    except schedule_requests.NotReady as exc:
+        messages.error(request, str(exc))
+        return redirect(back)
+    if not people:
+        messages.info(request, "Everyone scheduled has already been sent their request.")
+    else:
+        messages.success(request, f"Sending requests to {len(people)} "
+                                  f"{'person' if len(people) == 1 else 'people'} within a minute.")
+    if unreachable:
+        names = ", ".join(f"{p.first_name} {p.last_name}" for p in unreachable)
+        messages.warning(request, f"No email for {names}: let them know another way. "
+                                  "They can still answer on My serving if they log in.")
+    return redirect(back)
 
 
 @staff_required

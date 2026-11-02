@@ -10,6 +10,7 @@ from datetime import timedelta
 from groups.models import Group, GroupMembership
 
 from .availability import Availability
+from .requests import can_email
 from .models import Assignment, Plan
 
 MAX_RANGE_DAYS = 366
@@ -48,6 +49,7 @@ class Slot:
     """One person in a cell, with anything wrong about it."""
     assignment: Assignment
     warnings: list
+    emailable: bool = True  # False: requests and reminders can't reach them
 
 
 @dataclass
@@ -115,7 +117,8 @@ def build_grid(service_type, plans, *, team=None, positions=None):
         warnings = [] if a.status == Assignment.Status.DECLINED else availability.reasons(
             membership, a.plan.date, person_id=a.person_id, team=a.position.group, skip=a,
         )
-        cells.setdefault((a.plan_id, a.position_id), []).append(Slot(a, warnings))
+        cells.setdefault((a.plan_id, a.position_id), []).append(
+            Slot(a, warnings, can_email(a.person)))
 
     grouped = {}
     for position in sorted(wanted, key=lambda p: (p.group.name, p.name)):

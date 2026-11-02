@@ -4,13 +4,18 @@
         {% for slot in cell.slots %}{% with a=slot.assignment %}
         <li class="sched-slot sched-slot--{{ a.status }}">
             <span class="sched-slot__name">{{ a.person.first_name }} {{ a.person.last_name }}</span>
-            {% if a.status != "pending" %}<span class="chip chip--{% if a.status == 'accepted' %}success{% else %}danger{% endif %}">{{ a.get_status_display }}</span>{% endif %}
+            {% if a.status == "accepted" %}<span class="chip chip--success">Accepted</span>
+            {% elif a.status == "declined" %}<span class="chip chip--danger"{% if a.decline_reason %} title="{{ a.decline_reason }}"{% endif %}>Declined</span>
+            {% elif a.is_draft %}<span class="chip chip--neutral" title="Not sent yet: use Send requests">Not sent</span>
+            {% else %}<span class="chip chip--warning">Pending</span>{% endif %}
+            {% if not slot.emailable %}<span class="chip chip--neutral" title="No email address, or they turned church email off: tell them another way">No email</span>{% endif %}
             <form method="post" action="{% url 'scheduling:assignment_remove' a.pk %}"
                   hx-post="{% url 'scheduling:assignment_remove' a.pk %}" hx-target="#{{ cell.dom_id }}" hx-swap="outerHTML">
                 {% csrf_token %}
                 <button type="submit" class="sched-slot__remove" aria-label="Remove {{ a.person.first_name }} from {{ cell.position.name }}" title="Remove">&times;</button>
             </form>
             {% for warning in slot.warnings %}<span class="sched-slot__warn">⚠ {{ warning }}</span>{% endfor %}
+            {% if a.status == "declined" and a.decline_reason %}<span class="sched-slot__note">“{{ a.decline_reason }}”</span>{% endif %}
         </li>
         {% endwith %}{% endfor %}
     </ul>

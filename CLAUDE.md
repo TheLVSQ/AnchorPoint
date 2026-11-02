@@ -91,7 +91,7 @@ Every text / phone blast to people in the directory goes through this one module
   POST turns it off) plus a `List-Unsubscribe` header. Quiet hours don't apply to email.
 - **Email is system-only:** staff can't write emails (no composer; they send texts and phone
   blasts). The channel stays for event-triggered emails such as scheduling reminders, so people
-  can't be turned into a mailing list. `send_transactional` has no `subject` yet (see `TODO.md`).
+  can't be turned into a mailing list. `send_transactional(..., subject=)` sets the email subject.
 - The Delivery is the audit trail (person page "Communications History" reads Deliveries).
 - Staff operational alerts (family flags, health email, welcome/registration emails) are
   *not* Communications; they use `messaging/twilio_client.py` / `send_mail` directly.
@@ -149,7 +149,8 @@ Side effects never block check-in. Terms (pickup code, walk-in, pre-staged) are 
 ## Scheduled communications & phone-blast audio
 
 The `cron` sidecar (see `docker/docker-compose.yml` + `docker/cron.sh`) runs
-`process_communications` every minute to send due broadcasts (`outbound.dispatch_due`), and
+`process_communications` every minute to send due broadcasts (`outbound.dispatch_due`) and
+`send_serving_emails` (schedule requests + reminders, `scheduling/requests.py`), and
 `cleanup_audio` + `purge_print_images` daily (old phone-blast recordings; label PNGs
 from print jobs older than 24h — finished jobs are already cleared on ack). Scheduled phone blasts need
 `SITE_BASE_URL` (or Organization Settings > Website) so the headless worker can build
@@ -262,7 +263,7 @@ is combined, not dropped, and merging two people who both have logins is blocked
 
 ## Teams & Plans (`scheduling/` app, plan in issue #134)
 
-The Planning Center replacement, built on existing Groups (a team = a `Group`). Phases 1a–1b so far:
+The Planning Center replacement, built on existing Groups (a team = a `Group`). Phases 1a–1c so far:
 - **Positions** (`groups.Position`): roles on a team. `GroupMembership.positions` = what that person
   can fill; `GroupMembership.serving_weeks` = which weeks of the month they serve on that team
   (digits, `"12345"` default, `"3"` = 3rd Sunday only). Staff edit both via **Edit** on a member.
@@ -278,10 +279,18 @@ The Planning Center replacement, built on existing Groups (a team = a `Group`). 
   + count). "Add dates" makes one `Plan` per date (`generate_plans`, safe to re-run). The grid is
   needs (rows, by team) × plans (columns); `build_grid` / `build_cell` / `candidates` / `assign`.
   Cells are HTMX partials (`_cell.html`, `_picker.html`); the picker offers only that team's members
-  and confirms before scheduling someone with a warning. An `Assignment` is pending until 1c adds
-  accept/decline; a position that's on a schedule can't be removed (`Assignment.position` PROTECT).
-- **My serving** (`/serving/`, any login linked to a Person): the volunteer's own teams (set their
-  weeks; positions are staff-only) and blockouts. Staff see the same on the person page.
+  and confirms before scheduling someone with a warning. A position that's on a schedule can't be
+  removed (`Assignment.position` PROTECT).
+- **Requests, answers, reminders** (`scheduling/requests.py`): new assignments are drafts ("Not sent",
+  staff only). **Send requests** on the grid only marks them `requested_at`; the cron
+  (`send_serving_emails`, every minute) emails each person once with a signed link
+  (`/serving/respond/<token>/`, own salt, 90 days, no login) and stamps `request_sent_at`. Emails
+  never go out inside a web request. Volunteers answer there or on My serving (only requested
+  dates are shown, never who else serves); a decline emails whoever scheduled them. One reminder
+  goes `REMINDER_DAYS` (3) before, after 8am local. Email only: the grid flags "No email".
+- **My serving** (`/serving/`, any login linked to a Person): the volunteer's schedule (accept /
+  decline), their teams (set their weeks; positions are staff-only) and blockouts. Unanswered dates
+  show on the dashboard. Staff see teams + blockouts on the person page.
 - Person merge combines positions, weeks and leader role on shared teams; blockouts and assignments move.
 
 ## Help guides (`helpcenter/` app, `/help/`)

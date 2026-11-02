@@ -10,6 +10,8 @@ _(empty — the UI refresh and security review both shipped 2026-10-01; see Comp
 
 - [ ] **Teams & Plans: replace Planning Center** (#134). Phases 1–2 live before the Jan 1, 2027 renewal.
   - [ ] Per-plan needs (e.g. an extra vocalist on Easter): today a plan always uses its service type's needs.
+  - [ ] Removing someone from a date (or deleting the date) after their request went out doesn't tell them.
+  - [ ] Schedule requests are email only: a "text me instead" option for people with no email.
 - [ ] **Address verification on person add.** Compare USPS Web Tools API (free, US-only) with Smarty/Lob (paid, easier).
   - Pattern: normalize, autocomplete on blur, store a `verified` flag.
   - Degrade gracefully when no API is configured.
@@ -19,7 +21,6 @@ _(empty — the UI refresh and security review both shipped 2026-10-01; see Comp
 ## Backlog
 
 ### Features
-- [ ] Email channel: add a `subject` to `outbound.send_transactional` when the first system email (scheduling reminders) uses it. Email is system-only; there is no staff composer.
 - [ ] Embed code generator for event info
 - [ ] Check-in: Create Room flow → age/grade auto-assignment
   - Min/Max as a K-12 dropdown

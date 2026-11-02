@@ -122,8 +122,13 @@ the Events app).
 **Plan**: one date of a service type, holding who serves in each position. One plan covers every
 team on that date. _Avoid_: service, schedule (the schedule is the grid of plans).
 
-**Assignment**: one person in one position on one plan: Pending, Accepted or Declined. Declined ones
-stay visible but don't fill the position.
+**Assignment**: one person in one position on one plan. A **draft** ("Not sent", staff only) until staff
+press Send requests; then Pending until the person answers: Accepted or Declined. Declined ones stay
+visible but don't fill the position.
+
+**Schedule request**: the system email listing someone's new dates, with a link to accept or decline
+(works without a login). A **serving reminder** follows a few days before the date. _Avoid_: invite
+(that's a login invite).
 
 **Already serving**: the person has another (not declined) assignment that date, on any plan or
 position. A warning, like being outside their serving weeks or blocked out; staff can still schedule.

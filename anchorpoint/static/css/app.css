@@ -1161,6 +1161,16 @@ html.embed-html { overflow-y: auto; background: transparent; }
 .sched-slot__remove { border: 0; background: none; color: var(--faint); font-size: 1.1rem; line-height: 1; padding: 0 0.2rem; cursor: pointer; }
 .sched-slot__remove:hover { color: var(--danger); }
 .sched-slot__warn { flex-basis: 100%; font-size: 0.75rem; color: var(--warning); }
+.sched-slot__note { flex-basis: 100%; font-size: 0.75rem; color: var(--muted); font-style: italic; }
+.my-schedule__item { flex-wrap: wrap; }
+.my-schedule__answer { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 0.4rem; flex-basis: 100%; }
+.my-schedule__answer form { margin: 0; }
+.my-schedule__decline summary { list-style: none; }
+.my-schedule__decline summary::-webkit-details-marker { display: none; }
+.my-schedule__decline[open] { flex-basis: 100%; }
+.my-schedule__decline form { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; margin-top: 0.5rem; }
+.my-schedule__decline label { font-size: 0.85rem; font-weight: 600; }
+.my-schedule__decline input[type="text"] { flex: 1 1 180px; margin: 0; }
 .sched-cell--picking { background: var(--surface-2); border-radius: var(--radius-sm); padding: 0.4rem; }
 .sched-picker__title { margin: 0; font-size: 0.8rem; font-weight: 600; color: var(--muted); }
 .sched-picker { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.25rem; }

@@ -130,7 +130,8 @@ class Plan(models.Model):
 
 
 class Assignment(models.Model):
-    """One person in one position on one plan. Pending until they answer (1c)."""
+    """One person in one position on one plan. A draft until staff send the request
+    (`requested_at`); then Pending until the person accepts or declines."""
 
     class Status(models.TextChoices):
         PENDING = "pending", "Pending"
@@ -147,6 +148,13 @@ class Assignment(models.Model):
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True,
                                    related_name="+", on_delete=models.SET_NULL)
     created_at = models.DateTimeField(auto_now_add=True)
+    # Staff pressed "Send requests" (the volunteer can see and answer it from then on);
+    # the cron sends the email and stamps request_sent_at. See scheduling/requests.py.
+    requested_at = models.DateTimeField(null=True, blank=True)
+    request_sent_at = models.DateTimeField(null=True, blank=True)
+    responded_at = models.DateTimeField(null=True, blank=True)
+    decline_reason = models.CharField(max_length=200, blank=True)
+    reminded_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ["plan__date", "position__name", "person__last_name"]
@@ -157,3 +165,7 @@ class Assignment(models.Model):
 
     def __str__(self):
         return f"{self.person} – {self.position} – {self.plan}"
+
+    @property
+    def is_draft(self):
+        return self.requested_at is None

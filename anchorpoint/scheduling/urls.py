@@ -7,6 +7,8 @@ app_name = "scheduling"
 urlpatterns = [
     path("serving/", views.my_serving, name="my_serving"),
     path("serving/teams/<int:mid>/", views.my_serving_weeks, name="my_serving_weeks"),
+    path("serving/answer/", views.my_answer, name="my_answer"),
+    path("serving/respond/<str:token>/", views.respond, name="respond"),
     path("serving/blockouts/add/", views.my_blockout_add, name="my_blockout_add"),
     path("serving/blockouts/<int:pk>/delete/", views.my_blockout_delete,
          name="my_blockout_delete"),
@@ -21,6 +23,7 @@ urlpatterns = [
     path("plans/types/<int:pk>/", views.schedule_grid, name="schedule"),
     path("plans/types/<int:pk>/edit/", views.service_type_form, name="service_type_edit"),
     path("plans/types/<int:pk>/dates/", views.plans_add, name="plans_add"),
+    path("plans/types/<int:pk>/send/", views.send_requests, name="send_requests"),
     path("plans/<int:pk>/", views.plan_detail, name="plan_detail"),
     path("plans/<int:pk>/delete/", views.plan_delete, name="plan_delete"),
     path("plans/<int:pk>/positions/<int:position_id>/", views.cell, name="cell"),

@@ -101,6 +101,11 @@ def channel_ready(channel) -> bool:
     return _adapter(channel, OrganizationSettings.load()).ready()
 
 
+def reachable(person, channel) -> bool:
+    """``person`` has an address on ``channel`` and hasn't opted out of it."""
+    return bool(_address(person, channel)) and _consents(person, channel)
+
+
 def is_within_blackout_window(settings_obj: OrganizationSettings, moment) -> bool:
     start, end = settings_obj.sms_blackout_start, settings_obj.sms_blackout_end
     if not start or not end or start == end:
@@ -184,9 +189,10 @@ def broadcast(channel, *, created_by, person=None, group=None, scheduled_for=Non
     return comm
 
 
-def send_transactional(channel, *, people, body, title="", metadata=None):
+def send_transactional(channel, *, people, body, title="", subject="", metadata=None):
     """Send an event-triggered Communication now to whichever of ``people`` have an
-    address and consent. Ignores the blackout window. Returns the Communication, or None
+    address and consent. Ignores the blackout window. ``subject`` is the email subject
+    (falls back to ``title``). Returns the Communication, or None
     (recording nothing) when the channel isn't configured or nobody can be contacted.
     Per-recipient send failures are recorded on the Delivery, never raised."""
     settings_obj = OrganizationSettings.load()
@@ -204,6 +210,7 @@ def send_transactional(channel, *, people, body, title="", metadata=None):
             kind=Communication.Kind.TRANSACTIONAL,
             status=Communication.Status.SENDING,
             title=title,
+            subject=subject or (title if channel == Communication.Channel.EMAIL else ""),
             body=body,
             metadata=metadata or {},
             started_at=timezone.now(),

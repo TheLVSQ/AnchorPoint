@@ -1,0 +1,40 @@
+{# A volunteer's upcoming dates with Accept / Decline. `action` = where answers POST. #}
+{% if schedule %}
+<ul class="row-list my-schedule">
+    {% for a in schedule %}
+    <li class="row-list__item my-schedule__item">
+        <div class="row-list__main">
+            <strong>{{ a.plan.date|date:"l, M j" }}{% if a.plan.time %} · {{ a.plan.time|time:"g:i A" }}{% endif %}</strong>
+            <span class="muted-text">{{ a.position.name }} ({{ a.position.group.name }}) · {{ a.plan.service_type.name }}{% if a.plan.title %} · {{ a.plan.title }}{% endif %}</span>
+            {% if a.status == "declined" and a.decline_reason %}<span class="muted-text">You said: “{{ a.decline_reason }}”</span>{% endif %}
+        </div>
+        {% if a.status == "accepted" %}<span class="chip chip--success">Serving</span>
+        {% elif a.status == "declined" %}<span class="chip chip--danger">Can't make it</span>
+        {% else %}<span class="chip chip--warning">Needs your answer</span>{% endif %}
+        <div class="my-schedule__answer">
+            {% if a.status != "accepted" %}
+            <form method="post" action="{{ action }}">
+                {% csrf_token %}
+                <input type="hidden" name="assignment" value="{{ a.pk }}">
+                <button type="submit" name="answer" value="accept" class="btn btn-sm">{% if a.status == "declined" %}I can serve after all{% else %}Accept{% endif %}</button>
+            </form>
+            {% endif %}
+            {% if a.status != "declined" %}
+            <details class="my-schedule__decline">
+                <summary class="btn ghost btn-sm">{% if a.status == "accepted" %}Can't make it now{% else %}Decline{% endif %}</summary>
+                <form method="post" action="{{ action }}">
+                    {% csrf_token %}
+                    <input type="hidden" name="assignment" value="{{ a.pk }}">
+                    <label for="reason-{{ a.pk }}">Reason (optional)</label>
+                    <input id="reason-{{ a.pk }}" type="text" name="reason" maxlength="200" placeholder="e.g. Out of town">
+                    <button type="submit" name="answer" value="decline" class="btn danger btn-sm">Decline {{ a.plan.date|date:"M j" }}</button>
+                </form>
+            </details>
+            {% endif %}
+        </div>
+    </li>
+    {% endfor %}
+</ul>
+{% else %}
+<p class="empty-state">Nothing scheduled yet. When a leader schedules you, it shows up here and you'll get an email.</p>
+{% endif %}

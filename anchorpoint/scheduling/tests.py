@@ -1,18 +1,23 @@
-from datetime import date, time, timedelta
+from datetime import date, datetime, time, timedelta
+from unittest import mock
 
 from django.contrib.auth import get_user_model
-from django.test import TestCase
+from django.core import mail
+from django.test import TestCase, override_settings
 from django.urls import reverse
+from django.utils import timezone
 
 from core.models import UserProfile
 from groups.forms import MembershipForm
 from groups.models import Group, GroupMembership, Position
+from messaging.adapters import FakeAdapter
+from messaging.models import Communication, Delivery
+from messaging.services import unsubscribe_url
 from people.models import Person
 from people.services.merge import merge_persons
 
-from django.utils import timezone
-
 from . import availability, schedule
+from . import requests as schedule_requests
 from .forms import BlockoutForm, ServiceTypeForm
 from .models import Assignment, Blockout, Plan, ServiceType, ServiceTypeNeed
 
@@ -542,3 +547,226 @@ class MergeAssignmentTests(PlanTestCase):
         merge_persons(self.sam, dupe)
         self.assertEqual(sorted(a.position.name for a in self.sam.assignments.all()),
                          ["Keys", "Vocals"])
+
+
+# ---------------------------------------------------------------------------
+# 1c: requests, answers, reminders
+# ---------------------------------------------------------------------------
+
+BASE = "https://serve.example.test"
+
+
+@override_settings(SITE_BASE_URL=BASE, DEFAULT_FROM_EMAIL="church@example.test")
+class RequestTestCase(PlanTestCase):
+    def setUp(self):
+        super().setUp()
+        FakeAdapter.reset()
+        self.addCleanup(FakeAdapter.reset)
+        self.staff = make_login("staff", UserProfile.Role.STAFF)
+        self.staff.email = "leader@example.test"
+        self.staff.save()
+        self.sam.email = "sam@example.test"
+        self.sam.save()
+        self.today = timezone.localdate()
+        self.soon = Plan.objects.create(service_type=self.sunday,
+                                        date=self.today + timedelta(days=10))
+
+    def schedule(self, person, plan=None, position=None, **kw):
+        return Assignment.objects.create(plan=plan or self.soon, position=position or self.keys,
+                                         person=person, created_by=self.staff, **kw)
+
+    def emails_to(self, person):
+        return Delivery.objects.filter(person=person, communication__channel="email")
+
+
+class QueueAndSendTests(RequestTestCase):
+    def test_drafts_queue_then_cron_emails_each_person_once(self):
+        self.schedule(self.sam)
+        self.schedule(self.sam, position=self.vocals)
+        self.schedule(self.alex)  # no email address
+        people, unreachable = schedule_requests.queue_requests(self.sunday)
+        self.assertEqual(people, [self.alex, self.sam])
+        self.assertEqual(unreachable, [self.alex])
+        self.assertFalse(Assignment.objects.filter(requested_at__isnull=True).exists())
+
+        self.assertEqual(schedule_requests.send_due(), (1, 0))
+        comm = self.emails_to(self.sam).get().communication
+        self.assertEqual(comm.subject, "Can you serve? 2 dates")
+        self.assertIn("Keys (Worship)", comm.body)
+        self.assertIn(f"{BASE}/serving/respond/", comm.body)
+        self.assertFalse(Assignment.objects.filter(request_sent_at__isnull=True).exists())
+        self.assertEqual(schedule_requests.send_due(), (0, 0))  # never twice
+
+    def test_past_drafts_and_other_service_types_arent_queued(self):
+        past = Plan.objects.create(service_type=self.sunday, date=self.today - timedelta(days=7))
+        old = self.schedule(self.sam, plan=past)
+        evening = ServiceType.objects.create(name="Evening", weekday=6)
+        other = self.schedule(self.sam, plan=Plan.objects.create(service_type=evening,
+                                                                 date=self.soon.date))
+        schedule_requests.queue_requests(self.sunday)
+        old.refresh_from_db(), other.refresh_from_db()
+        self.assertIsNone(old.requested_at)
+        self.assertIsNone(other.requested_at)
+
+    def test_team_filter_sends_only_that_team(self):
+        kids = Group.objects.create(name="Kids Team", category="volunteer")
+        teacher = Position.objects.create(group=kids, name="Teacher")
+        ServiceTypeNeed.objects.create(service_type=self.sunday, position=teacher)
+        mine = self.schedule(self.sam)
+        theirs = self.schedule(self.alex, position=teacher)
+        self.client.force_login(self.staff)
+        grid = self.client.get(reverse("scheduling:schedule", args=[self.sunday.pk])
+                               + f"?team={self.team.pk}")
+        self.assertContains(grid, "Send Worship requests (1)")
+        self.client.post(reverse("scheduling:send_requests", args=[self.sunday.pk]),
+                         {"team": self.team.pk})
+        mine.refresh_from_db(), theirs.refresh_from_db()
+        self.assertIsNotNone(mine.requested_at)
+        self.assertIsNone(theirs.requested_at)
+
+    def test_answered_before_the_cron_gets_no_request_email(self):
+        a = self.schedule(self.sam, requested_at=timezone.now())
+        schedule_requests.respond(a, accept=True)
+        self.assertEqual(schedule_requests.send_due(), (0, 0))
+        self.assertFalse(self.emails_to(self.sam).exists())
+
+    def test_refuses_without_email_or_site_address(self):
+        self.schedule(self.sam)
+        FakeAdapter.is_ready = False
+        with self.assertRaises(schedule_requests.NotReady):
+            schedule_requests.queue_requests(self.sunday)
+        FakeAdapter.is_ready = True
+        with override_settings(SITE_BASE_URL="", CSRF_TRUSTED_ORIGINS=[]):
+            with self.assertRaises(schedule_requests.NotReady):
+                schedule_requests.queue_requests(self.sunday)
+        self.assertTrue(Assignment.objects.get().is_draft)
+
+    def test_grid_flags_not_sent_and_no_email(self):
+        self.schedule(self.alex)
+        self.client.force_login(self.staff)
+        resp = self.client.get(reverse("scheduling:schedule", args=[self.sunday.pk]))
+        self.assertContains(resp, "Not sent")
+        self.assertContains(resp, "No email")
+        self.assertContains(resp, "Send requests (1)")
+
+    def test_send_button(self):
+        self.schedule(self.sam)
+        self.client.force_login(self.staff)
+        resp = self.client.post(reverse("scheduling:send_requests", args=[self.sunday.pk]),
+                                follow=True)
+        self.assertContains(resp, "Sending requests to 1 person within a minute.")
+        self.assertNotContains(resp, "Send requests (")
+
+
+class EmailSubjectTests(RequestTestCase):
+    @override_settings(OUTBOUND_ADAPTERS={"email": "messaging.adapters.Email"})
+    def test_real_email_has_subject_and_clickable_link(self):
+        from messaging import outbound
+        outbound.send_transactional(Communication.Channel.EMAIL, people=[self.sam],
+                                    subject="Can you serve?", title="Schedule request",
+                                    body=f"Answer here: {BASE}/serving/respond/x/")
+        msg = mail.outbox[0]
+        self.assertEqual(msg.subject, "Can you serve?")
+        html = msg.alternatives[0][0]
+        self.assertIn(f'<a href="{BASE}/serving/respond/x/"', html)
+
+
+class RespondTests(RequestTestCase):
+    def setUp(self):
+        super().setUp()
+        self.assignment = self.schedule(self.sam, requested_at=timezone.now())
+        self.url = schedule_requests.respond_url(self.sam, BASE).removeprefix(BASE)
+
+    def test_link_shows_only_their_requested_dates(self):
+        draft = Plan.objects.create(service_type=self.sunday, date=self.today + timedelta(days=17))
+        self.schedule(self.sam, plan=draft)  # a staff draft: not shown
+        self.schedule(self.alex, requested_at=timezone.now(), position=self.vocals)
+        resp = self.client.get(self.url)
+        self.assertContains(resp, "Hi Sam")
+        self.assertContains(resp, self.soon.date.strftime("%b %-d"))
+        self.assertNotContains(resp, draft.date.strftime("%b %-d"))
+        self.assertNotContains(resp, "Alex")
+
+    def test_decline_with_reason_tells_the_scheduler(self):
+        resp = self.client.post(self.url, {"assignment": self.assignment.pk, "answer": "decline",
+                                           "reason": "Out of town"}, follow=True)
+        self.assertContains(resp, "let the scheduler know")
+        self.assignment.refresh_from_db()
+        self.assertEqual((self.assignment.status, self.assignment.decline_reason),
+                         ("declined", "Out of town"))
+        self.assertEqual(mail.outbox[0].to, ["leader@example.test"])
+        self.assertIn("Out of town", mail.outbox[0].body)
+
+    def test_accept(self):
+        self.client.post(self.url, {"assignment": self.assignment.pk, "answer": "accept"})
+        self.assignment.refresh_from_db()
+        self.assertEqual(self.assignment.status, "accepted")
+        self.assertEqual(mail.outbox, [])
+
+    def test_someone_elses_assignment_is_404(self):
+        theirs = self.schedule(self.alex, requested_at=timezone.now())
+        resp = self.client.post(self.url, {"assignment": theirs.pk, "answer": "decline"})
+        self.assertEqual(resp.status_code, 404)
+
+    def test_unsubscribe_and_tampered_tokens_dont_work(self):
+        token = unsubscribe_url(self.sam, BASE).rstrip("/").rsplit("/", 1)[1]
+        self.assertEqual(self.client.get(reverse("scheduling:respond", args=[token])).status_code,
+                         404)
+        self.assertEqual(self.client.get(self.url.replace(":", "x", 1)).status_code, 404)
+
+    def test_expired_link(self):
+        token = self.url.rstrip("/").rsplit("/", 1)[1]
+        later = timezone.now() + timedelta(days=schedule_requests.RESPOND_LINK_DAYS + 1)
+        with mock.patch("time.time", return_value=later.timestamp()):
+            self.assertIsNone(schedule_requests.person_from_token(token))
+        self.assertEqual(schedule_requests.person_from_token(token), self.sam)
+
+    def test_past_dates_cant_be_answered(self):
+        self.soon.date = self.today - timedelta(days=1)
+        self.soon.save()
+        with self.assertRaises(schedule_requests.TooLate):
+            schedule_requests.respond(self.assignment, accept=True)
+
+    def test_my_serving_answer_and_dashboard_prompt(self):
+        user = make_login("sam", UserProfile.Role.TEAM_MEMBER, person=self.sam)
+        self.client.force_login(user)
+        self.assertContains(self.client.get(reverse("dashboard")), "date to answer")
+        self.client.post(reverse("scheduling:my_answer"),
+                         {"assignment": self.assignment.pk, "answer": "accept"})
+        self.assignment.refresh_from_db()
+        self.assertEqual(self.assignment.status, "accepted")
+        resp = self.client.get(reverse("scheduling:my_serving"))
+        self.assertContains(resp, "Serving")
+        self.assertNotContains(self.client.get(reverse("dashboard")), "date to answer")
+
+
+class ReminderTests(RequestTestCase):
+    def at(self, days_ahead_of_plan, hour):
+        day = self.soon.date - timedelta(days=days_ahead_of_plan)
+        return timezone.make_aware(datetime.combine(day, time(hour, 0)))
+
+    def test_one_reminder_in_the_window_in_the_morning(self):
+        sent = timezone.now() - timedelta(days=20)
+        a = self.schedule(self.sam, requested_at=sent, request_sent_at=sent,
+                          status=Assignment.Status.ACCEPTED)
+        self.assertEqual(schedule_requests.send_due(now=self.at(5, 9)), (0, 0))  # too early
+        self.assertEqual(schedule_requests.send_due(now=self.at(2, 6)), (0, 0))  # overnight
+        self.assertEqual(schedule_requests.send_due(now=self.at(2, 9)), (0, 1))
+        self.assertEqual(schedule_requests.send_due(now=self.at(1, 9)), (0, 0))  # only once
+        comm = self.emails_to(self.sam).get().communication
+        self.assertTrue(comm.subject.startswith("Reminder: you're serving"))
+        self.assertIn("Can't make it after all?", comm.body)
+        a.refresh_from_db()
+        self.assertIsNotNone(a.reminded_at)
+
+    def test_answered_before_the_request_email_still_gets_a_reminder(self):
+        sent = timezone.now() - timedelta(days=20)
+        self.schedule(self.sam, requested_at=sent, status=Assignment.Status.ACCEPTED)
+        self.assertEqual(schedule_requests.send_due(now=self.at(2, 9)), (0, 1))
+
+    def test_no_reminder_for_declined_or_drafts(self):
+        sent = timezone.now() - timedelta(days=20)
+        self.schedule(self.sam, requested_at=sent, request_sent_at=sent,
+                      status=Assignment.Status.DECLINED)
+        self.schedule(self.sam, position=self.vocals)  # draft
+        self.assertEqual(schedule_requests.send_due(now=self.at(2, 9)), (0, 0))
