@@ -6,9 +6,11 @@
         <h1>Schedules</h1>
         <p class="page-subtitle">Who serves where on each date. A service type (like Sunday Morning) says which positions it needs; each date is a plan.</p>
     </div>
+    {% if can_manage %}
     <div class="page-actions">
         <a class="btn" href="{% url 'scheduling:service_type_create' %}">New service type</a>
     </div>
+    {% endif %}
 </div>
 
 {% if active %}
@@ -30,7 +32,8 @@
 </div>
 {% else %}
 <div class="empty-state">
-    No service types yet. Start with <a href="{% url 'scheduling:service_type_create' %}">Sunday Morning</a>: pick the positions it needs, then add its dates.
+    {% if can_manage %}No service types yet. Start with <a href="{% url 'scheduling:service_type_create' %}">Sunday Morning</a>: pick the positions it needs, then add its dates.
+    {% else %}None of the schedules use your team's positions yet. Ask a staff member to add them.{% endif %}
 </div>
 {% endif %}
 

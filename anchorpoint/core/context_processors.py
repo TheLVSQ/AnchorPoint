@@ -53,7 +53,13 @@ def _nav(request):
         "comms": has_communications_access(user),
         "admin": is_admin(user),
         "serving": bool(getattr(getattr(user, "profile", None), "person_id", None)),
+        "schedules": is_staff_or_above(user) or _leads_a_team(user),
     }
+
+
+def _leads_a_team(user):
+    from scheduling.access import is_team_leader
+    return is_team_leader(user)
 
 
 def _family_flags_badge(request):

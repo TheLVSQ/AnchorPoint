@@ -770,3 +770,111 @@ class ReminderTests(RequestTestCase):
                       status=Assignment.Status.DECLINED)
         self.schedule(self.sam, position=self.vocals)  # draft
         self.assertEqual(schedule_requests.send_due(now=self.at(2, 9)), (0, 0))
+
+
+# ---------------------------------------------------------------------------
+# 1d: team leaders schedule their own team
+# ---------------------------------------------------------------------------
+
+@override_settings(SITE_BASE_URL=BASE, DEFAULT_FROM_EMAIL="church@example.test")
+class LeaderTests(PlanTestCase):
+    HX = {"HTTP_HX_REQUEST": "true"}
+
+    def setUp(self):
+        super().setUp()
+        FakeAdapter.reset()
+        self.addCleanup(FakeAdapter.reset)
+        self.kids = Group.objects.create(name="Kids Team", category="volunteer")
+        self.teacher = Position.objects.create(group=self.kids, name="Teacher")
+        ServiceTypeNeed.objects.create(service_type=self.sunday, position=self.teacher)
+        self.pat = Person.objects.create(first_name="Pat", last_name="Moss", allergies="Peanuts")
+        GroupMembership.objects.create(group=self.kids, person=self.pat).positions.add(self.teacher)
+        self.sam_on_team.role = "leader"
+        self.sam_on_team.save()
+        self.leader = make_login("sam", UserProfile.Role.TEAM_MEMBER, person=self.sam)
+        self.client.force_login(self.leader)
+
+    def test_led_teams(self):
+        from . import access
+        self.assertEqual(list(access.led_teams(self.leader)), [self.team])
+        self.assertTrue(access.can_schedule(self.leader, self.team))
+        self.assertFalse(access.can_schedule(self.leader, self.kids))
+        self.team.is_active = False
+        self.team.save()
+        self.assertFalse(access.is_team_leader(self.leader))
+
+    def test_sidebar_list_and_grid_show_only_their_team(self):
+        self.assertContains(self.client.get(reverse("dashboard")), "Schedules")
+        resp = self.client.get(reverse("scheduling:service_type_list"))
+        self.assertContains(resp, "Sunday Morning")
+        self.assertNotContains(resp, "New service type")
+        resp = self.client.get(reverse("scheduling:schedule", args=[self.sunday.pk]))
+        self.assertContains(resp, "Keys")
+        self.assertNotContains(resp, "Teacher")
+        self.assertNotContains(resp, "Kids Team")
+        self.assertNotContains(resp, "All teams")
+        self.assertNotContains(resp, "Edit positions")
+        self.assertNotContains(resp, "Add dates")
+        resp = self.client.get(reverse("scheduling:schedule", args=[self.sunday.pk])
+                               + f"?team={self.kids.pk}")
+        self.assertNotContains(resp, "Teacher")  # asking for another team gets their own
+
+    def test_pick_assign_remove_and_send_on_their_team(self):
+        pick = self.client.get(reverse("scheduling:cell_pick", args=[self.plan.pk, self.keys.pk]),
+                               **self.HX)
+        self.assertContains(pick, "Alex Rivera")
+        self.client.post(reverse("scheduling:cell_assign", args=[self.plan.pk, self.keys.pk]),
+                         {"person": self.alex.pk}, **self.HX)
+        a = Assignment.objects.get()
+        self.assertEqual(a.created_by, self.leader)
+        self.client.post(reverse("scheduling:send_requests", args=[self.sunday.pk]),
+                         {"team": self.team.pk})
+        a.refresh_from_db()
+        self.assertIsNotNone(a.requested_at)
+        resp = self.client.post(reverse("scheduling:assignment_remove", args=[a.pk]), **self.HX)
+        self.assertEqual(resp.status_code, 200)
+        self.assertFalse(Assignment.objects.exists())
+
+    def test_refused_on_other_teams_and_staff_only_actions(self):
+        theirs = Assignment.objects.create(plan=self.plan, position=self.teacher, person=self.pat)
+        cell = [self.plan.pk, self.teacher.pk]
+        for method, name, args, data in [
+            ("get", "scheduling:cell", cell, {}),
+            ("get", "scheduling:cell_pick", cell, {}),
+            ("post", "scheduling:cell_assign", cell, {"person": self.pat.pk}),
+            ("post", "scheduling:assignment_remove", [theirs.pk], {}),
+            ("post", "scheduling:send_requests", [self.sunday.pk], {}),
+            ("post", "scheduling:send_requests", [self.sunday.pk], {"team": self.kids.pk}),
+            ("get", "scheduling:service_type_create", [], {}),
+            ("get", "scheduling:service_type_edit", [self.sunday.pk], {}),
+            ("post", "scheduling:plans_add", [self.sunday.pk],
+             {"starts_on": "2026-11-01", "ends_on": "2026-11-30"}),
+            ("post", "scheduling:plan_delete", [self.plan.pk], {}),
+            ("post", "scheduling:plan_detail", [self.plan.pk], {"title": "Easter"}),
+            ("get", "people_detail", [self.pat.pk], {}),
+            ("get", "groups:detail", [self.team.pk], {}),
+        ]:
+            with self.subTest(name=name, data=data):
+                resp = getattr(self.client, method)(reverse(name, args=args), data, **self.HX)
+                self.assertIn(resp.status_code, (302, 403))
+                self.assertNotContains(resp, "Peanuts", status_code=resp.status_code)
+        self.assertTrue(Assignment.objects.filter(pk=theirs.pk).exists())
+        self.assertEqual(Assignment.objects.count(), 1)
+        self.assertTrue(Plan.objects.filter(pk=self.plan.pk).exists())
+        self.assertEqual(self.plan.title, Plan.objects.get(pk=self.plan.pk).title)
+        self.assertIsNone(Assignment.objects.get().requested_at)
+
+    def test_plan_page_shows_their_team_without_details(self):
+        Assignment.objects.create(plan=self.plan, position=self.teacher, person=self.pat)
+        resp = self.client.get(reverse("scheduling:plan_detail", args=[self.plan.pk]))
+        self.assertContains(resp, "Keys")
+        self.assertNotContains(resp, "Pat Moss")
+        self.assertNotContains(resp, "Delete this date")
+        self.assertNotContains(resp, "Details")
+
+    def test_member_who_leads_nothing_is_refused(self):
+        self.client.force_login(make_login("alex", UserProfile.Role.TEAM_MEMBER, person=self.alex))
+        self.assertNotContains(self.client.get(reverse("dashboard")), "Schedules")
+        for url in (reverse("scheduling:service_type_list"),
+                    reverse("scheduling:schedule", args=[self.sunday.pk])):
+            self.assertIn(self.client.get(url).status_code, (302, 403))
