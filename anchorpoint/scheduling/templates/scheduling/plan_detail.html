@@ -14,7 +14,7 @@
     </div>
 </div>
 
-<div class="split split--main-first">
+<div class="{% if can_manage %}split split--main-first{% else %}single{% endif %}">
     <div class="split__main">
         {% for team_rows in grid %}
         <section class="card">
@@ -29,9 +29,10 @@
             </ul>
         </section>
         {% empty %}
-        <div class="empty-state">{{ plan.service_type.name }} doesn't need any positions yet. <a href="{% url 'scheduling:service_type_edit' plan.service_type.pk %}">Pick them</a>.</div>
+        <div class="empty-state">{{ plan.service_type.name }} doesn't need any positions yet.{% if can_manage %} <a href="{% url 'scheduling:service_type_edit' plan.service_type.pk %}">Pick them</a>.{% endif %}</div>
         {% endfor %}
     </div>
+    {% if can_manage %}
     <aside class="split__side">
         <section class="card">
             <div class="card__head"><h2>Details</h2></div>
@@ -57,5 +58,6 @@
             </form>
         </section>
     </aside>
+    {% endif %}
 </div>
 {% endblock %}

@@ -156,6 +156,22 @@ can find someone else.
 Three days before each date, everyone who hasn't declined gets a **reminder email**. Reminders
 go out after 8am.
 
+## Team leaders can schedule their own team
+
+You don't have to build every schedule yourself. Anyone marked **Leader** on a team can schedule
+that team, even without a Staff login:
+
+1. Go to **Groups**, open the team, and click **Edit** next to the leader.
+2. Set **Role** to **Leader** and click **Save**.
+3. Make sure they can log in (see [Step 3](#step-3-invite-volunteers-to-log-in-optional)).
+
+They then see **Schedules** in their menu. On it they only see their own team's positions,
+and they can add and remove people and click **Send requests** for their team. When someone
+declines a date the leader scheduled, the leader gets the email.
+
+Leaders **can't** create service types, change how many people a date needs, add or delete
+dates, or open anyone's profile. Staff still do those.
+
 ## Dates someone is away
 
 Volunteers can add the dates they're away themselves. You can also add them for someone: open

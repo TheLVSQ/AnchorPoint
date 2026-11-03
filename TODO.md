@@ -12,6 +12,7 @@ _(empty — the UI refresh and security review both shipped 2026-10-01; see Comp
   - [ ] Per-plan needs (e.g. an extra vocalist on Easter): today a plan always uses its service type's needs.
   - [ ] Removing someone from a date (or deleting the date) after their request went out doesn't tell them.
   - [ ] Schedule requests are email only: a "text me instead" option for people with no email.
+  - [ ] Team leaders: let them edit their members' positions/weeks and add dates (staff-only for now).
 - [ ] **Address verification on person add.** Compare USPS Web Tools API (free, US-only) with Smarty/Lob (paid, easier).
   - Pattern: normalize, autocomplete on blur, store a `verified` flag.
   - Degrade gracefully when no API is configured.

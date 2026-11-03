@@ -2,8 +2,9 @@ from datetime import timedelta
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import PermissionDenied
 from django.db.models import Count, Min, Q
-from django.http import Http404
+from django.http import Http404, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -14,8 +15,10 @@ from core.permissions import staff_required
 from groups.models import Group, GroupMembership, Position
 from people.models import Person
 
+from . import access
 from . import requests as schedule_requests
 from . import schedule
+from .access import scheduler_required
 from .forms import (
     AddDatesForm, BlockoutForm, PlanForm, ServiceTypeForm, ServingWeeksForm,
 )
@@ -174,7 +177,16 @@ def person_blockout_delete(request, person_id, pk):
 GRID_COLUMNS = 6
 
 
-@staff_required
+def _forbidden():
+    return HttpResponseForbidden("You do not have permission to change this team's schedule.")
+
+
+def _service_type_teams(service_type):
+    return list(Group.objects.filter(positions__needs__service_type=service_type)
+                .distinct().order_by("name"))
+
+
+@scheduler_required
 def service_type_list(request):
     today = timezone.localdate()
     service_types = ServiceType.objects.annotate(
@@ -182,9 +194,14 @@ def service_type_list(request):
         upcoming=Count("plans", filter=Q(plans__date__gte=today)),
         positions=Count("needs", distinct=True),
     )
+    manager = access.can_manage(request.user)
+    if not manager:  # a leader: only service types that use their teams
+        service_types = service_types.filter(
+            needs__position__group__in=access.led_teams(request.user)).distinct()
     return render(request, "scheduling/service_type_list.html", {
         "active": [s for s in service_types if s.is_active],
         "inactive": [s for s in service_types if not s.is_active],
+        "can_manage": manager,
     })
 
 
@@ -204,9 +221,17 @@ def service_type_form(request, pk=None):
     })
 
 
-@staff_required
+@scheduler_required
 def schedule_grid(request, pk):
     service_type = get_object_or_404(ServiceType, pk=pk)
+    manager = access.can_manage(request.user)
+    teams = access.schedulable_teams(request.user, _service_type_teams(service_type))
+    if not manager and not teams:
+        return _forbidden()
+    team = next((t for t in teams if str(t.pk) == request.GET.get("team")), None)
+    if not manager and team is None:
+        team = teams[0]  # a leader always works on one of their own teams
+
     today = timezone.localdate()
     start = parse_date(request.GET.get("start") or "") or today
     plans = list(service_type.plans.filter(date__gte=start)[:GRID_COLUMNS])
@@ -216,9 +241,6 @@ def schedule_grid(request, pk):
     if plans and service_type.plans.filter(date__gt=plans[-1].date).exists():
         later = plans[-1].date + timedelta(days=1)
 
-    teams = list(Group.objects.filter(positions__needs__service_type=service_type)
-                 .distinct().order_by("name"))
-    team = next((t for t in teams if str(t.pk) == request.GET.get("team")), None)
     drafts = schedule_requests.drafts(service_type, team)
     return render(request, "scheduling/schedule.html", {
         "draft_people": drafts.values("person").distinct().count(),
@@ -227,6 +249,7 @@ def schedule_grid(request, pk):
         "grid": schedule.build_grid(service_type, plans, team=team),
         "teams": teams,
         "team": team,
+        "can_manage": manager,
         "start": start,
         "earlier": earlier[-1] if earlier else None,
         "later": later,
@@ -252,11 +275,15 @@ def plans_add(request, pk):
     return redirect(f"{reverse('scheduling:schedule', args=[pk])}?start={start.isoformat()}")
 
 
-@staff_required
+@scheduler_required
 @require_POST
 def send_requests(request, pk):
     service_type = get_object_or_404(ServiceType, pk=pk)
     team = Group.objects.filter(pk=request.POST.get("team") or 0).first()
+    # Without a team this sends every team's drafts: staff only.
+    if not (access.can_manage(request.user) if team is None
+            else access.can_schedule(request.user, team)):
+        return _forbidden()
     back = reverse("scheduling:schedule", args=[pk]) + (f"?team={team.pk}" if team else "")
     try:
         people, unreachable = schedule_requests.queue_requests(service_type, team)
@@ -275,9 +302,15 @@ def send_requests(request, pk):
     return redirect(back)
 
 
-@staff_required
+@scheduler_required
 def plan_detail(request, pk):
     plan = get_object_or_404(Plan.objects.select_related("service_type"), pk=pk)
+    manager = access.can_manage(request.user)
+    teams = None
+    if not manager:  # a leader: only their teams' positions; the details stay staff-only
+        teams = access.schedulable_teams(request.user, _service_type_teams(plan.service_type))
+        if not teams or request.method == "POST":
+            return _forbidden()
     form = PlanForm(request.POST or None, instance=plan)
     if request.method == "POST" and form.is_valid():
         form.save()
@@ -287,7 +320,8 @@ def plan_detail(request, pk):
     return render(request, "scheduling/plan_detail.html", {
         "plan": plan,
         "form": form,
-        "grid": schedule.build_grid(plan.service_type, [plan]),
+        "can_manage": manager,
+        "grid": schedule.build_grid(plan.service_type, [plan], teams=teams),
         "previous": siblings.filter(date__lt=plan.date).order_by("-date").first(),
         "next": siblings.filter(date__gt=plan.date).order_by("date").first(),
     })
@@ -305,10 +339,13 @@ def plan_delete(request, pk):
 
 
 # HTMX: one grid cell (plan × position): show it, pick someone for it, add, remove.
+# Each checks the position's team: a leader only touches the teams they lead.
 
-def _cell_parts(pk, position_id):
+def _cell_parts(request, pk, position_id):
     plan = get_object_or_404(Plan.objects.select_related("service_type"), pk=pk)
     position = get_object_or_404(Position.objects.select_related("group"), pk=position_id)
+    if not access.can_schedule(request.user, position.group):
+        raise PermissionDenied
     return plan, position
 
 
@@ -319,24 +356,24 @@ def _render_cell(request, plan, position):
                   {"cell": schedule.build_cell(plan, position)})
 
 
-@staff_required
+@scheduler_required
 def cell(request, pk, position_id):
-    return _render_cell(request, *_cell_parts(pk, position_id))
+    return _render_cell(request, *_cell_parts(request, pk, position_id))
 
 
-@staff_required
+@scheduler_required
 def cell_pick(request, pk, position_id):
-    plan, position = _cell_parts(pk, position_id)
+    plan, position = _cell_parts(request, pk, position_id)
     fits, others = schedule.candidates(plan, position)
     return render(request, "scheduling/_picker.html", {
         "cell": schedule.build_cell(plan, position), "fits": fits, "others": others,
     })
 
 
-@staff_required
+@scheduler_required
 @require_POST
 def cell_assign(request, pk, position_id):
-    plan, position = _cell_parts(pk, position_id)
+    plan, position = _cell_parts(request, pk, position_id)
     # Only people on the team: the picker never offers the whole directory.
     membership = get_object_or_404(GroupMembership.objects.select_related("person"),
                                    group_id=position.group_id,
@@ -345,10 +382,12 @@ def cell_assign(request, pk, position_id):
     return _render_cell(request, plan, position)
 
 
-@staff_required
+@scheduler_required
 @require_POST
 def assignment_remove(request, pk):
     assignment = get_object_or_404(
         Assignment.objects.select_related("plan__service_type", "position__group"), pk=pk)
+    if not access.can_schedule(request.user, assignment.position.group):
+        return _forbidden()
     assignment.delete()
     return _render_cell(request, assignment.plan, assignment.position)

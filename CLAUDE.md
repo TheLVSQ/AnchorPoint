@@ -44,8 +44,8 @@ Centralized decorators for consistent authorization:
 
 Role hierarchy: Admin > Staff > Volunteer Admin > Volunteer > Team Member. **Volunteer** = the
 check-in team (live manager, checkout, so it sees children). **Team Member** = scheduled volunteers
-(worship, greeters…): own dashboard/profile/help only; tests in `core/test_invites.py` assert it
-reaches no staff or check-in page.
+(worship, greeters…): own dashboard/profile/help/My serving only, plus **Schedules for the teams they
+lead** (see Teams & Plans); tests in `core/test_invites.py` assert it reaches no staff or check-in page.
 
 **Invites + forgot password** (`core/invites.py`): staff click **Invite to log in** on a person's
 profile → a Team Member login (email = login, one login per address, linked to the Person; an
@@ -263,7 +263,7 @@ is combined, not dropped, and merging two people who both have logins is blocked
 
 ## Teams & Plans (`scheduling/` app, plan in issue #134)
 
-The Planning Center replacement, built on existing Groups (a team = a `Group`). Phases 1a–1c so far:
+The Planning Center replacement, built on existing Groups (a team = a `Group`). Phases 1a–1d so far:
 - **Positions** (`groups.Position`): roles on a team. `GroupMembership.positions` = what that person
   can fill; `GroupMembership.serving_weeks` = which weeks of the month they serve on that team
   (digits, `"12345"` default, `"3"` = 3rd Sunday only). Staff edit both via **Edit** on a member.
@@ -288,6 +288,11 @@ The Planning Center replacement, built on existing Groups (a team = a `Group`). 
   never go out inside a web request. Volunteers answer there or on My serving (only requested
   dates are shown, never who else serves); a decline emails whoever scheduled them. One reminder
   goes `REMINDER_DAYS` (3) before, after 8am local. Email only: the grid flags "No email".
+- **Team leaders schedule their own team** (`scheduling/access.py`): a login whose Person is a
+  `leader` member of an active, schedulable team gets **Schedules** for that team only, whatever its
+  role. `led_teams` / `can_schedule` / `can_manage` / `@scheduler_required`; every view checks the
+  specific team (cells, remove, Send requests with no team = staff only). Service types, adding or
+  deleting dates and plan details stay staff-only; leaders never reach people or group pages.
 - **My serving** (`/serving/`, any login linked to a Person): the volunteer's schedule (accept /
   decline), their teams (set their weeks; positions are staff-only) and blockouts. Unanswered dates
   show on the dashboard. Staff see teams + blockouts on the person page.

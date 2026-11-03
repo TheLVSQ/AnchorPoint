@@ -86,9 +86,13 @@ class TeamRows:
     rows: list
 
 
-def build_grid(service_type, plans, *, team=None, positions=None):
+def build_grid(service_type, plans, *, team=None, teams=None, positions=None):
     """Rows for `plans` (columns): one per needed position (plus any position someone is
-    assigned to that the service type no longer needs), grouped by team."""
+    assigned to that the service type no longer needs), grouped by team. `team` / `teams`
+    limit it to those teams (a leader sees only theirs)."""
+    if team is not None:
+        teams = [team]
+    team_ids = None if teams is None else {t.pk for t in teams}
     plans = list(plans)
     needs = {n.position_id: n for n in service_type.needs.select_related("position__group")}
     assignments = list(
@@ -100,7 +104,7 @@ def build_grid(service_type, plans, *, team=None, positions=None):
     for a in assignments:
         by_position.setdefault(a.position_id, a.position)
     wanted = [p for p in by_position.values()
-              if (team is None or p.group_id == team.pk)
+              if (team_ids is None or p.group_id in team_ids)
               and (positions is None or p in positions)]
 
     availability = Availability({a.person_id for a in assignments}, [p.date for p in plans])
