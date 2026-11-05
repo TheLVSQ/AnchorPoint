@@ -384,6 +384,7 @@ def seed_serving(user):
         person = Person.objects.get(first_name=first, last_name=last)
         person.email = f"{first.lower()}.{last.lower()}@example.org" if has_email else ""
         person.email_opt_in = True
+        person.contact_sharing = Person.SHARE_WITH_TEAMS
         person.save()
         membership, _ = GroupMembership.objects.get_or_create(group=team, person=person)
         membership.serving_weeks = weeks
@@ -506,6 +507,9 @@ def shoot_serving(browser, cookie, user):
     page.mouse.move(0, 0)
     shot(page, "v06-decline", ".my-schedule__item:has(details[open])")
     shot(page, "v07-weeks", '.card:has(h2:text("My teams"))')
+    page.locator('.card:has(h2:text("My teams")) .disclosure summary').first.click()
+    page.mouse.move(0, 0)
+    shot(page, "v09-team", '.card:has(h2:text("My teams"))')
     page.fill("#id_starts_on", (plans[3].date + timedelta(days=-1)).isoformat())
     page.fill("#id_ends_on", (plans[3].date + timedelta(days=6)).isoformat())
     page.fill("#id_note", "Vacation")

@@ -520,8 +520,8 @@ class ScheduleViewTests(PlanTestCase):
         self.assertFalse(Group.objects.filter(pk=self.team.pk).exists())
 
     def test_person_page_lists_upcoming(self):
-        upcoming = Plan.objects.create(service_type=self.sunday,
-                                       date=timezone.localdate() + timedelta(days=3))
+        upcoming, _ = Plan.objects.get_or_create(  # today + 3 can be the fixed 3rd-Sunday plan
+            service_type=self.sunday, date=timezone.localdate() + timedelta(days=3))
         Assignment.objects.create(plan=upcoming, position=self.keys, person=self.sam)
         resp = self.client.get(reverse("people_detail", args=[self.sam.pk]))
         self.assertContains(resp, "Scheduled")
@@ -568,6 +568,8 @@ class RequestTestCase(PlanTestCase):
         self.sam.email = "sam@example.test"
         self.sam.save()
         self.today = timezone.localdate()
+        # These tests date their plans from today; the fixed 3rd-Sunday plan could land on one.
+        self.plan.delete()
         self.soon = Plan.objects.create(service_type=self.sunday,
                                         date=self.today + timedelta(days=10))
 
@@ -878,3 +880,162 @@ class LeaderTests(PlanTestCase):
         for url in (reverse("scheduling:service_type_list"),
                     reverse("scheduling:schedule", args=[self.sunday.pk])):
             self.assertIn(self.client.get(url).status_code, (302, 403))
+
+
+class ContactTests(RequestTestCase):
+    """Teammates and "who's serving" on My serving, and whose phone and email show."""
+
+    def setUp(self):
+        super().setUp()
+        from households.models import Household
+        self.alex.email, self.alex.phone = "alex@example.test", "(555) 010-0001"
+        self.alex.save()
+        self.sam.phone = "(555) 010-0002"
+        self.sam.save()
+        self.jordan = Person.objects.create(first_name="Jordan", last_name="Park",
+                                           phone="(555) 010-0003", email="jordan@example.test",
+                                           contact_sharing=Person.SHARE_WITH_LEADERS)
+        self.riley = Person.objects.create(first_name="Riley", last_name="Moss", grade="10",
+                                          phone="(555) 010-0004", allergies="Peanuts")
+        Household.objects.create(name="Moss Family").memberships.create(
+            person=self.riley, relationship_type="student")
+        for p in (self.jordan, self.riley):
+            GroupMembership.objects.create(group=self.team, person=p).positions.add(self.vocals)
+        self.kids = Group.objects.create(name="Kids Team", category="volunteer")
+        self.teacher = Position.objects.create(group=self.kids, name="Teacher")
+        self.pat = Person.objects.create(first_name="Pat", last_name="Quinn",
+                                        phone="(555) 010-0005")
+        GroupMembership.objects.create(group=self.kids, person=self.pat)
+        self.user = make_login("alex", UserProfile.Role.TEAM_MEMBER, person=self.alex)
+        self.client.force_login(self.user)
+        self.url = reverse("scheduling:my_serving")
+
+    def test_contact_rule(self):
+        from .roster import may_see_contact
+        teams, leaders = Person.SHARE_WITH_TEAMS, Person.SHARE_WITH_LEADERS
+        cases = [  # viewer teams, viewer leads, subject teams, sharing, minor -> visible
+            ({1}, set(), {1}, teams, False, True),
+            ({1}, set(), {1}, leaders, False, False),
+            ({1}, {1}, {1}, leaders, False, True),
+            ({1}, {1}, {1}, teams, True, False),   # a minor, even to their leader
+            ({1}, set(), {2}, teams, False, False),  # no shared team
+            ({1, 2}, {2}, {1}, leaders, False, False),  # leads a different team
+        ]
+        for viewer, led, subject, sharing, minor, expected in cases:
+            with self.subTest(viewer=viewer, led=led, subject=subject, sharing=sharing,
+                              minor=minor):
+                self.assertIs(may_see_contact(
+                    viewer_team_ids=viewer, viewer_led_ids=led, subject_team_ids=subject,
+                    sharing=sharing, minor=minor), expected)
+
+    def test_who_counts_as_a_minor(self):
+        from households.models import Household
+        from .roster import minor_ids
+        family = Household.objects.create(name="Test Family")
+        today = date.today()
+        cases = {
+            "under 18 by birthdate": (dict(birthdate=today.replace(year=today.year - 12)), None),
+            "child in a family": ({}, "child"),
+            "student in a family": ({}, "student"),
+            "school grade, no birthdate": (dict(grade="7"), None),
+            "adult in a family": ({}, "adult"),
+            "nothing known": ({}, None),
+            "18 or older": (dict(birthdate=date(1990, 1, 1)), None),
+        }
+        expected_minor = {"under 18 by birthdate", "child in a family", "student in a family",
+                          "school grade, no birthdate"}
+        for label, (fields, family_role) in cases.items():
+            with self.subTest(label):
+                person = Person.objects.create(first_name="Test", last_name=label, **fields)
+                if family_role:
+                    family.memberships.create(person=person, relationship_type=family_role)
+                self.assertEqual(bool(minor_ids([person])), label in expected_minor)
+
+    def test_teammates_show_with_the_contact_they_allow(self):
+        resp = self.client.get(self.url)
+        self.assertContains(resp, "Who's on the team (3)")
+        self.assertContains(resp, "Sam Lee")
+        self.assertContains(resp, "(555) 010-0002")         # shares with the team
+        self.assertContains(resp, 'href="tel:5550100002"')
+        self.assertContains(resp, "Jordan Park")
+        self.assertNotContains(resp, "(555) 010-0003")      # leaders only
+        self.assertNotContains(resp, "jordan@example.test")
+        self.assertContains(resp, "Riley Moss")
+        self.assertNotContains(resp, "(555) 010-0004")      # a minor: never
+        self.assertNotContains(resp, "Peanuts")
+        self.assertNotContains(resp, "Pat Quinn")           # not on their team
+        self.assertNotContains(resp, "{#")                  # no template comment leaks
+
+    def test_leader_sees_leaders_only_contact_but_never_a_minors(self):
+        GroupMembership.objects.filter(group=self.team, person=self.alex).update(role="leader")
+        resp = self.client.get(self.url)
+        self.assertContains(resp, "(555) 010-0003")
+        self.assertContains(resp, "jordan@example.test")
+        self.assertNotContains(resp, "(555) 010-0004")
+        self.assertNotContains(resp, "Peanuts")
+
+    def test_whos_serving_lists_their_team_that_date(self):
+        now = timezone.now()
+        self.schedule(self.alex, requested_at=now)
+        self.schedule(self.sam, position=self.vocals, requested_at=now)
+        self.schedule(self.jordan, position=self.vocals)  # a staff draft: not shown
+        self.schedule(self.riley, position=self.vocals, requested_at=now, status="declined")
+        self.schedule(self.pat, position=self.teacher, requested_at=now)  # another team
+        GroupMembership.objects.filter(group=self.team, person=self.sam).delete()
+        resp = self.client.get(self.url)
+        self.assertContains(resp, "Who's serving with you (1)")
+        crew = resp.context["schedule"][0].crew
+        self.assertEqual([(t.name, t.positions) for t in crew], [("Sam Lee", "Vocals")])
+        self.assertNotContains(resp, "Pat Quinn")
+
+    def test_emailed_link_never_shows_who_else_serves(self):
+        now = timezone.now()
+        self.schedule(self.alex, requested_at=now)
+        self.schedule(self.sam, position=self.vocals, requested_at=now)
+        self.client.logout()
+        resp = self.client.get(schedule_requests.respond_url(self.alex, BASE).removeprefix(BASE))
+        self.assertContains(resp, "Hi Alex")
+        self.assertNotContains(resp, "Sam")
+        self.assertNotContains(resp, "serving with you")
+
+    def test_query_count_does_not_grow_with_the_team(self):
+        from django.db import connection
+        from django.test.utils import CaptureQueriesContext
+        self.schedule(self.alex, requested_at=timezone.now())
+
+        def count():
+            with CaptureQueriesContext(connection) as ctx:
+                self.assertEqual(self.client.get(self.url).status_code, 200)
+            return len(ctx.captured_queries)
+
+        count()  # the first request also creates the organization settings row
+        before = count()
+        for i in range(8):
+            p = Person.objects.create(first_name=f"Extra{i}", last_name="Member")
+            GroupMembership.objects.create(group=self.team, person=p).positions.add(self.keys)
+            self.schedule(p, position=self.vocals, requested_at=timezone.now())
+        self.assertEqual(count(), before)
+
+    def test_volunteer_changes_only_their_own_setting(self):
+        resp = self.client.post(reverse("scheduling:my_contact_sharing"),
+                                {"contact_sharing": "leaders"}, follow=True)
+        self.assertContains(resp, "team leaders only")
+        self.alex.refresh_from_db()
+        self.sam.refresh_from_db()
+        self.assertEqual(self.alex.contact_sharing, "leaders")
+        self.assertEqual(self.sam.contact_sharing, "teams")
+
+    def test_staff_can_set_it_on_the_person_form(self):
+        self.client.force_login(self.staff)
+        resp = self.client.get(reverse("people_edit", args=[self.sam.pk]))
+        self.assertContains(resp, "Phone and email visible to")
+
+    def test_merge_and_imports_never_widen_it(self):
+        from people.services import identity
+        keeper = Person.objects.create(first_name="Jordan", last_name="Park")
+        merge_persons(keeper, self.jordan)  # the dropped record had "leaders only"
+        keeper.refresh_from_db()
+        self.assertEqual(keeper.contact_sharing, "leaders")
+        identity.absorb(keeper, {"contact_sharing": "teams"})
+        keeper.refresh_from_db()
+        self.assertEqual(keeper.contact_sharing, "leaders")

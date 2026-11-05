@@ -68,6 +68,12 @@ days. If it expires, the button changes to **Resend invite**.
 Volunteers who log in only see their own dashboard, profile, schedule and these help
 pages. They can't see the directory or anyone's children.
 
+On **My serving** they also see who's on their teams and who else is serving on their dates.
+Each person's phone and email show to **People on my teams** (the default) or **Team leaders
+only**. Volunteers choose this themselves, or you can set it under **Phone and email visible to**
+when you edit their profile. Anyone under 18, in a school grade, or listed as a child or student
+in a family never has their phone or email shown.
+
 ## Step 4: Create a service type
 
 1. Go to **Schedules** and click **New service type**.

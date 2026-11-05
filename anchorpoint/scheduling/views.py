@@ -20,9 +20,10 @@ from . import requests as schedule_requests
 from . import schedule
 from .access import scheduler_required
 from .forms import (
-    AddDatesForm, BlockoutForm, PlanForm, ServiceTypeForm, ServingWeeksForm,
+    AddDatesForm, BlockoutForm, ContactSharingForm, PlanForm, ServiceTypeForm, ServingWeeksForm,
 )
 from .models import Assignment, Blockout, Plan, ServiceType
+from .roster import Circle
 from .services import current_blockouts, serving_memberships
 
 
@@ -39,16 +40,23 @@ def _own_person(user):
 @login_required
 def my_serving(request, blockout_form=None, weeks_form=None):
     person = _own_person(request.user)
-    teams = []
+    teams, schedule_rows = [], []
     if person:
+        circle = Circle(request.user, person)
+        rosters = circle.rosters()
         for membership in serving_memberships(person):
             form = weeks_form if weeks_form and weeks_form.instance.pk == membership.pk else None
             teams.append((membership, form or ServingWeeksForm(
-                instance=membership, prefix=f"m{membership.pk}")))
+                instance=membership, prefix=f"m{membership.pk}"), rosters[membership.group_id]))
+        schedule_rows = list(schedule_requests.upcoming_for(person))
+        crews = circle.crews(schedule_rows)
+        for a in schedule_rows:
+            a.crew = crews[a.pk]  # only My serving sets this; the emailed link page never does
     return render(request, "scheduling/my_serving.html", {
         "person": person,
-        "schedule": schedule_requests.upcoming_for(person) if person else [],
+        "schedule": schedule_rows,
         "teams": teams,
+        "sharing_form": ContactSharingForm(instance=person) if person else None,
         "blockouts": current_blockouts(person) if person else [],
         "blockout_form": blockout_form or (BlockoutForm(person=person) if person else None),
     })
@@ -71,6 +79,20 @@ def my_serving_weeks(request, mid):
     form.save()
     messages.success(request, f"Saved: you serve {membership.serving_weeks_label.lower()} "
                               f"on {membership.group}.")
+    return redirect("scheduling:my_serving")
+
+
+@login_required
+@require_POST
+def my_contact_sharing(request):
+    person = _own_person(request.user)
+    if not person:
+        raise Http404
+    form = ContactSharingForm(request.POST, instance=person)
+    if form.is_valid():
+        form.save()
+        messages.success(request, "Saved: your phone and email show to "
+                                  f"{person.get_contact_sharing_display().lower()}.")
     return redirect("scheduling:my_serving")
 
 

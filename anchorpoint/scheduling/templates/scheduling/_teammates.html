@@ -1,0 +1,15 @@
+{# `people` = roster.Teammate rows: name, positions, leader, and phone/email only when allowed. #}
+<ul class="teammates">
+    {% for t in people %}
+    <li class="teammates__item">
+        <span class="teammates__name">{{ t.name }}{% if t.is_leader %} <span class="chip chip--neutral">Leader</span>{% endif %}</span>
+        {% if t.positions %}<span class="muted-text">{{ t.positions }}</span>{% endif %}
+        {% if t.phone or t.email %}
+        <span class="teammates__contact">
+            {% if t.phone %}<a href="{{ t.phone_href }}">{{ t.phone }}</a>{% endif %}
+            {% if t.email %}<a href="mailto:{{ t.email }}">{{ t.email }}</a>{% endif %}
+        </span>
+        {% endif %}
+    </li>
+    {% endfor %}
+</ul>

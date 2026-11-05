@@ -286,7 +286,7 @@ The Planning Center replacement, built on existing Groups (a team = a `Group`). 
   (`send_serving_emails`, every minute) emails each person once with a signed link
   (`/serving/respond/<token>/`, own salt, 90 days, no login) and stamps `request_sent_at`. Emails
   never go out inside a web request. Volunteers answer there or on My serving (only requested
-  dates are shown, never who else serves); a decline emails whoever scheduled them. One reminder
+  dates are shown; the emailed page never shows who else serves); a decline emails whoever scheduled them. One reminder
   goes `REMINDER_DAYS` (3) before, after 8am local. Email only: the grid flags "No email".
 - **Team leaders schedule their own team** (`scheduling/access.py`): a login whose Person is a
   `leader` member of an active, schedulable team gets **Schedules** for that team only, whatever its
@@ -296,6 +296,12 @@ The Planning Center replacement, built on existing Groups (a team = a `Group`). 
 - **My serving** (`/serving/`, any login linked to a Person): the volunteer's schedule (accept /
   decline), their teams (set their weeks; positions are staff-only) and blockouts. Unanswered dates
   show on the dashboard. Staff see teams + blockouts on the person page.
+- **Teammates + contact sharing** (`scheduling/roster.py`): My serving lists each team's members and,
+  per date, who else on *that team* is serving (sent, not declined). `Person.contact_sharing`
+  ("teams" default / "leaders") decides who sees phone + email via `may_see_contact`; a minor's
+  (under 18, school grade, or family child/student: `minor_ids`) is never shown. Templates get
+  `Teammate` strings, never Person objects. The emailed respond page shows no one else. Merge and
+  `identity.absorb` only ever tighten the setting.
 - Person merge combines positions, weeks and leader role on shared teams; blockouts and assignments move.
 
 ## Help guides (`helpcenter/` app, `/help/`)

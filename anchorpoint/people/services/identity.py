@@ -134,7 +134,8 @@ def find_or_create(incoming: Incoming, fields=None, family=None):
 
 def absorb(person: Person, fields) -> dict:
     """Apply incoming data to an existing person: fill blank fields, ADD safety text,
-    set custody_flag if raised, set photo_consent only if still unknown.
+    set custody_flag if raised, set photo_consent only if still unknown, and only ever
+    tighten contact_sharing.
     Returns {field: "filled" | "appended"} for what changed (saved once)."""
     changed = {}
     for field, value in fields.items():
@@ -149,6 +150,11 @@ def absorb(person: Person, fields) -> dict:
         elif field == "custody_flag":
             if value and not person.custody_flag:
                 person.custody_flag = True
+                changed[field] = FILLED
+        elif field == "contact_sharing":
+            # Only ever tightened: a merge or import never widens who sees their contact.
+            if value == Person.SHARE_WITH_LEADERS and person.contact_sharing != value:
+                person.contact_sharing = value
                 changed[field] = FILLED
         elif field == "photo_consent":
             if person.photo_consent == "unknown" and value != "unknown":

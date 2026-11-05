@@ -8,6 +8,7 @@ urlpatterns = [
     path("serving/", views.my_serving, name="my_serving"),
     path("serving/teams/<int:mid>/", views.my_serving_weeks, name="my_serving_weeks"),
     path("serving/answer/", views.my_answer, name="my_answer"),
+    path("serving/sharing/", views.my_contact_sharing, name="my_contact_sharing"),
     path("serving/respond/<str:token>/", views.respond, name="respond"),
     path("serving/blockouts/add/", views.my_blockout_add, name="my_blockout_add"),
     path("serving/blockouts/<int:pk>/delete/", views.my_blockout_delete,

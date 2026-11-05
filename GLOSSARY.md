@@ -132,3 +132,9 @@ visible but don't fill the position.
 
 **Already serving**: the person has another (not declined) assignment that date, on any plan or
 position. A warning, like being outside their serving weeks or blocked out; staff can still schedule.
+
+**Team leader**: a team member with the Leader role. Schedules that team (whatever their login role)
+and sees the phone and email of everyone on it, except minors.
+
+**Contact sharing**: who on a person's teams sees their phone and email: **People on my teams**
+(default) or **Team leaders only**. A minor's contact is never shown. _Avoid_: privacy setting.
