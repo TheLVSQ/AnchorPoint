@@ -69,6 +69,19 @@ class Person(models.Model):
         help_text="Can this person receive church emails? On by default; turned off when "
                   "they unsubscribe.",
     )
+    # Who on their serving teams may see their phone and email (My serving → teammates and
+    # who's serving). Minors' contact is never shown, whatever this says.
+    SHARE_WITH_TEAMS = "teams"
+    SHARE_WITH_LEADERS = "leaders"
+    CONTACT_SHARING_CHOICES = [
+        (SHARE_WITH_TEAMS, "People on my teams"),
+        (SHARE_WITH_LEADERS, "Team leaders only"),
+    ]
+    contact_sharing = models.CharField(
+        "Phone and email visible to", max_length=10, choices=CONTACT_SHARING_CHOICES,
+        default=SHARE_WITH_TEAMS,
+        help_text="Who on their serving teams can see their phone and email.",
+    )
     birthdate = models.DateField(blank=True, null=True)
     grade = models.CharField(
         max_length=20, choices=GRADE_CHOICES, blank=True, null=True

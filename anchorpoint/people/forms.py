@@ -74,6 +74,7 @@ class PersonForm(forms.ModelForm):
             "email_opt_in",
             "phone",
             "phone_opt_in",
+            "contact_sharing",
             "birthdate",
             "gender",
             "grade",
@@ -103,3 +104,12 @@ class PersonForm(forms.ModelForm):
             "first_visit_date": forms.DateInput(attrs={"type": "date"}),
             "profile_photo": forms.ClearableFileInput(),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Older forms and imports post without it: keep what the person already has.
+        self.fields["contact_sharing"].required = False
+
+    def clean_contact_sharing(self):
+        return (self.cleaned_data.get("contact_sharing")
+                or self.instance.contact_sharing or Person.SHARE_WITH_TEAMS)

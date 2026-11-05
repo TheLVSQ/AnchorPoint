@@ -68,6 +68,8 @@ All your upcoming dates and your answer for each:
 
 ![My schedule: every upcoming date and your answer](serving/v05-my-schedule.png)
 
+Tap **Who's serving with you** under a date to see who else on your team is serving that day.
+
 When you decline, you can say why. Your leader sees your reason.
 
 ![Declining with a reason](serving/v06-decline.png)
@@ -81,6 +83,22 @@ building the schedule.
 ![The weeks you serve on each team](serving/v07-weeks.png)
 
 Your positions (like Keys or Vocals) are set by your leader. Ask them if one is missing.
+
+### Who's on your team, and who sees your number
+
+Tap **Who's on the team** to see everyone on that team and their positions. You can tap a phone
+number or email to call, text or write to them.
+
+![Your team, with the phone and email they share](serving/v09-team.png)
+
+At the bottom of **My teams**, choose who can see **your** phone and email, then tap **Save**:
+
+- **People on my teams** (the usual choice): everyone on a team with you.
+- **Team leaders only**: just the leaders of your teams.
+
+!!! note "Children"
+    A child's or teen's phone and email are never shown, whatever is chosen. Their name still
+    shows so you know who's on the team.
 
 ### Dates I'm away
 

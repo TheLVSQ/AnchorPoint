@@ -58,7 +58,7 @@ def merge_persons(survivor, duplicate):
     # duplicate's allergy or custody note would be a check-in safety gap).
     identity.absorb(survivor, {
         f: getattr(duplicate, f, None)
-        for f in identity.FILL_FIELDS + identity.APPEND_FIELDS + ["custody_flag", "photo_consent"]
+        for f in identity.FILL_FIELDS + identity.APPEND_FIELDS + ["custody_flag", "photo_consent", "contact_sharing"]
     })
 
     _combine_shared_teams(duplicate, survivor)

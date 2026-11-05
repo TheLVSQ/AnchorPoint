@@ -1127,6 +1127,12 @@ html.embed-html { overflow-y: auto; background: transparent; }
 .inline-add input { flex: 1; margin-bottom: 0; }
 .serving-team + .serving-team { border-top: 1px solid var(--border); margin-top: 1rem; padding-top: 1rem; }
 .serving-team h3 { margin: 0 0 0.2rem; font-size: 1rem; }
+.serving-team .disclosure { margin: 0.5rem 0 1rem; }
+.serving-sharing { border-top: 1px solid var(--border); margin-top: 1rem; padding-top: 1rem; }
+.teammates { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.6rem; }
+.teammates__item { display: flex; flex-direction: column; gap: 0.1rem; }
+.teammates__name { font-weight: 600; color: var(--text); }
+.teammates__contact { display: flex; flex-wrap: wrap; gap: 0.15rem 0.9rem; font-size: 0.9rem; overflow-wrap: anywhere; }
 .blockout-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0 0.75rem; margin-top: 1rem; }
 .blockout-form .checkbox-field, .blockout-form .form-actions { grid-column: 1 / -1; }
 .blockout-form .form-actions { margin-top: 0; }
@@ -1165,6 +1171,7 @@ html.embed-html { overflow-y: auto; background: transparent; }
 .my-schedule__item { flex-wrap: wrap; }
 .my-schedule__answer { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 0.4rem; flex-basis: 100%; }
 .my-schedule__answer form { margin: 0; }
+.my-schedule__crew { flex-basis: 100%; margin-top: 0.25rem; }
 .my-schedule__decline summary { list-style: none; }
 .my-schedule__decline summary::-webkit-details-marker { display: none; }
 .my-schedule__decline[open] { flex-basis: 100%; }

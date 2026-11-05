@@ -2,6 +2,7 @@ from django import forms
 
 from groups.forms import ServingWeeksField
 from groups.models import Group, GroupMembership, Position
+from people.models import Person
 
 from .models import Blockout, Plan, ServiceType, ServiceTypeNeed
 from .schedule import MAX_RANGE_DAYS
@@ -41,6 +42,15 @@ class ServingWeeksForm(forms.ModelForm):
     class Meta:
         model = GroupMembership
         fields = ["serving_weeks"]
+
+
+class ContactSharingForm(forms.ModelForm):
+    """A volunteer choosing who on their teams sees their phone and email."""
+
+    class Meta:
+        model = Person
+        fields = ["contact_sharing"]
+        widgets = {"contact_sharing": forms.RadioSelect}
 
 
 class ServiceTypeForm(forms.ModelForm):

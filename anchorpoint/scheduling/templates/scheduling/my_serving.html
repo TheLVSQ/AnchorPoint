@@ -18,10 +18,16 @@
 <div class="split split--even">
     <section class="card">
         <div class="card__head"><h2>My teams</h2></div>
-        {% for membership, form in teams %}
+        {% for membership, form, roster in teams %}
         <div class="serving-team">
             <h3>{{ membership.group.name }}</h3>
             <p class="muted-text">{% for p in membership.positions.all %}{{ p.name }}{% if not forloop.last %}, {% endif %}{% empty %}No positions yet{% endfor %}{% if membership.role == "leader" %} · Leader{% endif %}</p>
+            {% if roster %}
+            <details class="disclosure">
+                <summary>Who's on the team ({{ roster|length }})</summary>
+                {% include "scheduling/_teammates.html" with people=roster %}
+            </details>
+            {% endif %}
             <form method="post" action="{% url 'scheduling:my_serving_weeks' membership.pk %}">
                 {% csrf_token %}
                 <fieldset class="form-field check-list check-list--row">
@@ -36,6 +42,16 @@
         <p class="empty-state">You're not on any teams yet.</p>
         {% endfor %}
         {% if teams %}<p class="help-text mt-2">Positions are set by your team leader. Ask them if one is missing.</p>{% endif %}
+        {% if teams %}
+        <form method="post" action="{% url 'scheduling:my_contact_sharing' %}" class="serving-sharing">
+            {% csrf_token %}
+            <fieldset class="form-field check-list">
+                <legend>Who can see my phone and email</legend>
+                {{ sharing_form.contact_sharing }}
+            </fieldset>
+            <button type="submit" class="btn ghost btn-sm">Save</button>
+        </form>
+        {% endif %}
     </section>
 
     <section class="card">
