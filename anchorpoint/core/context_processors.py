@@ -28,6 +28,7 @@ _NAV_SECTIONS = [
     ("/help/", "help"),
     ("/serving/", "serving"),
     ("/plans/", "plans"),
+    ("/songs/", "songs"),
 ]
 
 
@@ -54,12 +55,18 @@ def _nav(request):
         "admin": is_admin(user),
         "serving": bool(getattr(getattr(user, "profile", None), "person_id", None)),
         "schedules": is_staff_or_above(user) or _leads_a_team(user),
+        "songs": _manages_songs(user),
     }
 
 
 def _leads_a_team(user):
     from scheduling.access import is_team_leader
     return is_team_leader(user)
+
+
+def _manages_songs(user):
+    from songs.access import can_manage_songs
+    return can_manage_songs(user)
 
 
 def _family_flags_badge(request):

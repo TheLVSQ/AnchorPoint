@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}{{ song.title }}{% endblock %}
+{% block content %}
+<a class="back-link" href="{% url 'songs:list' %}{% if not song.is_active %}?archived=1{% endif %}">&larr; Songs</a>
+
+<div class="page-header page-header--split">
+    <div>
+        <h1>{{ song.title }}</h1>
+        <p class="page-subtitle">{% if song.author %}{{ song.author }}{% endif %}{% if song.author and song.ccli_number %} · {% endif %}{% if song.ccli_number %}CCLI {{ song.ccli_number }}{% endif %}</p>
+        {% if not song.is_active %}<span class="chip chip--neutral">Archived</span>{% endif %}
+    </div>
+    <div class="page-actions">
+        <a class="btn ghost" href="{% url 'songs:edit' song.pk %}">Edit song</a>
+        <a class="btn ghost" href="{% url 'songs:arrangement_create' song.pk %}">Add arrangement</a>
+    </div>
+</div>
+
+{% if song.notes %}<p class="song-notes">{{ song.notes|linebreaksbr }}</p>{% endif %}
+
+{% for arrangement, chart_form, link_form in arrangements %}
+<section class="card mb-4 arrangement">
+    <div class="card__head">
+        <h2>{{ arrangement.name }}</h2>
+        <a class="btn ghost btn-sm" href="{% url 'songs:arrangement_edit' arrangement.pk %}">Edit</a>
+    </div>
+    <dl class="kv kv--inline">
+        <div><dt>Key</dt><dd>{{ arrangement.key|default:"Not set" }}</dd></div>
+        {% if arrangement.bpm %}<div><dt>BPM</dt><dd>{{ arrangement.bpm }}</dd></div>{% endif %}
+    </dl>
+    {% if arrangement.notes %}<p class="muted-text mt-2">{{ arrangement.notes|linebreaksbr }}</p>{% endif %}
+
+    <div class="split split--even mt-2">
+        <div>
+            <h3 class="arrangement__title">Charts</h3>
+            {% if arrangement.charts.all %}
+            <ul class="row-list">
+                {% for chart in arrangement.charts.all %}
+                <li class="row-list__item">
+                    <div class="row-list__main"><a href="{% url 'songs:chart' chart.pk %}" target="_blank" rel="noopener">{{ chart.label }}</a> <span class="muted-text">PDF</span></div>
+                    <form method="post" action="{% url 'songs:chart_delete' chart.pk %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn ghost danger btn-sm">Remove</button>
+                    </form>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}<p class="muted-text">No charts yet.</p>{% endif %}
+            <form method="post" action="{% url 'songs:chart_add' arrangement.pk %}" enctype="multipart/form-data" class="attach-form">
+                {% csrf_token %}
+                {% for field in chart_form %}{% include "songs/_field.html" %}{% endfor %}
+                <button type="submit" class="btn ghost btn-sm">Upload chart</button>
+            </form>
+        </div>
+        <div>
+            <h3 class="arrangement__title">Rehearsal links</h3>
+            {% if arrangement.links.all %}
+            <ul class="row-list">
+                {% for link in arrangement.links.all %}
+                <li class="row-list__item">
+                    <div class="row-list__main"><a href="{{ link.url }}" target="_blank" rel="noopener noreferrer">{{ link.label }}</a></div>
+                    <form method="post" action="{% url 'songs:link_delete' link.pk %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn ghost danger btn-sm">Remove</button>
+                    </form>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}<p class="muted-text">No links yet.</p>{% endif %}
+            <form method="post" action="{% url 'songs:link_add' arrangement.pk %}" class="attach-form">
+                {% csrf_token %}
+                {% for field in link_form %}{% include "songs/_field.html" %}{% endfor %}
+                <button type="submit" class="btn ghost btn-sm">Add link</button>
+            </form>
+        </div>
+    </div>
+
+    {% if arrangements|length > 1 %}
+    <form method="post" action="{% url 'songs:arrangement_delete' arrangement.pk %}" class="mt-2"
+          onsubmit="return confirm('Remove the {{ arrangement.name|escapejs }} arrangement and its charts?');">
+        {% csrf_token %}
+        <button type="submit" class="btn ghost danger btn-sm">Remove this arrangement</button>
+    </form>
+    {% endif %}
+</section>
+{% endfor %}
+
+<form method="post" action="{% url 'songs:archive' song.pk %}">
+    {% csrf_token %}
+    <button type="submit" class="btn ghost{% if song.is_active %} danger{% endif %}">{% if song.is_active %}Archive song{% else %}Restore to library{% endif %}</button>
+</form>
+{% endblock %}

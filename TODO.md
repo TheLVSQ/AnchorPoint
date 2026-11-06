@@ -13,6 +13,8 @@ _(empty — the UI refresh and security review both shipped 2026-10-01; see Comp
   - [ ] Removing someone from a date (or deleting the date) after their request went out doesn't tell them.
   - [ ] Schedule requests are email only: a "text me instead" option for people with no email.
   - [ ] Team leaders: let them edit their members' positions/weeks and add dates (staff-only for now).
+- [ ] **Back up uploaded files.** The backup sidecar dumps the database only; the `media_data` volume
+  (profile photos, event photos and releases, song chart PDFs) has no copy off the droplet.
 - [ ] **Address verification on person add.** Compare USPS Web Tools API (free, US-only) with Smarty/Lob (paid, easier).
   - Pattern: normalize, autocomplete on blur, store a `verified` flag.
   - Degrade gracefully when no API is configured.

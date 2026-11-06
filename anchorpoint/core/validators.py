@@ -6,6 +6,7 @@ from django.core.exceptions import ValidationError
 from django.core.validators import FileExtensionValidator
 
 MAX_IMAGE_BYTES = 5 * 1024 * 1024
+MAX_PDF_BYTES = 20 * 1024 * 1024
 
 pdf_extension = FileExtensionValidator(["pdf"])
 
@@ -33,6 +34,13 @@ def validate_pdf(file):
             pass
     if header != b"%PDF-":
         raise ValidationError("Please upload a PDF file.")
+
+
+def validate_pdf_size(file):
+    if _already_stored(file):
+        return
+    if file.size and file.size > MAX_PDF_BYTES:
+        raise ValidationError("PDFs must be 20 MB or smaller.")
 
 
 def validate_image_size(file):

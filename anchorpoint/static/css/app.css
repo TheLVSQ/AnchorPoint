@@ -1137,6 +1137,12 @@ html.embed-html { overflow-y: auto; background: transparent; }
 .blockout-form .checkbox-field, .blockout-form .form-actions { grid-column: 1 / -1; }
 .blockout-form .form-actions { margin-top: 0; }
 
+/* Songs: library, arrangements, charts and rehearsal links. */
+.song-notes { margin: 0 0 1rem; color: var(--muted); }
+.arrangement__title { margin: 0 0 0.5rem; font-size: 0.95rem; }
+.attach-form { margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid var(--border); }
+.attach-form .form-field { margin-bottom: 0.5rem; }
+
 /* Schedules: service types, the dates × positions grid, plan pages. */
 .needs-fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
 .needs-fieldset legend { padding: 0; margin-bottom: 0.2rem; font-size: 0.85rem; font-weight: 600; color: var(--text); }
