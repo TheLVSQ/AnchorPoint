@@ -22,6 +22,7 @@ anchorpoint/              # Django project root (manage.py, .env)
 ├── households/           # Family groupings and relationships (/families/)
 ├── groups/               # Volunteer teams, check-in classrooms, community groups
 ├── scheduling/           # Teams & Plans (Planning Center replacement): blockouts, availability
+├── songs/                # Song library: songs, arrangements, chart PDFs, rehearsal links
 ├── events/               # Events, registrations, attendee matching
 ├── checkin/              # Check-in kiosk system, label printing, print agents
 ├── messaging/            # SMS and phone blast communications (Twilio)
@@ -303,6 +304,19 @@ The Planning Center replacement, built on existing Groups (a team = a `Group`). 
   `Teammate` strings, never Person objects. The emailed respond page shows no one else. Merge and
   `identity.absorb` only ever tighten the setting.
 - Person merge combines positions, weeks and leader role on shared teams; blockouts and assignments move.
+
+## Song library (`songs/` app, `/songs/`, phase 2 of #134)
+
+- **Song → Arrangement → Chart / MediaLink.** A song (title, writers, CCLI number) has one or more
+  arrangements (name, key, BPM, notes); each arrangement has chart PDFs and rehearsal links
+  (http/https only). A new song gets a "Default" arrangement; the last arrangement can't be removed.
+  Songs are **archived** (`is_active=False`), never deleted, so setlists and the CCLI report keep them.
+- **Who:** staff and team leaders manage the library (`songs/access.py`: `can_manage_songs`,
+  `can_view_chart`, `@songs_required`; sidebar `nav.songs`). Volunteers don't browse it.
+- **Charts** are real PDFs ≤ 20 MB (`validate_pdf` + `validate_pdf_size`) stored as
+  `songs/charts/<uuid>.pdf`. That folder isn't public in `core/media.py`, so pages link to
+  `songs:chart` (access-checked, inline, `private, no-store`), **never** `chart.file.url`. Deleting a
+  chart row (or its arrangement) deletes the file (`post_delete`).
 
 ## Help guides (`helpcenter/` app, `/help/`)
 

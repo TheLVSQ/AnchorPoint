@@ -1,0 +1,6 @@
+{# One form field: label, input, then its first error or its help text. #}
+<div class="form-field">
+    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+    {{ field }}
+    {% if field.errors %}<p class="error-text">{{ field.errors.0 }}</p>{% elif field.help_text %}<p class="help-text">{{ field.help_text }}</p>{% endif %}
+</div>

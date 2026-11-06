@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Songs{% endblock %}
+{% block content %}
+<div class="page-header page-header--split">
+    <div>
+        <h1>{% if archived %}Archived songs{% else %}Songs{% endif %}</h1>
+        <p class="page-subtitle">Your team's song library: each song's arrangements, keys, charts and rehearsal links.</p>
+    </div>
+    <div class="page-actions">
+        <a class="btn" href="{% url 'songs:create' %}">New song</a>
+    </div>
+</div>
+
+<form method="get" class="search-bar" role="search">
+    {% if archived %}<input type="hidden" name="archived" value="1">{% endif %}
+    <input type="search" name="q" value="{{ query }}" placeholder="Search by title, writer or CCLI number" aria-label="Search songs">
+    <button type="submit" class="btn ghost">Search</button>
+</form>
+
+{% if songs %}
+<div class="table-wrap">
+    <table class="data-table data-table--stack">
+        <thead><tr><th>Title</th><th>Writers</th><th>Keys</th><th>CCLI</th></tr></thead>
+        <tbody>
+        {% for song in songs %}
+        <tr>
+            <td data-label="Name"><a href="{% url 'songs:detail' song.pk %}"><strong>{{ song.title }}</strong></a></td>
+            <td data-label="Writers">{{ song.author|default:"" }}</td>
+            <td data-label="Keys">{% for a in song.arrangements.all %}{% if a.key %}{{ a.key }}{% if not forloop.last %}, {% endif %}{% endif %}{% endfor %}</td>
+            <td data-label="CCLI">{{ song.ccli_number|default:"" }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% elif query %}
+<div class="empty-state">No songs match “{{ query }}”.</div>
+{% elif archived %}
+<div class="empty-state">No archived songs.</div>
+{% else %}
+<div class="empty-state">No songs yet. <a href="{% url 'songs:create' %}">Add your first song</a>, then upload its chart.</div>
+{% endif %}
+
+<p class="mt-4">
+    {% if archived %}<a href="{% url 'songs:list' %}">&larr; Back to the library</a>
+    {% elif archived_count %}<a href="{% url 'songs:list' %}?archived=1">Archived songs ({{ archived_count }})</a>{% endif %}
+</p>
+{% endblock %}

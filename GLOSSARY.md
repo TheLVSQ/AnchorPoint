@@ -136,5 +136,17 @@ position. A warning, like being outside their serving weeks or blocked out; staf
 **Team leader**: a team member with the Leader role. Schedules that team (whatever their login role)
 and sees the phone and email of everyone on it, except minors.
 
+**Song**: a song in the library (title, writers, CCLI number). Archived, never deleted, once it's
+been used. _Avoid_: track.
+
+**Arrangement**: one way the team plays a song: its key, tempo, notes, charts and rehearsal links. Every
+song has at least one ("Default"). _Avoid_: version.
+
+**Chart**: an uploaded PDF for an arrangement (chord chart, lead sheet, vocal part). Opened through
+AnchorPoint after a permission check, never by a public link.
+
+**Rehearsal link**: a web link to practice with (YouTube, Spotify, a shared audio file). Stored as a
+`MediaLink`. _Avoid_: media (uploads).
+
 **Contact sharing**: who on a person's teams sees their phone and email: **People on my teams**
 (default) or **Team leaders only**. A minor's contact is never shown. _Avoid_: privacy setting.
