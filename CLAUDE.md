@@ -312,7 +312,16 @@ The Planning Center replacement, built on existing Groups (a team = a `Group`). 
   (http/https only). A new song gets a "Default" arrangement; the last arrangement can't be removed.
   Songs are **archived** (`is_active=False`), never deleted, so setlists and the CCLI report keep them.
 - **Who:** staff and team leaders manage the library (`songs/access.py`: `can_manage_songs`,
-  `can_view_chart`, `@songs_required`; sidebar `nav.songs`). Volunteers don't browse it.
+  `can_view_chart`, `@songs_required`; sidebar `nav.songs`). Volunteers don't browse it; they get
+  setlists (below).
+- **Setlists** (`scheduling/setlist.py`, `PlanItem`): a plan's songs in order, on the plan page.
+  `PlanItem` has `kind` (only "song" so far; phase 3 adds headers/lengths), `arrangement` (PROTECT, so
+  a used arrangement can't be removed: the song page says which dates), and a per-date `key`/`notes`.
+  Staff and leaders of a team the service type uses edit it (`access.can_edit_setlist`); the picker
+  hides archived songs. Volunteers see each date's songs on My serving (`for_plans`, 3 queries) and
+  open a chart only while they have a sent, not declined assignment on an **upcoming** plan with that
+  arrangement (`volunteer_can_open`, the volunteer branch of `can_view_chart`). The emailed respond
+  page and emails never show songs.
 - **Charts** are real PDFs ≤ 20 MB (`validate_pdf` + `validate_pdf_size`) stored as
   `songs/charts/<uuid>.pdf`. That folder isn't public in `core/media.py`, so pages link to
   `songs:chart` (access-checked, inline, `private, no-store`), **never** `chart.file.url`. Deleting a
@@ -333,7 +342,8 @@ See its docstring for the one-time DB container + `LABEL_FONT_DIR` (DejaVu fonts
 sample labels). Re-run it when check-in screens change; `--guide communications` re-shoots the
 text/phone-blast guides (fake Twilio settings, pre-made results, nothing is sent); `--guide serving`
 re-shoots the scheduling guides (`scheduling.md` for staff, `serving.md` for volunteers; requests and
-answers are made in the ORM, no email goes out).
+answers are made in the ORM, no email goes out; songs are public-domain hymns with generated placeholder
+chart PDFs, never real charts).
 
 ## Common Tasks
 

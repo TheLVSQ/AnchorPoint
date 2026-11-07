@@ -1,0 +1,13 @@
+{# `songs` = setlist.SetlistSong rows: title, key, notes, chart and rehearsal links. #}
+<ol class="setlist">
+    {% for song in songs %}
+    <li class="setlist__item">
+        <div class="setlist__song">
+            <strong>{{ song.title }}</strong>
+            <span class="muted-text">{% if song.arrangement %}{{ song.arrangement }} · {% endif %}{% if song.key %}Key {{ song.key }}{% else %}No key set{% endif %}{% if song.notes %} · {{ song.notes }}{% endif %}</span>
+            {% for chart in song.charts %}<a class="setlist__chart" href="{{ chart.url }}" target="_blank" rel="noopener">{{ chart.label }}</a>{% endfor %}
+            {% for link in song.links %}<a class="setlist__chart" href="{{ link.url }}" target="_blank" rel="noopener noreferrer">{{ link.label }}</a>{% endfor %}
+        </div>
+    </li>
+    {% endfor %}
+</ol>

@@ -145,6 +145,9 @@ song has at least one ("Default"). _Avoid_: version.
 **Chart**: an uploaded PDF for an arrangement (chord chart, lead sheet, vocal part). Opened through
 AnchorPoint after a permission check, never by a public link.
 
+**Setlist**: the songs on a plan, in order, each with its key for that date. Stored as plan items
+(`PlanItem`), which phase 3 extends into the full order of service. _Avoid_: song list.
+
 **Rehearsal link**: a web link to practice with (YouTube, Spotify, a shared audio file). Stored as a
 `MediaLink`. _Avoid_: media (uploads).
 

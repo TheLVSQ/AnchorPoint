@@ -68,6 +68,12 @@ All your upcoming dates and your answer for each:
 
 ![My schedule: every upcoming date and your answer](serving/v05-my-schedule.png)
 
+Tap **Songs** under a date to see what's being played: each song's key and notes, its
+**chord chart** (opens the PDF) and any **rehearsal links**. You can open the charts until the date
+has passed.
+
+![The songs for a date, with charts and rehearsal links](serving/v10-setlist.png)
+
 Tap **Who's serving with you** under a date to see who else on your team is serving that day.
 
 When you decline, you can say why. Your leader sees your reason.

@@ -76,6 +76,7 @@ from people.models import Person  # noqa: E402
 from scheduling.models import (  # noqa: E402
     Assignment, Blockout, Plan, ServiceType, ServiceTypeNeed,
 )
+from songs.models import Arrangement, Chart, MediaLink, Song  # noqa: E402
 
 
 def years_ago(n, month=3, day=14):
@@ -426,6 +427,8 @@ def seed_serving(user):
         Assignment.objects.create(plan=plans[plan_i], position=positions[pos],
                                   person=people[who], created_by=user)  # drafts: not sent
 
+    seed_songs(plans[0])
+
     volunteer = User.objects.filter(username="docs-volunteer").first()
     if volunteer is None:
         volunteer = User.objects.create_user("docs-volunteer", email=people["Jordan"].email)
@@ -433,6 +436,49 @@ def seed_serving(user):
     volunteer.profile.person = people["Jordan"]
     volunteer.profile.save()
     return team, sunday, plans, people, volunteer
+
+
+def placeholder_chart(title, key):
+    """A one-page PDF that looks like a chart but has no lyrics (the repo is public)."""
+    from io import BytesIO
+
+    from PIL import Image, ImageDraw
+    page = Image.new("RGB", (850, 1100), "white")
+    draw = ImageDraw.Draw(page)
+    draw.text((60, 60), f"{title}  (Key {key})", fill="black")
+    for i, chords in enumerate(["1   4   1   5", "1   4   5   1", "6   4   1   5"] * 4):
+        draw.text((60, 140 + i * 60), chords, fill="black")
+        draw.line((60, 170 + i * 60, 790, 170 + i * 60), fill="#cccccc")
+    out = BytesIO()
+    page.save(out, "PDF")
+    return out.getvalue()
+
+
+def seed_songs(plan):
+    """Public-domain hymns with placeholder charts, on `plan`'s setlist."""
+    songs = []
+    for title, author, ccli, key, bpm in [
+        ("Be Thou My Vision", "Traditional Irish hymn", "30639", "D", 72),
+        ("Amazing Grace", "John Newton", "22025", "G", 68),
+        ("Come Thou Fount", "Robert Robinson", "108389", "Eb", 76),
+    ]:
+        song, _ = Song.objects.update_or_create(
+            title=title, defaults={"author": author, "ccli_number": ccli, "is_active": True})
+        arrangement, _ = Arrangement.objects.update_or_create(
+            song=song, name="Default", defaults={"key": key, "bpm": bpm})
+        for chart in arrangement.charts.all():
+            chart.delete()
+        chart = Chart(arrangement=arrangement, label="Chord chart")
+        chart.file.save("chart.pdf", ContentFile(placeholder_chart(title, key)), save=True)
+        arrangement.links.all().delete()
+        MediaLink.objects.create(arrangement=arrangement, label="YouTube",
+                                 url="https://www.youtube.com/results?search_query=hymn")
+        songs.append(song)
+    plan.items.all().delete()
+    for order, song in enumerate(songs):
+        plan.items.create(order=order, arrangement=song.arrangements.get(name="Default"),
+                          notes="A cappella first verse" if order == 1 else "")
+    return songs
 
 
 def shoot_serving(browser, cookie, user):
@@ -473,6 +519,13 @@ def shoot_serving(browser, cookie, user):
     page.wait_for_selector(f"#cell-{plans[2].pk}-{vocals.pk}.sched-cell--picking")
     page.mouse.move(0, 0)  # no hover highlight on a picker option
     shot(page, "s09-picker", ".sched-grid-wrap")
+    page.goto(f"{BASE}/songs/{Song.objects.get(title='Be Thou My Vision').pk}/")
+    shot(page, "s10-song")
+    page.goto(f"{BASE}/plans/{plans[0].pk}/")
+    page.fill("#song-q", "grace")
+    page.wait_for_selector("#song-results .setlist-pick")
+    page.mouse.move(0, 0)
+    shot(page, "s11-setlist", "#setlist")
     ctx.close()
 
     # ---- Volunteer (phone-sized) ----
@@ -501,6 +554,11 @@ def shoot_serving(browser, cookie, user):
     shot(page, "v04-dashboard", ".attention")
     page.goto(f"{BASE}/serving/")
     shot(page, "v05-my-schedule", '.card:has(h2:text("My schedule"))')
+    first = page.locator(".my-schedule__item").first
+    first.locator("summary:has-text('Songs')").click()
+    page.mouse.move(0, 0)
+    shot(page, "v10-setlist", ".my-schedule__item >> nth=0")
+    first.locator("summary:has-text('Songs')").click()
     pending = page.locator(".my-schedule__item:has(.chip--warning)").first
     pending.locator("summary").click()
     pending.locator("input[name=reason]").fill("Visiting family")

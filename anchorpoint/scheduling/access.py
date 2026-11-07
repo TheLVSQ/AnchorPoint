@@ -48,6 +48,13 @@ def can_schedule(user, team):
     return team is not None and led_teams(user).filter(pk=team.pk).exists()
 
 
+def can_edit_setlist(user, plan):
+    """Staff, or a leader of a team that `plan`'s service type uses."""
+    if is_staff_or_above(user):
+        return True
+    return led_teams(user).filter(positions__needs__service_type_id=plan.service_type_id).exists()
+
+
 def schedulable_teams(user, teams):
     """`teams` narrowed to the ones `user` may schedule."""
     if is_staff_or_above(user):

@@ -1,8 +1,8 @@
 """Who may use the song library and open charts.
 
 Staff and team leaders (`scheduling.access.is_team_leader`) manage the library. Volunteers
-don't browse it; they'll see the setlist and charts for the dates they serve (phase 2b adds
-that branch to `can_view_chart`). Views and the sidebar ask this module only.
+don't browse it; they open a chart only while they serve on an upcoming date with that song
+(`scheduling.setlist.volunteer_can_open`). Views and the sidebar ask this module only.
 """
 from functools import wraps
 
@@ -19,7 +19,12 @@ def can_manage_songs(user):
 
 
 def can_view_chart(user, chart):
-    return can_manage_songs(user)
+    """Song managers, or a volunteer serving on an upcoming date that has this song."""
+    if can_manage_songs(user):
+        return True
+    from scheduling.setlist import volunteer_can_open
+    person_id = getattr(getattr(user, "profile", None), "person_id", None)
+    return volunteer_can_open(person_id, chart.arrangement_id)
 
 
 def songs_required(view_func):
