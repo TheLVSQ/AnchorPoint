@@ -1,5 +1,5 @@
 {# A volunteer's upcoming dates with Accept / Decline. `action` = where answers POST. #}
-{# `a.crew` (who else on their team serves that date) is set only on My serving. #}
+{# `a.crew` (who else on their team serves) and `a.setlist` are set only on My serving. #}
 {% if schedule %}
 <ul class="row-list my-schedule">
     {% for a in schedule %}
@@ -33,6 +33,12 @@
             </details>
             {% endif %}
         </div>
+        {% if a.setlist %}
+        <details class="disclosure my-schedule__crew">
+            <summary>Songs ({{ a.setlist|length }})</summary>
+            {% include "scheduling/_volunteer_setlist.html" with songs=a.setlist %}
+        </details>
+        {% endif %}
         {% if a.crew %}
         <details class="disclosure my-schedule__crew">
             <summary>Who's serving with you ({{ a.crew|length }})</summary>

@@ -14,15 +14,17 @@ from django.views.decorators.http import require_POST
 from core.permissions import staff_required
 from groups.models import Group, GroupMembership, Position
 from people.models import Person
+from songs.models import Arrangement
 
 from . import access
 from . import requests as schedule_requests
 from . import schedule
+from . import setlist
 from .access import scheduler_required
 from .forms import (
     AddDatesForm, BlockoutForm, ContactSharingForm, PlanForm, ServiceTypeForm, ServingWeeksForm,
 )
-from .models import Assignment, Blockout, Plan, ServiceType
+from .models import Assignment, Blockout, Plan, PlanItem, ServiceType
 from .roster import Circle
 from .services import current_blockouts, serving_memberships
 
@@ -50,8 +52,11 @@ def my_serving(request, blockout_form=None, weeks_form=None):
                 instance=membership, prefix=f"m{membership.pk}"), rosters[membership.group_id]))
         schedule_rows = list(schedule_requests.upcoming_for(person))
         crews = circle.crews(schedule_rows)
-        for a in schedule_rows:
-            a.crew = crews[a.pk]  # only My serving sets this; the emailed link page never does
+        setlists = setlist.for_plans({a.plan_id for a in schedule_rows})
+        for a in schedule_rows:  # only My serving sets these; the emailed link page never does
+            a.crew = crews[a.pk]
+            if a.status != Assignment.Status.DECLINED:
+                a.setlist = setlists.get(a.plan_id, [])
     return render(request, "scheduling/my_serving.html", {
         "person": person,
         "schedule": schedule_rows,
@@ -343,6 +348,8 @@ def plan_detail(request, pk):
         "plan": plan,
         "form": form,
         "can_manage": manager,
+        "setlist": setlist.items(plan),
+        "can_edit_setlist": access.can_edit_setlist(request.user, plan),
         "grid": schedule.build_grid(plan.service_type, [plan], teams=teams),
         "previous": siblings.filter(date__lt=plan.date).order_by("-date").first(),
         "next": siblings.filter(date__gt=plan.date).order_by("date").first(),
@@ -358,6 +365,74 @@ def plan_delete(request, pk):
     note = f" ({people} scheduled {'person' if people == 1 else 'people'} removed)" if people else ""
     messages.success(request, f"Deleted {plan.date:%b %-d}{note}.")
     return redirect("scheduling:schedule", pk=service_type.pk)
+
+
+# The setlist on the plan page: staff, and leaders of a team the service type uses.
+
+def _setlist_plan(request, pk):
+    plan = get_object_or_404(Plan.objects.select_related("service_type"), pk=pk)
+    if not access.can_edit_setlist(request.user, plan):
+        raise PermissionDenied
+    return plan
+
+
+def _back_to_setlist(plan):
+    return redirect(reverse("scheduling:plan_detail", args=[plan.pk]) + "#setlist")
+
+
+@scheduler_required
+def setlist_pick(request, pk):
+    """HTMX: songs matching the search box, each arrangement with an Add button."""
+    plan = _setlist_plan(request, pk)
+    return render(request, "scheduling/_setlist_pick.html", {
+        "plan": plan, "songs": setlist.pick(request.GET.get("q", "").strip()),
+    })
+
+
+@scheduler_required
+@require_POST
+def setlist_add(request, pk):
+    plan = _setlist_plan(request, pk)
+    arrangement = get_object_or_404(Arrangement.objects.select_related("song"),
+                                    pk=request.POST.get("arrangement") or 0, song__is_active=True)
+    setlist.add_song(plan, arrangement)
+    messages.success(request, f"Added {arrangement.song} to {plan.date:%b %-d}.")
+    return _back_to_setlist(plan)
+
+
+def _setlist_item(request, item_pk):
+    item = get_object_or_404(PlanItem.objects.select_related("plan", "arrangement__song"),
+                             pk=item_pk)
+    _setlist_plan(request, item.plan_id)
+    return item
+
+
+@scheduler_required
+@require_POST
+def setlist_item_update(request, item_pk):
+    item = _setlist_item(request, item_pk)
+    item.key = request.POST.get("key", "").strip()[:10]
+    item.notes = request.POST.get("notes", "").strip()[:200]
+    item.save(update_fields=["key", "notes"])
+    messages.success(request, f"Saved {item.arrangement.song}.")
+    return _back_to_setlist(item.plan)
+
+
+@scheduler_required
+@require_POST
+def setlist_item_move(request, item_pk):
+    item = _setlist_item(request, item_pk)
+    setlist.move(item, -1 if request.POST.get("direction") == "up" else 1)
+    return _back_to_setlist(item.plan)
+
+
+@scheduler_required
+@require_POST
+def setlist_item_remove(request, item_pk):
+    item = _setlist_item(request, item_pk)
+    item.delete()
+    messages.success(request, f"Removed {item.arrangement.song} from {item.plan.date:%b %-d}.")
+    return _back_to_setlist(item.plan)
 
 
 # HTMX: one grid cell (plan × position): show it, pick someone for it, add, remove.
