@@ -1,5 +1,5 @@
 from django.contrib import messages
-from django.db.models import Q
+from django.db.models import ProtectedError, Q
 from django.http import FileResponse, Http404, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.text import slugify
@@ -95,7 +95,22 @@ def arrangement_delete(request, pk):
     if song.arrangements.count() == 1:
         messages.error(request, f"{song} needs at least one arrangement. Archive the song instead.")
         return redirect("songs:detail", pk=song.pk)
-    arrangement.delete()  # its charts' files go too (post_delete)
+    try:
+        arrangement.delete()  # its charts' files go too (post_delete)
+    except ProtectedError:
+        from django.utils import timezone
+
+        from scheduling.setlist import plans_using
+        plans = plans_using(arrangement)
+        upcoming = [p for p in plans if p.date >= timezone.localdate()]
+        if upcoming:
+            dates = ", ".join(f"{p.date:%b %-d}" for p in upcoming[:5])
+            messages.error(request, f"The {arrangement.name} arrangement is on the setlist for "
+                                    f"{dates}. Take it off those dates first.")
+        else:  # past setlists stay as they were (the CCLI usage report counts them)
+            messages.error(request, f"The {arrangement.name} arrangement was used on past dates, "
+                                    "so it stays. Archive the song if you don't use it any more.")
+        return redirect("songs:detail", pk=song.pk)
     messages.success(request, f"Removed the {arrangement.name} arrangement.")
     return redirect("songs:detail", pk=song.pk)
 

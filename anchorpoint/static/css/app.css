@@ -1144,6 +1144,23 @@ html.embed-html { overflow-y: auto; background: transparent; }
 .attach-form .form-field { margin-bottom: 0.5rem; }
 
 /* Schedules: service types, the dates × positions grid, plan pages. */
+.setlist { list-style: none; margin: 0; padding: 0; counter-reset: setlist; display: flex; flex-direction: column; }
+.setlist__item { counter-increment: setlist; display: flex; flex-wrap: wrap; align-items: flex-start; gap: 0.5rem 1rem; padding: 0.75rem 0; border-bottom: 1px solid var(--border); }
+.setlist__item:last-child { border-bottom: 0; }
+.setlist__song { flex: 1 1 14rem; display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.2rem 0.75rem; min-width: 0; }
+.setlist__song strong::before { content: counter(setlist) ". "; color: var(--muted); font-weight: 600; }
+.setlist__song .muted-text { flex-basis: 100%; }
+.setlist__chart { font-size: 0.9rem; }
+.setlist__actions { display: flex; gap: 0.3rem; }
+.setlist__actions form { margin: 0; }
+.setlist__edit { flex-basis: 100%; margin-top: 0; }
+.setlist__edit-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 0 0.75rem; align-items: end; }
+.setlist__edit-form .btn { margin-bottom: 1rem; justify-self: start; }
+.setlist-add { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+.setlist-pick { margin-top: 0.5rem; }
+.setlist-pick__add { display: flex; flex-wrap: wrap; gap: 0.3rem; }
+.setlist-pick__add form { margin: 0; }
+
 .needs-fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
 .needs-fieldset legend { padding: 0; margin-bottom: 0.2rem; font-size: 0.85rem; font-weight: 600; color: var(--text); }
 .needs-team + .needs-team { margin-top: 1rem; }

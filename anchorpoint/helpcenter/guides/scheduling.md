@@ -162,6 +162,40 @@ can find someone else.
 Three days before each date, everyone who hasn't declined gets a **reminder email**. Reminders
 go out after 8am.
 
+## Songs and setlists
+
+### Add songs to the library
+
+1. Go to **Songs** and click **New song**.
+2. Type the **Title**, the **Writers**, and the **CCLI song number** (from SongSelect). Click
+   **Add song**.
+3. On the song's page, click **Edit** on the **Default** arrangement to set its **Key** and **BPM**.
+4. Under **Charts**, give the chart a **Label** (for example *Chord chart*), choose the PDF, and click
+   **Upload chart**.
+5. Under **Rehearsal links**, add a YouTube or Spotify link if you have one.
+
+![A song: its key and tempo, chart PDFs, and rehearsal links](serving/s10-song.png)
+
+Charts must be PDFs of 20 MB or less. If your team plays a song two ways (say, an acoustic version
+in a lower key), click **Add arrangement**.
+
+Songs you don't use any more: click **Archive song**. It disappears from the library but stays on
+past dates.
+
+### Put songs on a date
+
+1. Open the date: click it at the top of the schedule.
+2. Under **Songs**, type part of a song's title and click **Add**.
+3. Use the arrows to change the order, and **×** to take a song off.
+4. Playing it in a different key that day? Click **Key and notes**, type the key, and click **Save**.
+
+![The songs for one date, with the song search below](serving/s11-setlist.png)
+
+Everyone scheduled that date sees the songs, keys, notes, charts and links on **My serving** once
+their request has been sent (not while they show **Not sent**, and not if they declined). They can
+open the charts until the date has passed. Charts never go out in emails, and volunteers can't
+browse the whole library.
+
 ## Team leaders can schedule their own team
 
 You don't have to build every schedule yourself. Anyone marked **Leader** on a team can schedule
@@ -171,9 +205,10 @@ that team, even without a Staff login:
 2. Set **Role** to **Leader** and click **Save**.
 3. Make sure they can log in (see [Step 3](#step-3-invite-volunteers-to-log-in-optional)).
 
-They then see **Schedules** in their menu. On it they only see their own team's positions,
-and they can add and remove people and click **Send requests** for their team. When someone
-declines a date the leader scheduled, the leader gets the email.
+They then see **Schedules** and **Songs** in their menu. On a schedule they only see their own
+team's positions, and they can add and remove people and click **Send requests** for their team.
+When someone declines a date the leader scheduled, the leader gets the email. Leaders can also
+add songs to the library and choose the songs for dates their team serves on.
 
 Leaders **can't** create service types, change how many people a date needs, add or delete
 dates, or open anyone's profile. Staff still do those.

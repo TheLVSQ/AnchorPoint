@@ -19,7 +19,7 @@ from people.services.merge import merge_persons
 from . import availability, schedule
 from . import requests as schedule_requests
 from .forms import BlockoutForm, ServiceTypeForm
-from .models import Assignment, Blockout, Plan, ServiceType, ServiceTypeNeed
+from .models import Assignment, Blockout, Plan, PlanItem, ServiceType, ServiceTypeNeed
 
 User = get_user_model()
 
@@ -1039,3 +1039,157 @@ class ContactTests(RequestTestCase):
         identity.absorb(keeper, {"contact_sharing": "teams"})
         keeper.refresh_from_db()
         self.assertEqual(keeper.contact_sharing, "leaders")
+
+
+class SetlistTests(RequestTestCase):
+    """Songs on a plan: who edits them, and which volunteers may open the charts."""
+
+    def setUp(self):
+        super().setUp()
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        from songs.models import Arrangement, Chart, Song
+        self.SimpleUploadedFile = SimpleUploadedFile
+        self.vision = Song.objects.create(title="Be Thou My Vision", ccli_number="30639")
+        self.vision_d = Arrangement.objects.create(song=self.vision, key="D")
+        self.grace = Song.objects.create(title="Amazing Grace")
+        self.grace_g = Arrangement.objects.create(song=self.grace, key="G")
+        self.chart = Chart.objects.create(
+            arrangement=self.vision_d, label="Chord chart",
+            file=SimpleUploadedFile("c.pdf", b"%PDF-1.4\n%%EOF\n", content_type="application/pdf"))
+        self.plan_url = reverse("scheduling:plan_detail", args=[self.soon.pk])
+        self.client.force_login(self.staff)
+
+    def add(self, arrangement, plan=None):
+        return self.client.post(reverse("scheduling:setlist_add", args=[(plan or self.soon).pk]),
+                                {"arrangement": arrangement.pk})
+
+    def titles(self, plan=None):
+        return [i.arrangement.song.title for i in (plan or self.soon).items.all()]
+
+    def test_staff_build_reorder_and_trim_a_setlist(self):
+        self.add(self.vision_d)
+        self.add(self.grace_g)
+        self.assertEqual(self.titles(), ["Be Thou My Vision", "Amazing Grace"])
+        grace_item = self.soon.items.get(arrangement=self.grace_g)
+        self.client.post(reverse("scheduling:setlist_item_move", args=[grace_item.pk]),
+                         {"direction": "up"})
+        self.assertEqual(self.titles(), ["Amazing Grace", "Be Thou My Vision"])
+        self.client.post(reverse("scheduling:setlist_item_update", args=[grace_item.pk]),
+                         {"key": "A", "notes": "Skip verse 3"})
+        grace_item.refresh_from_db()
+        self.assertEqual((grace_item.display_key, grace_item.notes), ("A", "Skip verse 3"))
+        resp = self.client.get(self.plan_url)
+        self.assertContains(resp, "Key A")
+        self.assertContains(resp, reverse("songs:chart", args=[self.chart.pk]))
+        self.client.post(reverse("scheduling:setlist_item_remove", args=[grace_item.pk]))
+        self.assertEqual(self.titles(), ["Be Thou My Vision"])
+
+    def test_picker_finds_active_songs_only(self):
+        url = reverse("scheduling:setlist_pick", args=[self.soon.pk])
+        self.assertContains(self.client.get(url, {"q": "grace"}), "Amazing Grace")
+        self.grace.is_active = False
+        self.grace.save()
+        self.assertNotContains(self.client.get(url, {"q": "grace"}), "Amazing Grace")
+        self.assertEqual(self.add(self.grace_g).status_code, 404)
+
+    def test_leaders_edit_only_service_types_their_team_is_on(self):
+        self.sam_on_team.role = "leader"
+        self.sam_on_team.save()
+        self.client.force_login(make_login("sam", UserProfile.Role.TEAM_MEMBER, person=self.sam))
+        self.add(self.vision_d)
+        self.assertEqual(self.titles(), ["Be Thou My Vision"])
+
+        vbs = ServiceType.objects.create(name="VBS", weekday=None)
+        kids = Group.objects.create(name="Kids Team", category="volunteer")
+        ServiceTypeNeed.objects.create(service_type=vbs, position=Position.objects.create(
+            group=kids, name="Teacher"))
+        vbs_plan = Plan.objects.create(service_type=vbs, date=self.today + timedelta(days=30))
+        self.assertEqual(self.add(self.vision_d, plan=vbs_plan).status_code, 403)
+        self.assertEqual(self.client.get(reverse("scheduling:setlist_pick",
+                                                 args=[vbs_plan.pk])).status_code, 403)
+        item = self.soon.items.get()
+        self.client.force_login(make_login("alex", UserProfile.Role.TEAM_MEMBER, person=self.alex))
+        for name in ("setlist_item_move", "setlist_item_remove", "setlist_item_update"):
+            with self.subTest(name):
+                self.assertEqual(self.client.post(reverse(f"scheduling:{name}",
+                                                          args=[item.pk])).status_code, 403)
+
+    def test_volunteers_open_charts_only_for_dates_they_serve(self):
+        chart_url = reverse("songs:chart", args=[self.chart.pk])
+        self.add(self.vision_d)
+        later = Plan.objects.create(service_type=self.sunday, date=self.today + timedelta(days=24))
+        past = Plan.objects.create(service_type=self.sunday, date=self.today - timedelta(days=7))
+        past.items.create(arrangement=self.vision_d)
+        self.client.force_login(make_login("alex", UserProfile.Role.TEAM_MEMBER, person=self.alex))
+        now = timezone.now()
+        cases = [
+            ("not scheduled", None, 403),
+            ("a draft", dict(plan=self.soon), 403),
+            ("a date without the song", dict(plan=later, requested_at=now), 403),
+            ("a past date", dict(plan=past, requested_at=now), 403),
+            ("declined", dict(plan=self.soon, requested_at=now, status="declined"), 403),
+            ("sent and pending", dict(plan=self.soon, requested_at=now), 200),
+        ]
+        for label, assignment, status in cases:
+            with self.subTest(label):
+                Assignment.objects.filter(person=self.alex).delete()
+                if assignment:
+                    self.schedule(self.alex, **assignment)
+                self.assertEqual(self.client.get(chart_url).status_code, status)
+        self.assertEqual(self.client.get("/media/" + self.chart.file.name).status_code, 403)
+
+    def test_my_serving_shows_the_setlist_but_the_emailed_page_does_not(self):
+        self.add(self.vision_d)
+        self.schedule(self.alex, requested_at=timezone.now())
+        self.client.force_login(make_login("alex", UserProfile.Role.TEAM_MEMBER, person=self.alex))
+        resp = self.client.get(reverse("scheduling:my_serving"))
+        self.assertContains(resp, "Songs (1)")
+        self.assertContains(resp, "Be Thou My Vision")
+        self.assertContains(resp, reverse("songs:chart", args=[self.chart.pk]))
+        self.assertNotContains(resp, "/media/songs/")
+        Assignment.objects.filter(person=self.alex).update(status="declined")
+        self.assertNotContains(self.client.get(reverse("scheduling:my_serving")), "Songs (1)")
+        self.client.logout()
+        respond = self.client.get(schedule_requests.respond_url(self.alex, BASE).removeprefix(BASE))
+        self.assertNotContains(respond, "Be Thou My Vision")
+
+    def test_setlists_load_in_three_queries(self):
+        from . import setlist
+        self.add(self.vision_d)
+        self.add(self.grace_g)
+        with self.assertNumQueries(3):
+            songs = setlist.for_plans([self.soon.pk])[self.soon.pk]
+        self.assertEqual([s.title for s in songs], ["Be Thou My Vision", "Amazing Grace"])
+        self.assertEqual([c.label for c in songs[0].charts], ["Chord chart"])
+
+    def test_an_arrangement_on_a_setlist_cant_be_removed(self):
+        import os
+        from songs.models import Arrangement
+        acoustic = Arrangement.objects.create(song=self.vision, name="Acoustic")
+        self.add(acoustic)
+        resp = self.client.post(reverse("songs:arrangement_delete", args=[acoustic.pk]),
+                                follow=True)
+        self.assertContains(resp, "is on the setlist for")
+        self.assertTrue(Arrangement.objects.filter(pk=acoustic.pk).exists())
+        self.assertTrue(os.path.exists(self.chart.file.path))
+
+    def test_every_song_item_has_an_arrangement(self):
+        from django.db import IntegrityError, transaction
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            PlanItem.objects.create(plan=self.soon, kind="song")
+
+    def test_archived_songs_stay_on_setlists(self):
+        self.add(self.vision_d)
+        self.vision.is_active = False
+        self.vision.save()
+        self.assertContains(self.client.get(self.plan_url), "Be Thou My Vision")
+
+    def test_an_arrangement_used_only_in_the_past_suggests_archiving(self):
+        from songs.models import Arrangement
+        acoustic = Arrangement.objects.create(song=self.vision, name="Acoustic")
+        past = Plan.objects.create(service_type=self.sunday, date=self.today - timedelta(days=7))
+        past.items.create(arrangement=acoustic)
+        resp = self.client.post(reverse("songs:arrangement_delete", args=[acoustic.pk]),
+                                follow=True)
+        self.assertContains(resp, "was used on past dates")
+        self.assertTrue(Arrangement.objects.filter(pk=acoustic.pk).exists())

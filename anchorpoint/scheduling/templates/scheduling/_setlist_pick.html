@@ -1,0 +1,24 @@
+{# Songs matching the setlist search box: one Add button per arrangement. Archived songs never show. #}
+{% if songs %}
+<ul class="row-list setlist-pick">
+    {% for song in songs %}
+    <li class="row-list__item">
+        <div class="row-list__main">
+            <strong>{{ song.title }}</strong>
+            {% if song.author %}<span class="muted-text">{{ song.author }}</span>{% endif %}
+        </div>
+        <div class="setlist-pick__add">
+            {% for a in song.arrangements.all %}
+            <form method="post" action="{% url 'scheduling:setlist_add' plan.pk %}">
+                {% csrf_token %}
+                <input type="hidden" name="arrangement" value="{{ a.pk }}">
+                <button type="submit" class="btn ghost btn-sm">Add{% if song.arrangements.all|length > 1 %} {{ a.name }}{% endif %}{% if a.key %} ({{ a.key }}){% endif %}</button>
+            </form>
+            {% endfor %}
+        </div>
+    </li>
+    {% endfor %}
+</ul>
+{% else %}
+<p class="muted-text">No songs match. <a href="{% url 'songs:create' %}">Add it to the library</a> first.</p>
+{% endif %}

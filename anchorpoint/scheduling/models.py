@@ -169,3 +169,38 @@ class Assignment(models.Model):
     @property
     def is_draft(self):
         return self.requested_at is None
+
+
+class PlanItem(models.Model):
+    """One item in a plan's order of service. Only songs for now (the setlist); phase 3 adds
+    headers and other items with lengths, so `kind` is here from the start."""
+
+    class Kind(models.TextChoices):
+        SONG = "song", "Song"
+
+    plan = models.ForeignKey(Plan, related_name="items", on_delete=models.CASCADE)
+    order = models.PositiveIntegerField(default=0)
+    kind = models.CharField(max_length=10, choices=Kind.choices, default=Kind.SONG)
+    # PROTECT: a song that's been on a setlist stays (the CCLI usage report counts it).
+    arrangement = models.ForeignKey("songs.Arrangement", null=True, blank=True,
+                                    related_name="plan_items", on_delete=models.PROTECT)
+    key = models.CharField(max_length=10, blank=True,
+                           help_text="Key for this date. Blank = the arrangement's key.")
+    notes = models.CharField(max_length=200, blank=True)
+
+    class Meta:
+        ordering = ["order", "pk"]
+        constraints = [
+            models.CheckConstraint(
+                condition=(models.Q(kind="song", arrangement__isnull=False)
+                           | (~models.Q(kind="song") & models.Q(arrangement__isnull=True))),
+                name="plan_item_song_has_arrangement",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.plan}: {self.arrangement or self.get_kind_display()}"
+
+    @property
+    def display_key(self):
+        return self.key or (self.arrangement.key if self.arrangement else "")

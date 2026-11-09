@@ -16,6 +16,62 @@
 
 <div class="{% if can_manage %}split split--main-first{% else %}single{% endif %}">
     <div class="split__main">
+        <section class="card" id="setlist">
+            <div class="card__head"><h2>Songs</h2></div>
+            {% if setlist %}
+            <ol class="setlist">
+                {% for item in setlist %}
+                <li class="setlist__item">
+                    <div class="setlist__song">
+                        <strong>{{ item.arrangement.song.title }}</strong>
+                        <span class="muted-text">{% if item.arrangement.name != "Default" %}{{ item.arrangement.name }} · {% endif %}{% if item.display_key %}Key {{ item.display_key }}{% else %}No key set{% endif %}{% if item.notes %} · {{ item.notes }}{% endif %}</span>
+                        {% for chart in item.arrangement.charts.all %}<a class="setlist__chart" href="{% url 'songs:chart' chart.pk %}" target="_blank" rel="noopener">{{ chart.label }}</a>{% endfor %}
+                    </div>
+                    {% if can_edit_setlist %}
+                    <div class="setlist__actions">
+                        {% if not forloop.first %}
+                        <form method="post" action="{% url 'scheduling:setlist_item_move' item.pk %}">{% csrf_token %}<button type="submit" name="direction" value="up" class="btn ghost btn-sm" aria-label="Move {{ item.arrangement.song.title }} up">&uarr;</button></form>
+                        {% endif %}
+                        {% if not forloop.last %}
+                        <form method="post" action="{% url 'scheduling:setlist_item_move' item.pk %}">{% csrf_token %}<button type="submit" name="direction" value="down" class="btn ghost btn-sm" aria-label="Move {{ item.arrangement.song.title }} down">&darr;</button></form>
+                        {% endif %}
+                        <form method="post" action="{% url 'scheduling:setlist_item_remove' item.pk %}">{% csrf_token %}<button type="submit" class="btn ghost danger btn-sm" aria-label="Remove {{ item.arrangement.song.title }}">&times;</button></form>
+                    </div>
+                    <details class="disclosure setlist__edit">
+                        <summary>Key and notes</summary>
+                        <form method="post" action="{% url 'scheduling:setlist_item_update' item.pk %}" class="setlist__edit-form">
+                            {% csrf_token %}
+                            <div class="form-field">
+                                <label for="key-{{ item.pk }}">Key for this date</label>
+                                <input id="key-{{ item.pk }}" type="text" name="key" maxlength="10" value="{{ item.key }}" placeholder="{{ item.arrangement.key|default:'e.g. G' }}">
+                            </div>
+                            <div class="form-field">
+                                <label for="notes-{{ item.pk }}">Notes</label>
+                                <input id="notes-{{ item.pk }}" type="text" name="notes" maxlength="200" value="{{ item.notes }}" placeholder="e.g. Skip verse 3">
+                            </div>
+                            <button type="submit" class="btn btn-sm">Save</button>
+                        </form>
+                    </details>
+                    {% endif %}
+                </li>
+                {% endfor %}
+            </ol>
+            {% else %}
+            <p class="muted-text">No songs on this date yet.</p>
+            {% endif %}
+            {% if can_edit_setlist %}
+            <div class="setlist-add">
+                {# Outside any form so Enter searches instead of submitting. #}
+                <label for="song-q">Add a song</label>
+                <input id="song-q" type="search" name="q" placeholder="Search by title, writer or CCLI number" autocomplete="off"
+                       hx-get="{% url 'scheduling:setlist_pick' plan.pk %}"
+                       hx-trigger="input changed delay:300ms, search"
+                       hx-target="#song-results">
+                <div id="song-results"></div>
+            </div>
+            {% endif %}
+        </section>
+
         {% for team_rows in grid %}
         <section class="card">
             <div class="card__head"><h2>{{ team_rows.team.name }}</h2></div>
